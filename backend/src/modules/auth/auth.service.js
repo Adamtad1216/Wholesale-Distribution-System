@@ -8,14 +8,15 @@ import {
 import { logAudit } from '../../middleware/audit.middleware.js';
 import { env } from '../../utils/env.js';
 import crypto from 'crypto';
-import { recordAuthFailure, clearAuthFailures, isAuthBlocked } from '../../middleware/auth-failure.middleware.js';
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function register(data, req) {
   const existing = await prisma.user.findUnique({
     where: { username: data.username },
   });
   if (existing) {
-    throw new Error("Username already taken");
+    throw new Error('Username already taken');
   }
 
   if (data.email) {
@@ -23,7 +24,7 @@ export async function register(data, req) {
       where: { email: data.email },
     });
     if (emailPerson) {
-      throw new Error("Email already registered");
+      throw new Error('Email already registered');
     }
   }
 
@@ -73,8 +74,8 @@ export async function register(data, req) {
 
   await logAudit({
     userId: user.id,
-    action: "USER_REGISTERED",
-    entityType: "User",
+    action: 'USER_REGISTERED',
+    entityType: 'User',
     entityId: user.id,
     newValues: { username: user.username },
     req,
@@ -92,34 +93,42 @@ export async function login(data, req) {
   });
 
   if (!user) {
-    if (req?.ip) {
-      recordAuthFailure(req.ip);
-    }
     await logAudit({
-      action: "LOGIN_FAILED",
-      entityType: "User",
-      entityId: "unknown",
-      newValues: { username: data.username, reason: "User not found" },
+      action: 'LOGIN_FAILED',
+      entityType: 'User',
+      entityId: 'unknown',
+      newValues: { username: data.username, reason: 'User not found' },
       req,
     });
-    const error = new Error("Invalid username or password");
+    const error = new Error('Invalid username or password');
     error.statusCode = 401;
     throw error;
   }
 
   if (!user.isActive) {
-    if (req?.ip) {
-      recordAuthFailure(req.ip);
-    }
     await logAudit({
       userId: user.id,
-      action: "LOGIN_FAILED",
-      entityType: "User",
+      action: 'LOGIN_FAILED',
+      entityType: 'User',
       entityId: user.id,
-      newValues: { reason: "Account inactive" },
+      newValues: { reason: 'Account inactive' },
       req,
     });
-    const error = new Error("Invalid username or password");
+    const error = new Error('Invalid username or password');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    await logAudit({
+      userId: user.id,
+      action: 'LOGIN_FAILED',
+      entityType: 'User',
+      entityId: user.id,
+      newValues: { reason: 'Account locked' },
+      req,
+    });
+    const error = new Error('Account is locked due to multiple failed login attempts');
     error.statusCode = 401;
     throw error;
   }
@@ -130,35 +139,36 @@ export async function login(data, req) {
   );
 
   if (!isPasswordValid) {
-    if (req?.ip) {
-      const failureCount = recordAuthFailure(req.ip);
-      if (failureCount > env.AUTH_RATE_LIMIT_MAX) {
-        const error = new Error("Too many authentication attempts, please try again later.");
-        error.statusCode = 429;
-        throw error;
-      }
+    const newFailedAttempts = user.failedLoginAttempts + 1;
+    let lockedUntil = null;
+
+    if (newFailedAttempts >= env.MAX_FAILED_ATTEMPTS) {
+      lockedUntil = new Date(Date.now() + env.LOCKOUT_DURATION_MS);
     }
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        failedLoginAttempts: { increment: 1 },
-        lockedUntil:
-          user.failedLoginAttempts + 1 >= env.MAX_FAILED_ATTEMPTS
-            ? new Date(Date.now() + env.LOCKOUT_DURATION_MS)
-            : null,
+        failedLoginAttempts: newFailedAttempts,
+        lockedUntil,
       },
     });
 
+    if (newFailedAttempts >= 6 && newFailedAttempts <= 9) {
+      await sleep(10000);
+    } else if (newFailedAttempts >= 4 && newFailedAttempts <= 5) {
+      await sleep(3000);
+    }
+
     await logAudit({
       userId: user.id,
-      action: "LOGIN_FAILED",
-      entityType: "User",
+      action: 'LOGIN_FAILED',
+      entityType: 'User',
       entityId: user.id,
-      newValues: { reason: "Invalid password" },
+      newValues: { reason: 'Invalid password' },
       req,
     });
-    const error = new Error("Invalid username or password");
+    const error = new Error('Invalid username or password');
     error.statusCode = 401;
     throw error;
   }
@@ -192,8 +202,8 @@ export async function login(data, req) {
 
   await logAudit({
     userId: user.id,
-    action: "LOGIN_SUCCESS",
-    entityType: "User",
+    action: 'LOGIN_SUCCESS',
+    entityType: 'User',
     entityId: user.id,
     req,
   });
@@ -206,7 +216,7 @@ export async function refreshTokens(refreshToken, req) {
   try {
     payload = verifyRefreshToken(refreshToken);
   } catch (err) {
-    throw new Error("Invalid or expired refresh token");
+    throw new Error('Invalid or expired refresh token');
   }
 
   const user = await prisma.user.findUnique({
@@ -214,23 +224,20 @@ export async function refreshTokens(refreshToken, req) {
   });
 
   if (!user || !user.isActive) {
-    throw new Error("User not found or inactive");
+    throw new Error('User not found or inactive');
   }
 
   if (!user.refreshTokenHash || !user.refreshTokenExpiresAt) {
-    throw new Error("No refresh token session found");
+    throw new Error('No refresh token session found');
   }
 
   if (user.refreshTokenExpiresAt < new Date()) {
-    throw new Error("Refresh token expired");
+    throw new Error('Refresh token expired');
   }
 
-  const isTokenValid = await comparePassword(
-    refreshToken,
-    user.refreshTokenHash,
-  );
+  const isTokenValid = await comparePassword(refreshToken, user.refreshTokenHash);
   if (!isTokenValid) {
-    throw new Error("Invalid refresh token");
+    throw new Error('Invalid refresh token');
   }
 
   const accessToken = signAccessToken({
@@ -253,8 +260,8 @@ export async function refreshTokens(refreshToken, req) {
 
   await logAudit({
     userId: user.id,
-    action: "TOKEN_REFRESHED",
-    entityType: "User",
+    action: 'TOKEN_REFRESHED',
+    entityType: 'User',
     entityId: user.id,
     req,
   });
@@ -273,8 +280,8 @@ export async function logout(userId, req) {
 
   await logAudit({
     userId,
-    action: "LOGOUT",
-    entityType: "User",
+    action: 'LOGOUT',
+    entityType: 'User',
     entityId: userId,
     req,
   });
@@ -302,7 +309,7 @@ export async function getMe(userId) {
   });
 
   if (!user) {
-    throw new Error("User not found");
+    throw new Error('User not found');
   }
 
   return user;
@@ -336,11 +343,11 @@ export async function createPasswordResetToken(email) {
     return null;
   }
 
-  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetToken = crypto.randomBytes(32).toString('hex');
   const resetTokenHash = crypto
-    .createHash("sha256")
+    .createHash('sha256')
     .update(resetToken)
-    .digest("hex");
+    .digest('hex');
   const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
 
   await prisma.user.update({
@@ -353,8 +360,8 @@ export async function createPasswordResetToken(email) {
 
   await logAudit({
     userId: person.user.id,
-    action: "PASSWORD_RESET_REQUESTED",
-    entityType: "User",
+    action: 'PASSWORD_RESET_REQUESTED',
+    entityType: 'User',
     entityId: person.user.id,
     req: null,
   });
@@ -364,9 +371,9 @@ export async function createPasswordResetToken(email) {
 
 export async function resetPassword(token, newPassword) {
   const resetTokenHash = crypto
-    .createHash("sha256")
+    .createHash('sha256')
     .update(token)
-    .digest("hex");
+    .digest('hex');
 
   const user = await prisma.user.findFirst({
     where: {
@@ -378,7 +385,7 @@ export async function resetPassword(token, newPassword) {
   });
 
   if (!user) {
-    throw new Error("Invalid or expired reset token");
+    throw new Error('Invalid or expired reset token');
   }
 
   const passwordHash = await hashPassword(newPassword);
@@ -404,8 +411,8 @@ export async function resetPassword(token, newPassword) {
 
   await logAudit({
     userId: user.id,
-    action: "PASSWORD_RESET_COMPLETED",
-    entityType: "User",
+    action: 'PASSWORD_RESET_COMPLETED',
+    entityType: 'User',
     entityId: user.id,
     req: null,
   });

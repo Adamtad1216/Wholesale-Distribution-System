@@ -13,7 +13,7 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
   LOCKOUT_DURATION_MS: z.coerce.number().int().positive().default(900000),
-  MAX_FAILED_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  MAX_FAILED_ATTEMPTS: z.coerce.number().int().positive().default(10),
   RESET_TOKEN_SECRET: z.string().min(32),
   RESET_TOKEN_EXPIRES: z.string().default('1h'),
   BASE_URL: z.string().url().default('http://localhost:5000'),

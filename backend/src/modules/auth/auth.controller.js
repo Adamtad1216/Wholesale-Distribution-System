@@ -8,7 +8,6 @@ import {
   createPasswordResetToken,
   resetPassword,
 } from './auth.service.js';
-import { clearAuthFailures } from '../../middleware/auth-failure.middleware.js';
 
 export async function registerUser(req, res, next) {
   try {
@@ -22,7 +21,6 @@ export async function registerUser(req, res, next) {
 export async function loginUser(req, res, next) {
   try {
     const result = await login(req.body, req);
-    clearAuthFailures(req.ip);
     sendSuccess(res, result);
   } catch (err) {
     next(err);

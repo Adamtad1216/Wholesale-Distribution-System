@@ -56,18 +56,24 @@ model Person {
   address      String?
   status       String    @default("ACTIVE")
   archivedAt   DateTime? @map("archived_at")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
 
   user                 User?
   employee             Employee?
   organizationContacts OrganizationContact[]
   customers            Customer[] @relation("PersonCustomer")
   suppliers            Supplier[] @relation("PersonSupplier")
+  createdBy            User?    @relation("PersonCreator", fields: [createdById], references: [id])
+  updatedBy            User?    @relation("PersonUpdater", fields: [updatedById], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([email])
   @@index([phone])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("persons")
 }
 
@@ -85,32 +91,126 @@ model User {
   refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
   resetTokenHash String? @map("reset_token_hash")
   resetTokenExpires DateTime? @map("reset_token_expires")
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   person Person @relation(fields: [personId], references: [id])
+  createdBy User? @relation("UserCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("UserUpdater", fields: [updatedById], references: [id])
+  createdUsers User[] @relation("UserCreator")
+  updatedUsers User[] @relation("UserUpdater")
 
   userRoles UserRole[]
 
   aiQueries AiQuery[]
 
   notifications Notification[]
+  updatedNotifications Notification[] @relation("NotificationUpdater")
 
   auditLogs AuditLog[]
+  updatedAuditLogs AuditLog[] @relation("AuditLogUpdater")
 
   createdStockMovements StockMovement[]
   createdStockAdjustments StockAdjustment[] @relation("AdjustmentCreator")
   approvedStockAdjustments StockAdjustment[] @relation("AdjustmentApprover")
+  updatedStockAdjustments StockAdjustment[] @relation("AdjustmentUpdater")
   orderedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderer")
   approvedPurchaseOrders PurchaseOrder[] @relation("PurchaseApprover")
+  updatedPurchaseOrders PurchaseOrder[] @relation("PurchaseUpdater")
   receivedGoodsReceipts GoodsReceipt[]
+  updatedGoodsReceipts GoodsReceipt[] @relation("GoodsReceiptUpdater")
   approvedSalesOrders SalesOrder[] @relation("SalesOrderApprover")
+  updatedSalesOrders SalesOrder[] @relation("SalesOrderUpdater")
   createdSalesReturns SalesReturn[] @relation("SalesReturnCreator")
+  updatedSalesReturns SalesReturn[] @relation("SalesReturnUpdater")
   receivedPayments Payment[]
+  updatedPayments Payment[] @relation("PaymentUpdater")
   processedRefunds Refund[]
+  updatedRefunds Refund[] @relation("RefundUpdater")
   createdPurchaseReturns PurchaseReturn[] @relation("PurchaseReturnCreator")
+  updatedPurchaseReturns PurchaseReturn[] @relation("PurchaseReturnUpdater")
+
+  createdPersons Person[] @relation("PersonCreator")
+  updatedPersons Person[] @relation("PersonUpdater")
+  createdEmployees Employee[] @relation("EmployeeCreator")
+  updatedEmployees Employee[] @relation("EmployeeUpdater")
+  createdOrganizations Organization[] @relation("OrganizationCreator")
+  updatedOrganizations Organization[] @relation("OrganizationUpdater")
+  createdOrganizationContacts OrganizationContact[] @relation("OrganizationContactCreator")
+  updatedOrganizationContacts OrganizationContact[] @relation("OrganizationContactUpdater")
+  createdCustomers Customer[] @relation("CustomerCreator")
+  updatedCustomers Customer[] @relation("CustomerUpdater")
+  createdSuppliers Supplier[] @relation("SupplierCreator")
+  updatedSuppliers Supplier[] @relation("SupplierUpdater")
+  createdPaymentTerms PaymentTerms[] @relation("PaymentTermsCreator")
+  updatedPaymentTerms PaymentTerms[] @relation("PaymentTermsUpdater")
+  createdCategories Category[] @relation("CategoryCreator")
+  updatedCategories Category[] @relation("CategoryUpdater")
+  createdBrands Brand[] @relation("BrandCreator")
+  updatedBrands Brand[] @relation("BrandUpdater")
+  createdUnits Unit[] @relation("UnitCreator")
+  updatedUnits Unit[] @relation("UnitUpdater")
+  createdProducts Product[] @relation("ProductCreator")
+  updatedProducts Product[] @relation("ProductUpdater")
+  createdProductVariants ProductVariant[] @relation("ProductVariantCreator")
+  updatedProductVariants ProductVariant[] @relation("ProductVariantUpdater")
+  createdProductImages ProductImage[] @relation("ProductImageCreator")
+  updatedProductImages ProductImage[] @relation("ProductImageUpdater")
+  createdWarehouses Warehouse[] @relation("WarehouseCreator")
+  updatedWarehouses Warehouse[] @relation("WarehouseUpdater")
+  createdWarehouseStocks WarehouseStock[] @relation("WarehouseStockCreator")
+  updatedWarehouseStocks WarehouseStock[] @relation("WarehouseStockUpdater")
+  createdStockReservations StockReservation[] @relation("StockReservationCreator")
+  updatedStockReservations StockReservation[] @relation("StockReservationUpdater")
+  createdStockAdjustmentItems StockAdjustmentItem[] @relation("StockAdjustmentItemCreator")
+  updatedStockAdjustmentItems StockAdjustmentItem[] @relation("StockAdjustmentItemUpdater")
+  createdPurchaseOrderItems PurchaseOrderItem[] @relation("PurchaseOrderItemCreator")
+  updatedPurchaseOrderItems PurchaseOrderItem[] @relation("PurchaseOrderItemUpdater")
+  createdGoodsReceiptItems GoodsReceiptItem[] @relation("GoodsReceiptItemCreator")
+  updatedGoodsReceiptItems GoodsReceiptItem[] @relation("GoodsReceiptItemUpdater")
+  createdSupplierInvoices SupplierInvoice[] @relation("SupplierInvoiceCreator")
+  updatedSupplierInvoices SupplierInvoice[] @relation("SupplierInvoiceUpdater")
+  createdPurchaseReturnItems PurchaseReturnItem[] @relation("PurchaseReturnItemCreator")
+  updatedPurchaseReturnItems PurchaseReturnItem[] @relation("PurchaseReturnItemUpdater")
+  createdSalesRequests SalesRequest[] @relation("SalesRequestCreator")
+  updatedSalesRequests SalesRequest[] @relation("SalesRequestUpdater")
+  createdSalesRequestItems SalesRequestItem[] @relation("SalesRequestItemCreator")
+  updatedSalesRequestItems SalesRequestItem[] @relation("SalesRequestItemUpdater")
+  createdQuotations Quotation[] @relation("QuotationCreator")
+  updatedQuotations Quotation[] @relation("QuotationUpdater")
+  createdSalesOrderQuotationItems SalesOrderQuotationItem[] @relation("SalesOrderQuotationItemCreator")
+  updatedSalesOrderQuotationItems SalesOrderQuotationItem[] @relation("SalesOrderQuotationItemUpdater")
+  createdSalesOrderItems SalesOrderItem[] @relation("SalesOrderItemCreator")
+  updatedSalesOrderItems SalesOrderItem[] @relation("SalesOrderItemUpdater")
+  createdSalesReturnItems SalesReturnItem[] @relation("SalesReturnItemCreator")
+  updatedSalesReturnItems SalesReturnItem[] @relation("SalesReturnItemUpdater")
+  createdVehicles Vehicle[] @relation("VehicleCreator")
+  updatedVehicles Vehicle[] @relation("VehicleUpdater")
+  createdDeliveries Delivery[] @relation("DeliveryCreator")
+  updatedDeliveries Delivery[] @relation("DeliveryUpdater")
+  createdDeliveryItems DeliveryItem[] @relation("DeliveryItemCreator")
+  updatedDeliveryItems DeliveryItem[] @relation("DeliveryItemUpdater")
+  createdDeliveryProofs DeliveryProof[] @relation("DeliveryProofCreator")
+  updatedDeliveryProofs DeliveryProof[] @relation("DeliveryProofUpdater")
+  createdInvoices Invoice[] @relation("InvoiceCreator")
+  updatedInvoices Invoice[] @relation("InvoiceUpdater")
+  createdInvoiceItems InvoiceItem[] @relation("InvoiceItemCreator")
+  updatedInvoiceItems InvoiceItem[] @relation("InvoiceItemUpdater")
+  createdPaymentAllocations PaymentAllocation[] @relation("PaymentAllocationCreator")
+  updatedPaymentAllocations PaymentAllocation[] @relation("PaymentAllocationUpdater")
+  createdCredits Credit[] @relation("CreditCreator")
+  updatedCredits Credit[] @relation("CreditUpdater")
+  updatedAiQueries AiQuery[] @relation("AiQueryUpdater")
+  createdAiRecommendations AiRecommendation[] @relation("AiRecommendationCreator")
+  updatedAiRecommendations AiRecommendation[] @relation("AiRecommendationUpdater")
+  createdAiRecommendationSources AiRecommendationSource[] @relation("AiRecommendationSourceCreator")
+  updatedAiRecommendationSources AiRecommendationSource[] @relation("AiRecommendationSourceUpdater")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([createdById])
+  @@index([updatedById])
   @@map("users")
 }
 
@@ -177,8 +277,12 @@ model Employee {
   department   String?
   jobTitle     String?  @map("job_title")
   status       String   @default("ACTIVE")
+  createdById  String?  @map("created_by_id") @db.Uuid
+  updatedById  String?  @map("updated_by_id") @db.Uuid
 
   person Person @relation(fields: [personId], references: [id])
+  createdBy User? @relation("EmployeeCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("EmployeeUpdater", fields: [updatedById], references: [id])
 
   salesRepresentative SalesRepresentative?
   driver              Driver?
@@ -188,6 +292,9 @@ model Employee {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([personId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("employees")
 }
 
@@ -236,8 +343,12 @@ model Organization {
   email              String?
   address            String?
   status             String   @default("ACTIVE")
+  createdById        String?  @map("created_by_id") @db.Uuid
+  updatedById        String?  @map("updated_by_id") @db.Uuid
 
   contacts OrganizationContact[]
+  createdBy User? @relation("OrganizationCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("OrganizationUpdater", fields: [updatedById], references: [id])
 
   customers Customer[] @relation("OrganizationCustomer")
   suppliers Supplier[] @relation("OrganizationSupplier")
@@ -248,6 +359,8 @@ model Organization {
   @@index([name])
   @@index([registrationNumber])
   @@index([taxNumber])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("organizations")
 }
 
@@ -258,13 +371,19 @@ model OrganizationContact {
   personId     String  @map("person_id") @db.Uuid
   position     String?
   isPrimary    Boolean @default(false) @map("is_primary")
+  createdById  String? @map("created_by_id") @db.Uuid
+  updatedById  String? @map("updated_by_id") @db.Uuid
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   person       Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("OrganizationContactCreator", fields: [createdById], references: [id])
+  updatedBy    User?        @relation("OrganizationContactUpdater", fields: [updatedById], references: [id])
 
   @@unique([organizationId, personId])
   @@index([organizationId])
   @@index([personId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("organization_contacts")
 }
 
@@ -279,11 +398,15 @@ model Customer {
   paymentTermsId      String?  @map("payment_terms_id") @db.Uuid
   status              String   @default("ACTIVE")
   assignedSalesRepId  String?  @map("assigned_sales_rep_id") @db.Uuid
+  createdById         String?  @map("created_by_id") @db.Uuid
+  updatedById         String?  @map("updated_by_id") @db.Uuid
 
   person       Person?              @relation("PersonCustomer", fields: [personId], references: [id])
   organization Organization?        @relation("OrganizationCustomer", fields: [organizationId], references: [id])
   paymentTerms PaymentTerms?       @relation(fields: [paymentTermsId], references: [id])
   salesRep      SalesRepresentative? @relation("AssignedSalesRep", fields: [assignedSalesRepId], references: [id])
+  createdBy     User?               @relation("CustomerCreator", fields: [createdById], references: [id])
+  updatedBy     User?               @relation("CustomerUpdater", fields: [updatedById], references: [id])
 
   salesRequests SalesRequest[]
   quotations    Quotation[]
@@ -303,6 +426,8 @@ model Customer {
   @@index([organizationId])
   @@index([assignedSalesRepId])
   @@index([paymentTermsId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("customers")
 }
 
@@ -314,10 +439,14 @@ model Supplier {
   organizationId String?  @map("organization_id") @db.Uuid
   paymentTermsId String?  @map("payment_terms_id") @db.Uuid
   status         String   @default("ACTIVE")
+  createdById    String?  @map("created_by_id") @db.Uuid
+  updatedById    String?  @map("updated_by_id") @db.Uuid
 
   person       Person?        @relation("PersonSupplier", fields: [personId], references: [id])
   organization Organization?  @relation("OrganizationSupplier", fields: [organizationId], references: [id])
   paymentTerms PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
+  createdBy    User?         @relation("SupplierCreator", fields: [createdById], references: [id])
+  updatedBy    User?         @relation("SupplierUpdater", fields: [updatedById], references: [id])
 
   purchaseOrders   PurchaseOrder[]
   supplierInvoices SupplierInvoice[]
@@ -330,6 +459,8 @@ model Supplier {
   @@index([personId])
   @@index([organizationId])
   @@index([paymentTermsId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("suppliers")
 }
 
@@ -339,10 +470,16 @@ model PaymentTerms {
   name        String
   days        Int
   description String?
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   customers Customer[]
   suppliers Supplier[]
+  createdBy User? @relation("PaymentTermsCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("PaymentTermsUpdater", fields: [updatedById], references: [id])
 
+  @@index([createdById])
+  @@index([updatedById])
   @@map("payment_terms")
 }
 
@@ -357,13 +494,19 @@ model Category {
   description String?
   parentId    String? @map("parent_id") @db.Uuid
   status      String  @default("ACTIVE")
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children Category[] @relation("CategoryHierarchy")
+  createdBy User?     @relation("CategoryCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("CategoryUpdater", fields: [updatedById], references: [id])
 
   products Product[]
 
   @@index([parentId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("categories")
 }
 
@@ -373,9 +516,15 @@ model Brand {
   name        String  @unique
   description String?
   status      String  @default("ACTIVE")
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   products Product[]
+  createdBy User? @relation("BrandCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("BrandUpdater", fields: [updatedById], references: [id])
 
+  @@index([createdById])
+  @@index([updatedById])
   @@map("brands")
 }
 
@@ -384,10 +533,16 @@ model Unit {
   id           String @id @default(uuid()) @db.Uuid
   name         String
   abbreviation String
+  createdById  String? @map("created_by_id") @db.Uuid
+  updatedById  String? @map("updated_by_id") @db.Uuid
 
   products Product[]
   variants ProductVariant[]
+  createdBy User? @relation("UnitCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("UnitUpdater", fields: [updatedById], references: [id])
 
+  @@index([createdById])
+  @@index([updatedById])
   @@map("units")
 }
 
@@ -405,10 +560,14 @@ model Product {
   minimumStockLevel  Decimal @default(0) @map("minimum_stock_level") @db.Decimal(15, 3)
   reorderLevel       Decimal @default(0) @map("reorder_level") @db.Decimal(15, 3)
   status             String  @default("ACTIVE")
+  createdById        String? @map("created_by_id") @db.Uuid
+  updatedById        String? @map("updated_by_id") @db.Uuid
 
   category Category @relation(fields: [categoryId], references: [id])
   brand    Brand?   @relation(fields: [brandId], references: [id])
   unit     Unit     @relation(fields: [unitId], references: [id])
+  createdBy User?  @relation("ProductCreator", fields: [createdById], references: [id])
+  updatedBy User?  @relation("ProductUpdater", fields: [updatedById], references: [id])
 
   variants ProductVariant[]
   images   ProductImage[]
@@ -433,6 +592,8 @@ model Product {
   @@index([categoryId])
   @@index([brandId])
   @@index([unitId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("products")
 }
 
@@ -447,12 +608,18 @@ model ProductVariant {
   sellingPrice   Decimal @default(0) @map("selling_price") @db.Decimal(15, 2)
   wholesalePrice Decimal @default(0) @map("wholesale_price") @db.Decimal(15, 2)
   status         String  @default("ACTIVE")
+  createdById    String? @map("created_by_id") @db.Uuid
+  updatedById    String? @map("updated_by_id") @db.Uuid
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   unit    Unit    @relation(fields: [unitId], references: [id])
+  createdBy User? @relation("ProductVariantCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("ProductVariantUpdater", fields: [updatedById], references: [id])
 
   @@index([productId])
   @@index([unitId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("product_variants")
 }
 
@@ -462,10 +629,16 @@ model ProductImage {
   productId  String  @map("product_id") @db.Uuid
   imageUrl   String  @map("image_url")
   isPrimary  Boolean @default(false) @map("is_primary")
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdBy User? @relation("ProductImageCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("ProductImageUpdater", fields: [updatedById], references: [id])
 
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("product_images")
 }
 
@@ -481,8 +654,12 @@ model Warehouse {
   location  String?
   managerId String? @map("manager_id") @db.Uuid
   status    String  @default("ACTIVE")
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   manager Employee? @relation(fields: [managerId], references: [id])
+  createdBy User?  @relation("WarehouseCreator", fields: [createdById], references: [id])
+  updatedBy User?  @relation("WarehouseUpdater", fields: [updatedById], references: [id])
 
   stocks        WarehouseStock[]
   stockMovements StockMovement[]
@@ -499,6 +676,8 @@ model Warehouse {
   purchaseReturns PurchaseReturn[]
 
   @@index([managerId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("warehouses")
 }
 
@@ -513,12 +692,18 @@ model WarehouseStock {
   minimumStock     Decimal  @default(0) @map("minimum_stock") @db.Decimal(15, 3)
   reorderLevel     Decimal  @default(0) @map("reorder_level") @db.Decimal(15, 3)
   updatedAt        DateTime @updatedAt @map("updated_at")
+  createdById      String?  @map("created_by_id") @db.Uuid
+  updatedById      String?  @map("updated_by_id") @db.Uuid
 
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id])
+  createdBy User?     @relation("WarehouseStockCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("WarehouseStockUpdater", fields: [updatedById], references: [id])
 
   @@unique([warehouseId, productId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("warehouse_stocks")
 }
 
@@ -558,13 +743,19 @@ model StockReservation {
   status        String   @default("RESERVED")
   createdAt     DateTime @default(now()) @map("created_at")
   releasedAt    DateTime? @map("released_at")
+  createdById   String? @map("created_by_id") @db.Uuid
+  updatedById   String? @map("updated_by_id") @db.Uuid
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   warehouse  Warehouse  @relation(fields: [warehouseId], references: [id])
   product    Product    @relation(fields: [productId], references: [id])
+  createdBy  User?      @relation("StockReservationCreator", fields: [createdById], references: [id])
+  updatedBy  User?      @relation("StockReservationUpdater", fields: [updatedById], references: [id])
 
   @@index([salesOrderId])
   @@index([warehouseId, productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("stock_reservations")
 }
 
@@ -578,16 +769,19 @@ model StockAdjustment {
   approvedBy  String?   @map("approved_by") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at")
   approvedAt  DateTime? @map("approved_at")
+  updatedById String?   @map("updated_by_id") @db.Uuid
 
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   creator   User      @relation("AdjustmentCreator", fields: [createdBy], references: [id])
   approver  User?     @relation("AdjustmentApprover", fields: [approvedBy], references: [id])
+  updatedBy User?     @relation("AdjustmentUpdater", fields: [updatedById], references: [id])
 
   items StockAdjustmentItem[]
 
   @@index([warehouseId])
   @@index([createdBy])
   @@index([approvedBy])
+  @@index([updatedById])
   @@map("stock_adjustments")
 }
 
@@ -600,12 +794,18 @@ model StockAdjustmentItem {
   actualQuantity  Decimal @map("actual_quantity") @db.Decimal(15, 3)
   difference      Decimal @db.Decimal(15, 3)
   reason          String?
+  createdById     String? @map("created_by_id") @db.Uuid
+  updatedById     String? @map("updated_by_id") @db.Uuid
 
   adjustment StockAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
   product    Product         @relation(fields: [productId], references: [id])
+  createdBy  User?           @relation("StockAdjustmentItemCreator", fields: [createdById], references: [id])
+  updatedBy  User?           @relation("StockAdjustmentItemUpdater", fields: [updatedById], references: [id])
 
   @@index([adjustmentId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("stock_adjustment_items")
 }
 
@@ -628,11 +828,13 @@ model PurchaseOrder {
   discount     Decimal  @default(0) @db.Decimal(15, 2)
   tax          Decimal  @default(0) @db.Decimal(15, 2)
   total        Decimal  @default(0) @db.Decimal(15, 2)
+  updatedById  String?  @map("updated_by_id") @db.Uuid
 
   supplier  Supplier  @relation(fields: [supplierId], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   orderer   User      @relation("PurchaseOrderer", fields: [orderedBy], references: [id])
   approver  User?     @relation("PurchaseApprover", fields: [approvedBy], references: [id])
+  updatedBy User?     @relation("PurchaseUpdater", fields: [updatedById], references: [id])
 
   items PurchaseOrderItem[]
 
@@ -644,6 +846,7 @@ model PurchaseOrder {
   @@index([warehouseId])
   @@index([orderedBy])
   @@index([approvedBy])
+  @@index([updatedById])
   @@index([status])
   @@index([orderDate])
   @@map("purchase_orders")
@@ -660,12 +863,18 @@ model PurchaseOrderItem {
   tax             Decimal @default(0) @db.Decimal(15, 2)
   total           Decimal @db.Decimal(15, 2)
   receivedQuantity Decimal @default(0) @map("received_quantity") @db.Decimal(15, 3)
+  createdById     String? @map("created_by_id") @db.Uuid
+  updatedById     String? @map("updated_by_id") @db.Uuid
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   product      Product       @relation(fields: [productId], references: [id])
+  createdBy    User?         @relation("PurchaseOrderItemCreator", fields: [createdById], references: [id])
+  updatedBy    User?         @relation("PurchaseOrderItemUpdater", fields: [updatedById], references: [id])
 
   @@index([purchaseOrderId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("purchase_order_items")
 }
 
@@ -678,16 +887,19 @@ model GoodsReceipt {
   receivedBy     String   @map("received_by") @db.Uuid
   receivedAt     DateTime @map("received_at")
   status         String   @default("RECEIVED")
+  updatedById    String?  @map("updated_by_id") @db.Uuid
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   warehouse    Warehouse     @relation(fields: [warehouseId], references: [id])
   receiver     User          @relation(fields: [receivedBy], references: [id])
+  updatedBy    User?         @relation("GoodsReceiptUpdater", fields: [updatedById], references: [id])
 
   items GoodsReceiptItem[]
 
   @@index([purchaseOrderId])
   @@index([warehouseId])
   @@index([receivedBy])
+  @@index([updatedById])
   @@map("goods_receipts")
 }
 
@@ -699,13 +911,19 @@ model GoodsReceiptItem {
   orderedQuantity  Decimal @map("ordered_quantity") @db.Decimal(15, 3)
   receivedQuantity Decimal @map("received_quantity") @db.Decimal(15, 3)
   damagedQuantity  Decimal @default(0) @map("damaged_quantity") @db.Decimal(15, 3)
-  unitCost         Decimal  @map("unit_cost") @db.Decimal(15, 2)
+  unitCost         Decimal @map("unit_cost") @db.Decimal(15, 2)
+  createdById      String? @map("created_by_id") @db.Uuid
+  updatedById      String? @map("updated_by_id") @db.Uuid
 
   goodsReceipt GoodsReceipt @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
   product      Product      @relation(fields: [productId], references: [id])
+  createdBy    User?        @relation("GoodsReceiptItemCreator", fields: [createdById], references: [id])
+  updatedBy    User?        @relation("GoodsReceiptItemUpdater", fields: [updatedById], references: [id])
 
   @@index([goodsReceiptId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("goods_receipt_items")
 }
 
@@ -724,14 +942,20 @@ model SupplierInvoice {
   paidAmount     Decimal  @default(0) @map("paid_amount") @db.Decimal(15, 2)
   balance        Decimal  @default(0) @db.Decimal(15, 2)
   status         String   @default("UNPAID")
+  createdById    String?  @map("created_by_id") @db.Uuid
+  updatedById    String?  @map("updated_by_id") @db.Uuid
 
   supplier      Supplier      @relation(fields: [supplierId], references: [id])
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  createdBy     User?         @relation("SupplierInvoiceCreator", fields: [createdById], references: [id])
+  updatedBy     User?         @relation("SupplierInvoiceUpdater", fields: [updatedById], references: [id])
 
   @@unique([supplierId, invoiceNumber])
   @@index([supplierId])
   @@index([purchaseOrderId])
   @@index([dueDate])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("supplier_invoices")
 }
 
@@ -745,11 +969,13 @@ model PurchaseReturn {
   reason         String
   status         String   @default("DRAFT")
   createdBy      String   @map("created_by") @db.Uuid
+  updatedById     String?  @map("updated_by_id") @db.Uuid
 
   supplier      Supplier       @relation(fields: [supplierId], references: [id])
   warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
   creator       User           @relation("PurchaseReturnCreator", fields: [createdBy], references: [id])
+  updatedBy     User?          @relation("PurchaseReturnUpdater", fields: [updatedById], references: [id])
 
   items PurchaseReturnItem[]
 
@@ -757,6 +983,7 @@ model PurchaseReturn {
   @@index([warehouseId])
   @@index([purchaseOrderId])
   @@index([createdBy])
+  @@index([updatedById])
   @@map("purchase_returns")
 }
 
@@ -768,12 +995,18 @@ model PurchaseReturnItem {
   quantity       Decimal @db.Decimal(15, 3)
   unitCost       Decimal @map("unit_cost") @db.Decimal(15, 2)
   reason         String?
+  createdById    String? @map("created_by_id") @db.Uuid
+  updatedById    String? @map("updated_by_id") @db.Uuid
 
   purchaseReturn PurchaseReturn @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
   product        Product        @relation(fields: [productId], references: [id])
+  createdBy      User?          @relation("PurchaseReturnItemCreator", fields: [createdById], references: [id])
+  updatedBy      User?          @relation("PurchaseReturnItemUpdater", fields: [updatedById], references: [id])
 
   @@index([purchaseReturnId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("purchase_return_items")
 }
 
@@ -793,9 +1026,13 @@ model SalesRequest {
   status        String        @default("SUBMITTED")
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
+  createdById   String?       @map("created_by_id") @db.Uuid
+  updatedById   String?       @map("updated_by_id") @db.Uuid
 
   customer Customer            @relation(fields: [customerId], references: [id])
   salesRep SalesRepresentative? @relation(fields: [salesRepId], references: [id])
+  createdBy User?              @relation("SalesRequestCreator", fields: [createdById], references: [id])
+  updatedBy User?              @relation("SalesRequestUpdater", fields: [updatedById], references: [id])
 
   items SalesRequestItem[]
 
@@ -805,6 +1042,8 @@ model SalesRequest {
   @@index([salesRepId])
   @@index([status])
   @@index([createdAt])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("sales_requests")
 }
 
@@ -815,12 +1054,18 @@ model SalesRequestItem {
   productId     String  @map("product_id") @db.Uuid
   quantity      Decimal @db.Decimal(15, 3)
   notes         String?
+  createdById   String? @map("created_by_id") @db.Uuid
+  updatedById   String? @map("updated_by_id") @db.Uuid
 
   salesRequest SalesRequest @relation(fields: [salesRequestId], references: [id], onDelete: Cascade)
   product      Product      @relation(fields: [productId], references: [id])
+  createdBy    User?        @relation("SalesRequestItemCreator", fields: [createdById], references: [id])
+  updatedBy    User?        @relation("SalesRequestItemUpdater", fields: [updatedById], references: [id])
 
   @@index([salesRequestId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("sales_request_items")
 }
 
@@ -838,10 +1083,14 @@ model Quotation {
   discount       Decimal  @default(0) @db.Decimal(15, 2)
   tax            Decimal  @default(0) @db.Decimal(15, 2)
   total          Decimal  @default(0) @db.Decimal(15, 2)
+  createdById    String?  @map("created_by_id") @db.Uuid
+  updatedById    String?  @map("updated_by_id") @db.Uuid
 
   customer Customer         @relation(fields: [customerId], references: [id])
   salesRep SalesRepresentative @relation(fields: [salesRepId], references: [id])
   salesRequest SalesRequest? @relation(fields: [salesRequestId], references: [id])
+  createdBy User?           @relation("QuotationCreator", fields: [createdById], references: [id])
+  updatedBy User?           @relation("QuotationUpdater", fields: [updatedById], references: [id])
 
   items SalesOrderQuotationItem[]
 
@@ -850,6 +1099,8 @@ model Quotation {
   @@index([customerId])
   @@index([salesRepId])
   @@index([validUntil])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("quotations")
 }
 
@@ -863,12 +1114,18 @@ model SalesOrderQuotationItem {
   discount     Decimal @default(0) @db.Decimal(15, 2)
   tax          Decimal @default(0) @db.Decimal(15, 2)
   total        Decimal @db.Decimal(15, 2)
+  createdById  String? @map("created_by_id") @db.Uuid
+  updatedById  String? @map("updated_by_id") @db.Uuid
 
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id])
+  createdBy User?     @relation("SalesOrderQuotationItemCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("SalesOrderQuotationItemUpdater", fields: [updatedById], references: [id])
 
   @@index([quotationId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("quotation_items")
 }
 
@@ -889,12 +1146,14 @@ model SalesOrder {
   total         Decimal  @default(0) @db.Decimal(15, 2)
   approvedBy    String?  @map("approved_by") @db.Uuid
   approvedAt    DateTime? @map("approved_at")
+  updatedById   String?  @map("updated_by_id") @db.Uuid
 
   customer  Customer            @relation(fields: [customerId], references: [id])
   salesRep  SalesRepresentative @relation(fields: [salesRepId], references: [id])
   warehouse Warehouse           @relation(fields: [warehouseId], references: [id])
   quotation Quotation?          @relation(fields: [quotationId], references: [id])
   approver  User?              @relation("SalesOrderApprover", fields: [approvedBy], references: [id])
+  updatedBy User?              @relation("SalesOrderUpdater", fields: [updatedById], references: [id])
 
   items SalesOrderItem[]
 
@@ -908,6 +1167,7 @@ model SalesOrder {
   @@index([warehouseId])
   @@index([status])
   @@index([orderDate])
+  @@index([updatedById])
   @@map("sales_orders")
 }
 
@@ -923,14 +1183,20 @@ model SalesOrderItem {
   total          Decimal @db.Decimal(15, 2)
   reservedQuantity Decimal @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
   fulfilledQuantity Decimal @default(0) @map("fulfilled_quantity") @db.Decimal(15, 3)
+  createdById    String? @map("created_by_id") @db.Uuid
+  updatedById    String? @map("updated_by_id") @db.Uuid
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   product   Product    @relation(fields: [productId], references: [id])
+  createdBy User?      @relation("SalesOrderItemCreator", fields: [createdById], references: [id])
+  updatedBy User?      @relation("SalesOrderItemUpdater", fields: [updatedById], references: [id])
 
   deliveryItems DeliveryItem[]
 
   @@index([salesOrderId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("sales_order_items")
 }
 
@@ -944,11 +1210,13 @@ model SalesReturn {
   reason       String
   status       String   @default("DRAFT")
   createdBy    String   @map("created_by") @db.Uuid
+  updatedById   String?  @map("updated_by_id") @db.Uuid
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   customer   Customer   @relation(fields: [customerId], references: [id])
   warehouse  Warehouse  @relation(fields: [warehouseId], references: [id])
   creator    User       @relation("SalesReturnCreator", fields: [createdBy], references: [id])
+  updatedBy  User?      @relation("SalesReturnUpdater", fields: [updatedById], references: [id])
 
   items SalesReturnItem[]
 
@@ -958,6 +1226,7 @@ model SalesReturn {
   @@index([customerId])
   @@index([warehouseId])
   @@index([createdBy])
+  @@index([updatedById])
   @@map("sales_returns")
 }
 
@@ -970,12 +1239,18 @@ model SalesReturnItem {
   unitPrice     Decimal @map("unit_price") @db.Decimal(15, 2)
   condition     String?
   reason        String?
+  createdById   String? @map("created_by_id") @db.Uuid
+  updatedById   String? @map("updated_by_id") @db.Uuid
 
   salesReturn SalesReturn @relation(fields: [salesReturnId], references: [id], onDelete: Cascade)
   product     Product     @relation(fields: [productId], references: [id])
+  createdBy   User?       @relation("SalesReturnItemCreator", fields: [createdById], references: [id])
+  updatedBy   User?       @relation("SalesReturnItemUpdater", fields: [updatedById], references: [id])
 
   @@index([salesReturnId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("sales_return_items")
 }
 
@@ -991,9 +1266,15 @@ model Vehicle {
   model       String?
   capacity    Decimal? @db.Decimal(15, 3)
   status      String  @default("ACTIVE")
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   deliveries Delivery[]
+  createdBy  User?   @relation("VehicleCreator", fields: [createdById], references: [id])
+  updatedBy  User?   @relation("VehicleUpdater", fields: [updatedById], references: [id])
 
+  @@index([createdById])
+  @@index([updatedById])
   @@map("vehicles")
 }
 
@@ -1011,12 +1292,16 @@ model Delivery {
   status         String   @default("SCHEDULED")
   deliveryAddress String  @map("delivery_address")
   notes          String?
+  createdById    String?  @map("created_by_id") @db.Uuid
+  updatedById    String?  @map("updated_by_id") @db.Uuid
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   customer   Customer   @relation(fields: [customerId], references: [id])
   warehouse  Warehouse  @relation(fields: [warehouseId], references: [id])
   driver     Driver     @relation(fields: [driverId], references: [id])
   vehicle    Vehicle    @relation(fields: [vehicleId], references: [id])
+  createdBy  User?      @relation("DeliveryCreator", fields: [createdById], references: [id])
+  updatedBy  User?      @relation("DeliveryUpdater", fields: [updatedById], references: [id])
 
   items DeliveryItem[]
   proofs DeliveryProof[]
@@ -1027,6 +1312,8 @@ model Delivery {
   @@index([driverId])
   @@index([vehicleId])
   @@index([scheduledDate])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("deliveries")
 }
 
@@ -1039,14 +1326,20 @@ model DeliveryItem {
   quantity         Decimal @db.Decimal(15, 3)
   deliveredQuantity Decimal @default(0) @map("delivered_quantity") @db.Decimal(15, 3)
   returnedQuantity Decimal @default(0) @map("returned_quantity") @db.Decimal(15, 3)
+  createdById      String? @map("created_by_id") @db.Uuid
+  updatedById      String? @map("updated_by_id") @db.Uuid
 
   delivery      Delivery      @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
   salesOrderItem SalesOrderItem @relation(fields: [salesOrderItemId], references: [id])
   product       Product       @relation(fields: [productId], references: [id])
+  createdBy     User?         @relation("DeliveryItemCreator", fields: [createdById], references: [id])
+  updatedBy     User?         @relation("DeliveryItemUpdater", fields: [updatedById], references: [id])
 
   @@index([deliveryId])
   @@index([salesOrderItemId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("delivery_items")
 }
 
@@ -1060,10 +1353,16 @@ model DeliveryProof {
   recipientSignature String? @map("recipient_signature")
   notes            String?
   createdAt        DateTime @default(now()) @map("created_at")
+  createdById      String?  @map("created_by_id") @db.Uuid
+  updatedById      String?  @map("updated_by_id") @db.Uuid
 
   delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation("DeliveryProofCreator", fields: [createdById], references: [id])
+  updatedBy User?   @relation("DeliveryProofUpdater", fields: [updatedById], references: [id])
 
   @@index([deliveryId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("delivery_proofs")
 }
 
@@ -1086,9 +1385,13 @@ model Invoice {
   paidAmount    Decimal  @default(0) @map("paid_amount") @db.Decimal(15, 2)
   balance       Decimal  @default(0) @db.Decimal(15, 2)
   status        String   @default("UNPAID")
+  createdById   String?  @map("created_by_id") @db.Uuid
+  updatedById   String?  @map("updated_by_id") @db.Uuid
 
   customer  Customer   @relation(fields: [customerId], references: [id])
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+  createdBy User?      @relation("InvoiceCreator", fields: [createdById], references: [id])
+  updatedBy User?      @relation("InvoiceUpdater", fields: [updatedById], references: [id])
 
   items InvoiceItem[]
   paymentAllocations PaymentAllocation[]
@@ -1096,6 +1399,8 @@ model Invoice {
   @@index([customerId])
   @@index([salesOrderId])
   @@index([dueDate])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("invoices")
 }
 
@@ -1109,12 +1414,18 @@ model InvoiceItem {
   discount   Decimal @default(0) @db.Decimal(15, 2)
   tax        Decimal @default(0) @db.Decimal(15, 2)
   total      Decimal @db.Decimal(15, 2)
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
+  createdBy User? @relation("InvoiceItemCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("InvoiceItemUpdater", fields: [updatedById], references: [id])
 
   @@index([invoiceId])
   @@index([productId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("invoice_items")
 }
 
@@ -1131,10 +1442,12 @@ model Payment {
   referenceNumber String?       @map("reference_number")
   status          String        @default("COMPLETED")
   receivedBy      String?       @map("received_by") @db.Uuid
+  updatedById     String?       @map("updated_by_id") @db.Uuid
 
   customer Customer? @relation(fields: [customerId], references: [id])
   supplier Supplier? @relation(fields: [supplierId], references: [id])
   receiver User?     @relation(fields: [receivedBy], references: [id])
+  updatedBy User?    @relation("PaymentUpdater", fields: [updatedById], references: [id])
 
   allocations PaymentAllocation[]
   refunds     Refund[]
@@ -1143,6 +1456,7 @@ model Payment {
   @@index([supplierId])
   @@index([paymentDate])
   @@index([receivedBy])
+  @@index([updatedById])
   @@map("payments")
 }
 
@@ -1153,12 +1467,18 @@ model PaymentAllocation {
   invoiceId   String   @map("invoice_id") @db.Uuid
   amount      Decimal  @db.Decimal(15, 2)
   allocatedAt DateTime @default(now()) @map("allocated_at")
+  createdById String?  @map("created_by_id") @db.Uuid
+  updatedById String?  @map("updated_by_id") @db.Uuid
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   invoice Invoice @relation(fields: [invoiceId], references: [id])
+  createdBy User?  @relation("PaymentAllocationCreator", fields: [createdById], references: [id])
+  updatedBy User?  @relation("PaymentAllocationUpdater", fields: [updatedById], references: [id])
 
   @@unique([paymentId, invoiceId])
   @@index([invoiceId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("payment_allocations")
 }
 
@@ -1173,14 +1493,17 @@ model Refund {
   refundDate   DateTime @map("refund_date")
   status       String   @default("PENDING")
   processedBy  String   @map("processed_by") @db.Uuid
+  updatedById  String?  @map("updated_by_id") @db.Uuid
 
   payment    Payment  @relation(fields: [paymentId], references: [id])
   customer   Customer @relation(fields: [customerId], references: [id])
   processor  User     @relation(fields: [processedBy], references: [id])
+  updatedBy  User?    @relation("RefundUpdater", fields: [updatedById], references: [id])
 
   @@index([paymentId])
   @@index([customerId])
   @@index([processedBy])
+  @@index([updatedById])
   @@map("refunds")
 }
 
@@ -1194,12 +1517,18 @@ model Credit {
   reason        String
   status        String   @default("ACTIVE")
   createdAt     DateTime @default(now()) @map("created_at")
+  createdById   String?  @map("created_by_id") @db.Uuid
+  updatedById   String?  @map("updated_by_id") @db.Uuid
 
   customer   Customer    @relation(fields: [customerId], references: [id])
   salesReturn SalesReturn? @relation(fields: [salesReturnId], references: [id])
+  createdBy  User?        @relation("CreditCreator", fields: [createdById], references: [id])
+  updatedBy  User?        @relation("CreditUpdater", fields: [updatedById], references: [id])
 
   @@index([customerId])
   @@index([salesReturnId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("credits")
 }
 
@@ -1214,31 +1543,40 @@ model AiQuery {
   question  String
   intent    String?
   createdAt DateTime @default(now()) @map("created_at")
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   user User @relation(fields: [userId], references: [id])
+  updatedBy User? @relation("AiQueryUpdater", fields: [updatedById], references: [id])
 
   recommendations AiRecommendation[]
 
   @@index([userId])
   @@index([createdAt])
+  @@index([updatedById])
   @@map("ai_queries")
 }
 
 
 model AiRecommendation {
-  id               String   @id @default(uuid()) @db.Uuid
-  aiQueryId        String   @map("ai_query_id") @db.Uuid
+  id               String  @id @default(uuid()) @db.Uuid
+  aiQueryId        String  @map("ai_query_id") @db.Uuid
   recommendationType String @map("recommendation_type")
   title            String
   description      String
   confidenceScore  Decimal? @map("confidence_score") @db.Decimal(5, 4)
   createdAt        DateTime @default(now()) @map("created_at")
+  createdById      String?  @map("created_by_id") @db.Uuid
+  updatedById      String?  @map("updated_by_id") @db.Uuid
 
   aiQuery AiQuery @relation(fields: [aiQueryId], references: [id], onDelete: Cascade)
+  createdBy User?           @relation("AiRecommendationCreator", fields: [createdById], references: [id])
+  updatedBy User?           @relation("AiRecommendationUpdater", fields: [updatedById], references: [id])
 
   sources AiRecommendationSource[]
 
   @@index([aiQueryId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("ai_recommendations")
 }
 
@@ -1251,11 +1589,17 @@ model AiRecommendationSource {
   metricName     String? @map("metric_name")
   metricValue    Decimal? @map("metric_value") @db.Decimal(15, 4)
   explanation    String?
+  createdById    String? @map("created_by_id") @db.Uuid
+  updatedById    String? @map("updated_by_id") @db.Uuid
 
   recommendation AiRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  createdBy      User?            @relation("AiRecommendationSourceCreator", fields: [createdById], references: [id])
+  updatedBy      User?            @relation("AiRecommendationSourceUpdater", fields: [updatedById], references: [id])
 
   @@index([recommendationId])
   @@index([sourceType, sourceId])
+  @@index([createdById])
+  @@index([updatedById])
   @@map("ai_recommendation_sources")
 }
 
@@ -1269,11 +1613,14 @@ model Notification {
   isRead    Boolean   @default(false) @map("is_read")
   createdAt DateTime  @default(now()) @map("created_at")
   readAt    DateTime? @map("read_at")
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedBy User? @relation("NotificationUpdater", fields: [updatedById], references: [id])
 
   @@index([userId, isRead])
   @@index([createdAt])
+  @@index([updatedById])
   @@map("notifications")
 }
 
@@ -1289,11 +1636,14 @@ model AuditLog {
   ipAddress  String?  @map("ip_address")
   userAgent  String?  @map("user_agent")
   createdAt  DateTime @default(now()) @map("created_at")
+  updatedById String? @map("updated_by_id") @db.Uuid
 
   user User? @relation(fields: [userId], references: [id])
+  updatedBy User? @relation("AuditLogUpdater", fields: [updatedById], references: [id])
 
   @@index([userId])
   @@index([entityType, entityId])
   @@index([createdAt])
+  @@index([updatedById])
   @@map("audit_logs")
 }
