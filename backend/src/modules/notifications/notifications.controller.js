@@ -1,4 +1,3 @@
-import { sendSuccess, sendError } from "../../utils/api-response.js";
 import { AppError } from "../../utils/errors.js";
 
 export const getNotifications = async (req, res, next) => {

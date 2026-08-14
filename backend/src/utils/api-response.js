@@ -5,6 +5,14 @@ export const sendSuccess = (res, data, statusCode = 200) => {
   });
 };
 
+export const sendPaginatedSuccess = (res, data, meta, statusCode = 200) => {
+  return res.status(statusCode).json({
+    status: 'success',
+    data,
+    meta,
+  });
+};
+
 export const sendError = (res, message, statusCode = 500) => {
   return res.status(statusCode).json({
     status: 'error',

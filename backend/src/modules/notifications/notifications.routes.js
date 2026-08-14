@@ -2,14 +2,12 @@ import { Router } from "express";
 import { authenticate } from "../../middleware/auth.middleware.js";
 import {
   getNotifications,
-  getNotificationById,
   markNotificationAsRead,
   markAllNotificationsAsRead,
 } from "./notifications.controller.js";
 import {
   notificationQuerySchema,
   notificationIdSchema,
-  markAsReadSchema,
 } from "./notifications.validation.js";
 import { validate } from "../../middleware/validation.middleware.js";
 

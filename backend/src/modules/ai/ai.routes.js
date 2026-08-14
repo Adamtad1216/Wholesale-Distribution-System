@@ -4,7 +4,6 @@ import {
   submitAiQuery,
   getAiQueries,
   getAiQueryById,
-  getAiRecommendations,
 } from "./ai.controller.js";
 import {
   aiQuerySchema,

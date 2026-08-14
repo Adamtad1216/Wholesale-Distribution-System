@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
+import { env } from './env.js';
 
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'your-access-secret';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret';
-const JWT_ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '15m';
-const JWT_REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '7d';
+const JWT_ACCESS_SECRET = env.JWT_ACCESS_SECRET;
+const JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
+const JWT_ACCESS_EXPIRES = env.JWT_ACCESS_EXPIRES;
+const JWT_REFRESH_EXPIRES = env.JWT_REFRESH_EXPIRES;
 
 export function signAccessToken(payload) {
   return jwt.sign(payload, JWT_ACCESS_SECRET, { expiresIn: JWT_ACCESS_EXPIRES });

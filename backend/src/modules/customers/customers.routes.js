@@ -14,7 +14,6 @@ import {
 } from "./customers.validation.js";
 import { validate } from "../../middleware/validation.middleware.js";
 import { authenticate } from "../../middleware/auth.middleware.js";
-import { requirePermission } from "../../middleware/permission.middleware.js";
 
 const router = Router();
 

@@ -7,6 +7,7 @@ import {
 } from '../../utils/jwt.js';
 import { logAudit } from '../../middleware/audit.middleware.js';
 import { env } from '../../utils/env.js';
+import { AppError } from '../../utils/errors.js';
 import crypto from 'crypto';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -16,7 +17,7 @@ export async function register(data, req) {
     where: { username: data.username },
   });
   if (existing) {
-    throw new Error('Username already taken');
+    throw new AppError('Username already taken', 400);
   }
 
   if (data.email) {
@@ -24,7 +25,7 @@ export async function register(data, req) {
       where: { email: data.email },
     });
     if (emailPerson) {
-      throw new Error('Email already registered');
+      throw new AppError('Email already registered', 400);
     }
   }
 
@@ -100,9 +101,7 @@ export async function login(data, req) {
       newValues: { username: data.username, reason: 'User not found' },
       req,
     });
-    const error = new Error('Invalid username or password');
-    error.statusCode = 401;
-    throw error;
+    throw new AppError('Invalid username or password', 401);
   }
 
   if (!user.isActive) {
@@ -114,9 +113,7 @@ export async function login(data, req) {
       newValues: { reason: 'Account inactive' },
       req,
     });
-    const error = new Error('Invalid username or password');
-    error.statusCode = 401;
-    throw error;
+    throw new AppError('Invalid username or password', 401);
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -128,9 +125,7 @@ export async function login(data, req) {
       newValues: { reason: 'Account locked' },
       req,
     });
-    const error = new Error('Account is locked due to multiple failed login attempts');
-    error.statusCode = 401;
-    throw error;
+    throw new AppError('Account is locked due to multiple failed login attempts', 401);
   }
 
   const isPasswordValid = await comparePassword(
@@ -168,9 +163,7 @@ export async function login(data, req) {
       newValues: { reason: 'Invalid password' },
       req,
     });
-    const error = new Error('Invalid username or password');
-    error.statusCode = 401;
-    throw error;
+    throw new AppError('Invalid username or password', 401);
   }
 
   await prisma.user.update({
@@ -215,8 +208,8 @@ export async function refreshTokens(refreshToken, req) {
   let payload;
   try {
     payload = verifyRefreshToken(refreshToken);
-  } catch (err) {
-    throw new Error('Invalid or expired refresh token');
+  } catch {
+    throw new AppError('Invalid or expired refresh token', 401);
   }
 
   const user = await prisma.user.findUnique({
@@ -224,20 +217,20 @@ export async function refreshTokens(refreshToken, req) {
   });
 
   if (!user || !user.isActive) {
-    throw new Error('User not found or inactive');
+    throw new AppError('User not found or inactive', 401);
   }
 
   if (!user.refreshTokenHash || !user.refreshTokenExpiresAt) {
-    throw new Error('No refresh token session found');
+    throw new AppError('No refresh token session found', 401);
   }
 
   if (user.refreshTokenExpiresAt < new Date()) {
-    throw new Error('Refresh token expired');
+    throw new AppError('Refresh token expired', 401);
   }
 
   const isTokenValid = await comparePassword(refreshToken, user.refreshTokenHash);
   if (!isTokenValid) {
-    throw new Error('Invalid refresh token');
+    throw new AppError('Invalid refresh token', 401);
   }
 
   const accessToken = signAccessToken({
@@ -309,7 +302,7 @@ export async function getMe(userId) {
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new AppError('User not found', 404);
   }
 
   return user;
@@ -385,7 +378,7 @@ export async function resetPassword(token, newPassword) {
   });
 
   if (!user) {
-    throw new Error('Invalid or expired reset token');
+    throw new AppError('Invalid or expired reset token', 400);
   }
 
   const passwordHash = await hashPassword(newPassword);
