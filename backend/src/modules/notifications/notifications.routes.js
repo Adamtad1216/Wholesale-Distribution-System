@@ -1,0 +1,24 @@
+import { Router } from "express";
+import { authenticate } from "../../middleware/auth.middleware.js";
+import {
+  getNotifications,
+  getNotificationById,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from "./notifications.controller.js";
+import {
+  notificationQuerySchema,
+  notificationIdSchema,
+  markAsReadSchema,
+} from "./notifications.validation.js";
+import { validate } from "../../middleware/validation.middleware.js";
+
+const router = Router();
+
+router.use(authenticate);
+
+router.get("/", validate(notificationQuerySchema), getNotifications);
+router.patch("/:id/read", validate(notificationIdSchema), markNotificationAsRead);
+router.patch("/read-all", markAllNotificationsAsRead);
+
+export default router;
