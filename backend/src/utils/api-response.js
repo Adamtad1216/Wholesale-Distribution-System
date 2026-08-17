@@ -26,3 +26,7 @@ export const sendCreated = (res, data) => {
     data,
   });
 };
+
+export const sendNoContent = (res) => {
+  return res.status(204).send();
+};

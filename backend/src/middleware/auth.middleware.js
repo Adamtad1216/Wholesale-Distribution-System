@@ -47,7 +47,16 @@ export async function authenticate(req, res, next) {
 
     req.user = user;
     next();
-  } catch {
+  } catch (e) {
+    const fs = await import('fs');
+    const logData = {
+      message: e.message,
+      stack: e.stack,
+      code: e.code,
+      meta: e.meta,
+      full: JSON.stringify(e, null, 2),
+    };
+    fs.appendFileSync('C:/Users/A/AppData/Local/Temp/kilo/auth_error.log', JSON.stringify(logData, null, 2) + '\n---\n');
     return res.status(401).json({
       status: 'error',
       message: 'Invalid or expired token',

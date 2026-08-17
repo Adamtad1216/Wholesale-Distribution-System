@@ -4,6 +4,7 @@ import {
   getNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  removeNotification,
 } from "./notifications.controller.js";
 import {
   notificationQuerySchema,
@@ -18,5 +19,6 @@ router.use(authenticate);
 router.get("/", validate(notificationQuerySchema), getNotifications);
 router.patch("/:id/read", validate(notificationIdSchema), markNotificationAsRead);
 router.patch("/read-all", markAllNotificationsAsRead);
+router.delete("/:id", validate(notificationIdSchema), removeNotification);
 
 export default router;

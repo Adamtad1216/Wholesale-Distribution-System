@@ -31,3 +31,11 @@ export const getAiRecommendations = async (req, res, next) => {
     next(err);
   }
 };
+
+export const removeAiQuery = async (req, res, next) => {
+  try {
+    next(new AppError("Not implemented", 501));
+  } catch (err) {
+    next(err);
+  }
+};

@@ -23,3 +23,11 @@ export const createSalesReturn = async (req, res, next) => {
     next(err);
   }
 };
+
+export const removeSalesReturn = async (req, res, next) => {
+  try {
+    next(new AppError("Not implemented", 501));
+  } catch (err) {
+    next(err);
+  }
+};

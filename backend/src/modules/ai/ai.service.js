@@ -13,3 +13,7 @@ export const getAiQueryById = async () => {
 export const getAiRecommendations = async () => {
   throw new Error("Not implemented");
 };
+
+export const deleteAiQuery = async () => {
+  throw new Error("Not implemented");
+};

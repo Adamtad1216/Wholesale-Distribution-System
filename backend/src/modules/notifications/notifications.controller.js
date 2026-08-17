@@ -31,3 +31,11 @@ export const markAllNotificationsAsRead = async (req, res, next) => {
     next(err);
   }
 };
+
+export const removeNotification = async (req, res, next) => {
+  try {
+    next(new AppError("Not implemented", 501));
+  } catch (err) {
+    next(err);
+  }
+};

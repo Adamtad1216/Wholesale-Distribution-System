@@ -4,6 +4,7 @@ import {
   getSalesRequests,
   getSalesRequestById,
   createSalesRequest,
+  removeSalesRequest,
 } from "./salesRequests.controller.js";
 import {
   salesRequestQuerySchema,
@@ -19,5 +20,6 @@ router.use(authenticate);
 router.get("/", validate(salesRequestQuerySchema), getSalesRequests);
 router.post("/", validate(createSalesRequestSchema), createSalesRequest);
 router.get("/:id", validate(salesRequestIdSchema), getSalesRequestById);
+router.delete("/:id", validate(salesRequestIdSchema), removeSalesRequest);
 
 export default router;

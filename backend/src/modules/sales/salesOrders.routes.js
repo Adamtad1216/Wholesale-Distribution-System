@@ -4,6 +4,7 @@ import {
   getSalesOrders,
   getSalesOrderById,
   createSalesOrder,
+  removeSalesOrder,
 } from "./salesOrders.controller.js";
 import {
   salesOrderQuerySchema,
@@ -19,5 +20,6 @@ router.use(authenticate);
 router.get("/", validate(salesOrderQuerySchema), getSalesOrders);
 router.post("/", validate(createSalesOrderSchema), createSalesOrder);
 router.get("/:id", validate(salesOrderIdSchema), getSalesOrderById);
+router.delete("/:id", validate(salesOrderIdSchema), removeSalesOrder);
 
 export default router;

@@ -9,3 +9,7 @@ export const getSalesRequestById = async () => {
 export const createSalesRequest = async () => {
   throw new Error("Not implemented");
 };
+
+export const deleteSalesRequest = async () => {
+  throw new Error("Not implemented");
+};

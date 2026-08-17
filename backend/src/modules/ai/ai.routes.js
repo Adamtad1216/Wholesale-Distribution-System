@@ -4,6 +4,7 @@ import {
   submitAiQuery,
   getAiQueries,
   getAiQueryById,
+  removeAiQuery,
 } from "./ai.controller.js";
 import {
   aiQuerySchema,
@@ -19,5 +20,6 @@ router.use(authenticate);
 router.post("/query", validate(aiQuerySchema), submitAiQuery);
 router.get("/queries", validate(aiQueryListSchema), getAiQueries);
 router.get("/queries/:id", validate(aiQueryIdSchema), getAiQueryById);
+router.delete("/queries/:id", validate(aiQueryIdSchema), removeAiQuery);
 
 export default router;

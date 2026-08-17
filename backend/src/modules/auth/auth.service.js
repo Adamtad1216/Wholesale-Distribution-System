@@ -9,64 +9,222 @@ import { logAudit } from '../../middleware/audit.middleware.js';
 import { env } from '../../utils/env.js';
 import { AppError } from '../../utils/errors.js';
 import crypto from 'crypto';
+import { sendResetPasswordEmail } from '../../utils/email.js';
+import { ensureUniqueCode } from '../customers/customers.service.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function register(data, req) {
-  const existing = await prisma.user.findUnique({
+  const existingUsername = await prisma.user.findUnique({
     where: { username: data.username },
   });
-  if (existing) {
+  if (existingUsername) {
     throw new AppError('Username already taken', 400);
   }
 
-  if (data.email) {
-    const emailPerson = await prisma.person.findUnique({
-      where: { email: data.email },
-    });
-    if (emailPerson) {
-      throw new AppError('Email already registered', 400);
-    }
+  const customerRole = await prisma.role.findUnique({
+    where: { name: 'CUSTOMER' },
+  });
+
+  if (!customerRole) {
+    throw new AppError('CUSTOMER role not configured. Please contact support.', 500);
   }
 
   const passwordHash = await hashPassword(data.password);
 
-  const user = await prisma.$transaction(async (tx) => {
-    const person = await tx.person.create({
-      data: {
-        firstName: data.firstName,
-        middleName: data.middleName,
-        lastName: data.lastName,
-        phone: data.phone,
-        email: data.email,
-        address: data.address,
-      },
-    });
+  const result = await prisma.$transaction(async (tx) => {
+    let person;
+    let customer;
 
-    return tx.user.create({
+    if (data.customerType === 'PERSON') {
+      if (data.email) {
+        const existingEmail = await prisma.person.findFirst({
+          where: { email: data.email },
+        });
+        if (existingEmail) {
+          throw new AppError('Email already registered', 400);
+        }
+      }
+
+      person = await tx.person.create({
+        data: {
+          firstName: data.firstName,
+          middleName: data.middleName,
+          lastName: data.lastName,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+          status: 'ACTIVE',
+        },
+      });
+
+      const customerCode = await ensureUniqueCode(tx, generateCustomerCode());
+
+      customer = await tx.customer.create({
+        data: {
+          customerCode,
+          customerType: 'PERSON',
+          personId: person.id,
+          status: 'ACTIVE',
+          creditLimit: 0,
+        },
+      });
+    } else if (data.customerType === 'ORGANIZATION') {
+      const existingReg = await prisma.organization.findFirst({
+        where: { registrationNumber: data.registrationNumber },
+      });
+      if (existingReg) {
+        throw new AppError('Organization with this registration number already exists', 409);
+      }
+
+      const existingTax = await prisma.organization.findFirst({
+        where: { taxNumber: data.taxNumber },
+      });
+      if (existingTax) {
+        throw new AppError('Organization with this tax number already exists', 409);
+      }
+
+      if (!data.contacts || data.contacts.length === 0) {
+        throw new AppError('At least one contact person is required for organization registration', 400);
+      }
+
+      for (const contact of data.contacts) {
+        if (contact.email) {
+          const existingEmail = await prisma.person.findFirst({
+            where: { email: contact.email },
+          });
+          if (existingEmail) {
+            throw new AppError('Contact email already registered', 400);
+          }
+        }
+      }
+
+      const organization = await tx.organization.create({
+        data: {
+          name: data.name,
+          registrationNumber: data.registrationNumber,
+          taxNumber: data.taxNumber,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+          status: 'ACTIVE',
+        },
+      });
+
+      const createdPersons = [];
+      let primaryPerson = null;
+
+      for (const contact of data.contacts) {
+        const person = await tx.person.create({
+          data: {
+            firstName: contact.firstName,
+            middleName: contact.middleName,
+            lastName: contact.lastName,
+            phone: contact.phone,
+            email: contact.email,
+            address: contact.address || data.address,
+            status: 'ACTIVE',
+          },
+        });
+        createdPersons.push(person);
+
+        if (contact.isPrimary) {
+          primaryPerson = person;
+        }
+
+        await tx.organizationContact.create({
+          data: {
+            organizationId: organization.id,
+            personId: person.id,
+            position: contact.position,
+            isPrimary: contact.isPrimary,
+          },
+        });
+      }
+
+      const customerCode = await ensureUniqueCode(tx, generateCustomerCode());
+
+      customer = await tx.customer.create({
+        data: {
+          customerCode,
+          customerType: 'ORGANIZATION',
+          organizationId: organization.id,
+          status: 'ACTIVE',
+          creditLimit: 0,
+        },
+      });
+
+      if (!primaryPerson && createdPersons.length > 0) {
+        primaryPerson = createdPersons[0];
+      }
+
+      if (primaryPerson) {
+        person = primaryPerson;
+      }
+    } else {
+      throw new AppError('Invalid customer type', 400);
+    }
+
+    const user = await tx.user.create({
       data: {
         personId: person.id,
         username: data.username,
         passwordHash,
+        isActive: true,
       },
       include: {
         person: true,
       },
     });
+
+    await tx.userRole.create({
+      data: {
+        userId: user.id,
+        roleId: customerRole.id,
+      },
+    });
+
+    return { user, customer };
+  });
+
+  const customerWithRelations = await prisma.customer.findUnique({
+    where: { id: result.customer.id },
+    include: {
+      person: true,
+      organization: {
+        include: {
+          contacts: {
+            include: {
+              person: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  middleName: true,
+                  lastName: true,
+                  phone: true,
+                  email: true,
+                  address: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   const accessToken = signAccessToken({
-    userId: user.id,
-    username: user.username,
+    userId: result.user.id,
+    username: result.user.username,
   });
   const refreshToken = signRefreshToken({
-    userId: user.id,
-    username: user.username,
+    userId: result.user.id,
+    username: result.user.username,
   });
   const refreshTokenHash = await hashPassword(refreshToken);
 
   await prisma.user.update({
-    where: { id: user.id },
+    where: { id: result.user.id },
     data: {
       refreshTokenHash,
       refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -74,15 +232,30 @@ export async function register(data, req) {
   });
 
   await logAudit({
-    userId: user.id,
-    action: 'USER_REGISTERED',
-    entityType: 'User',
-    entityId: user.id,
-    newValues: { username: user.username },
+    userId: result.user.id,
+    action: 'CUSTOMER_REGISTERED',
+    entityType: 'Customer',
+    entityId: result.customer.id,
+    newValues: {
+      username: result.user.username,
+      customerCode: result.customer.customerCode,
+      customerType: result.customer.customerType,
+    },
     req,
   });
 
-  return { user, accessToken, refreshToken };
+  return {
+    user: result.user,
+    customer: customerWithRelations,
+    accessToken,
+    refreshToken,
+  };
+}
+
+function generateCustomerCode() {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `CUS-${timestamp}-${random}`;
 }
 
 export async function login(data, req) {
@@ -90,14 +263,28 @@ export async function login(data, req) {
     where: { username: data.username },
     include: {
       person: true,
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              rolePermissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
   if (!user) {
     await logAudit({
+      userId: null,
       action: 'LOGIN_FAILED',
       entityType: 'User',
-      entityId: 'unknown',
+      entityId: null,
       newValues: { username: data.username, reason: 'User not found' },
       req,
     });
@@ -358,6 +545,8 @@ export async function createPasswordResetToken(email) {
     entityId: person.user.id,
     req: null,
   });
+
+  await sendResetPasswordEmail(email, resetToken, person.firstName);
 
   return { userId: person.user.id, resetToken, resetTokenExpires };
 }

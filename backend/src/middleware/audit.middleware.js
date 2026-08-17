@@ -2,7 +2,7 @@ import prisma from '../config/prisma.js';
 import { logger } from '../utils/logger.js';
 
 export async function logAudit({
-  userId,
+  createdById,
   action,
   entityType,
   entityId,
@@ -13,10 +13,10 @@ export async function logAudit({
   try {
     await prisma.auditLog.create({
       data: {
-        userId,
+        ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
         action,
         entityType,
-        entityId,
+        entityId: entityId || '00000000-0000-0000-0000-000000000000',
         oldValues,
         newValues,
         ipAddress: req?.ip || req?.connection?.remoteAddress,

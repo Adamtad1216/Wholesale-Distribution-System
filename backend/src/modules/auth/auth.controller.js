@@ -61,10 +61,12 @@ export async function getCurrentUser(req, res, next) {
 export async function forgotPassword(req, res, next) {
   try {
     const result = await createPasswordResetToken(req.body.email);
+
     if (!result) {
-      return sendSuccess(res, { message: 'If the email exists, a reset link has been sent' });
+      return sendError(res, 'Email not found', 404);
     }
-    sendSuccess(res, { message: 'If the email exists, a reset link has been sent' });
+
+    sendSuccess(res, { message: 'Reset link sent to your email' });
   } catch (err) {
     next(err);
   }

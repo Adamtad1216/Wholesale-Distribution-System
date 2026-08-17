@@ -4,6 +4,7 @@ import {
   getQuotations,
   getQuotationById,
   createQuotation,
+  removeQuotation,
 } from "./quotations.controller.js";
 import {
   quotationQuerySchema,
@@ -19,5 +20,6 @@ router.use(authenticate);
 router.get("/", validate(quotationQuerySchema), getQuotations);
 router.post("/", validate(createQuotationSchema), createQuotation);
 router.get("/:id", validate(quotationIdSchema), getQuotationById);
+router.delete("/:id", validate(quotationIdSchema), removeQuotation);
 
 export default router;

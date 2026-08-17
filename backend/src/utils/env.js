@@ -18,6 +18,13 @@ const envSchema = z.object({
   RESET_TOKEN_SECRET: z.string().min(32),
   RESET_TOKEN_EXPIRES: z.string().default('1h'),
   BASE_URL: z.string().url().default('http://localhost:5000'),
+  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().default('Wholesale Distribution <noreply@wholesale.com>'),
+  SMTP_REJECT_UNAUTHORIZED: z.string().default('true'),
 });
 
 export function validateEnv() {

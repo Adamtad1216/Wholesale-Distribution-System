@@ -17,3 +17,7 @@ export const updateDeliveryStatus = async () => {
 export const createDeliveryProof = async () => {
   throw new Error("Not implemented");
 };
+
+export const deleteDelivery = async () => {
+  throw new Error("Not implemented");
+};

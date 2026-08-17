@@ -13,3 +13,7 @@ export const markNotificationAsRead = async () => {
 export const markAllNotificationsAsRead = async () => {
   throw new Error("Not implemented");
 };
+
+export const deleteNotification = async () => {
+  throw new Error("Not implemented");
+};

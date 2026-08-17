@@ -6,6 +6,7 @@ import {
   createDelivery,
   updateDeliveryStatus,
   createDeliveryProof,
+  removeDelivery,
 } from "./delivery.controller.js";
 import {
   deliveryQuerySchema,
@@ -25,5 +26,6 @@ router.post("/", validate(createDeliverySchema), createDelivery);
 router.get("/:id", validate(deliveryIdSchema), getDeliveryById);
 router.patch("/:id/status", validate(deliveryIdSchema), validate(updateDeliveryStatusSchema), updateDeliveryStatus);
 router.post("/:id/proof", validate(deliveryIdSchema), validate(createDeliveryProofSchema), createDeliveryProof);
+router.delete("/:id", validate(deliveryIdSchema), removeDelivery);
 
 export default router;
