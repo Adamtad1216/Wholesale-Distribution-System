@@ -6,14 +6,44 @@ datasource db {
   provider = "postgresql"
 }
 
+model Region {
+  id String @id @default(uuid()) @db.Uuid
+
+  name        String
+  code        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  createdById String? @map("created_by_id") @db.Uuid
+  updatedById String? @map("updated_by_id") @db.Uuid
+
+  createdBy User? @relation("RegionCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("RegionUpdater", fields: [updatedById], references: [id])
+
+  branches   Branch[]
+  companies  Company[]
+  warehouses Warehouse[]
+
+  @@map("regions")
+}
 
 // ============================================================
-// ENUMS
+// OTHER ENUMS
 // ============================================================
 
 enum RequestSource {
   CUSTOMER_PORTAL
   SALES_OFFICER
+}
+
+enum UserAccountStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
 }
 
 enum StockMovementType {
@@ -41,1920 +71,1894 @@ enum PaymentMethod {
   OTHER
 }
 
+enum CustomerType {
+  PERSON
+  ORGANIZATION
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  PENDING_REVIEW
+  ADJUSTMENT_REQUIRED
+  APPROVED
+  REJECTED
+  RESERVED
+  READY_FOR_DELIVERY
+  PARTIALLY_FULFILLED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum SalesOrderSource {
+  CUSTOMER_PORTAL
+  SALES_REPRESENTATIVE
+}
+
+enum SalesOrderHistoryAction {
+  CREATED
+  SUBMITTED
+  ADJUSTMENT_REQUESTED
+  RESUBMITTED
+  APPROVED
+  REJECTED
+  RESERVATION_CREATED
+  READY_FOR_DELIVERY
+  PARTIALLY_FULFILLED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum StockReservationStatus {
+  RESERVED
+  PARTIALLY_FULFILLED
+  FULFILLED
+  RELEASED
+  CANCELLED
+}
+
+enum PricingRuleStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum DeliveryStatus {
+  SCHEDULED
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  PARTIAL
+  FAILED
+  RETURNED
+  CANCELLED
+}
+
+enum ReturnStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  RECEIVED
+  INSPECTED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOID
+  CREDITED
+}
 
 // ============================================================
-// 01. IDENTITY & ACCESS
+// IDENTITY & ACCESS
 // ============================================================
 
 model Person {
-
-  id           String    @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  firstName    String    @map("first_name")
-  middleName   String?   @map("middle_name")
-  lastName     String    @map("last_name")
-  phone        String?
-  email        String?   @unique
-  address      String?
-  status       String    @default("ACTIVE")
-
+  id                   String                @id @default(uuid()) @db.Uuid
+  createdById          String?               @map("created_by_id") @db.Uuid
+  updatedById          String?               @map("updated_by_id") @db.Uuid
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  isArchived           Boolean               @default(false) @map("is_archived")
+  archivedAt           DateTime?             @map("archived_at")
+  firstName            String                @map("first_name")
+  middleName           String?               @map("middle_name")
+  lastName             String                @map("last_name")
+  phone                String?
+  email                String?               @unique
+  address              String?
+  status               String                @default("ACTIVE")
   user                 User?
   employee             Employee?
   organizationContacts OrganizationContact[]
 
-  createdBy User? @relation("PersonCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("PersonUpdater", fields: [updatedById], references: [id])
-  customers            Customer[] @relation("PersonCustomer")
-  suppliers            Supplier[] @relation("PersonSupplier")
+  createdBy User?      @relation("PersonCreator", fields: [createdById], references: [id])
+  updatedBy User?      @relation("PersonUpdater", fields: [updatedById], references: [id])
+  customers Customer[] @relation("PersonCustomer")
+  suppliers Supplier[] @relation("PersonSupplier")
 
-
-  @@index([email])
-  @@index([phone])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("persons")
 }
+
 model User {
+  id                       String            @id @default(uuid()) @db.Uuid
+  createdById              String?           @map("created_by_id") @db.Uuid
+  updatedById              String?           @map("updated_by_id") @db.Uuid
+  createdAt                DateTime          @default(now()) @map("created_at")
+  updatedAt                DateTime          @updatedAt @map("updated_at")
+  isArchived               Boolean           @default(false) @map("is_archived")
+  archivedAt               DateTime?         @map("archived_at")
+  personId                 String            @unique @map("person_id") @db.Uuid
+  username                 String?           @unique
+  passwordHash             String?           @map("password_hash")
+  accountStatus            UserAccountStatus @default(INVITED) @map("account_status")
+  isActive                 Boolean           @default(false) @map("is_active")
+  lastLoginAt              DateTime?         @map("last_login_at")
+  failedLoginAttempts      Int               @default(0) @map("failed_login_attempts")
+  lockedUntil              DateTime?         @map("locked_until")
+  refreshTokenHash         String?           @map("refresh_token_hash")
+  refreshTokenExpiresAt    DateTime?         @map("refresh_token_expires_at")
+  resetTokenHash           String?           @map("reset_token_hash")
+  resetTokenExpires        DateTime?         @map("reset_token_expires")
+  invitationTokenHash      String?           @unique @map("invitation_token_hash")
+  invitationTokenExpiresAt DateTime?         @map("invitation_token_expires_at")
+  invitationAcceptedAt     DateTime?         @map("invitation_accepted_at")
+  userRoles                UserRole[]
+  aiQueries                AiQuery[]
+  notifications            Notification[]
+  auditLogs                AuditLog[]
+  receivedGoodsReceipts    GoodsReceipt[]
+  receivedPayments         Payment[]
+  processedRefunds         Refund[]
 
-
-  id           String    @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-
-  createdUsers User[] @relation("UserCreator")
-  updatedUsers User[] @relation("UserUpdater")
-
-  createdPersons Person[] @relation("PersonCreator")
-  updatedPersons Person[] @relation("PersonUpdater")
-  createdRoles Role[] @relation("RoleCreator")
-  updatedRoles Role[] @relation("RoleUpdater")
-  createdPermissions Permission[] @relation("PermissionCreator")
-  updatedPermissions Permission[] @relation("PermissionUpdater")
-  createdUserRoles UserRole[] @relation("UserRoleCreator")
-  updatedUserRoles UserRole[] @relation("UserRoleUpdater")
-  createdRolePermissions RolePermission[] @relation("RolePermissionCreator")
-  updatedRolePermissions RolePermission[] @relation("RolePermissionUpdater")
-  createdEmployees Employee[] @relation("EmployeeCreator")
-  updatedEmployees Employee[] @relation("EmployeeUpdater")
-  createdSalesRepresentatives SalesRepresentative[] @relation("SalesRepresentativeCreator")
-  updatedSalesRepresentatives SalesRepresentative[] @relation("SalesRepresentativeUpdater")
-  createdDrivers Driver[] @relation("DriverCreator")
-  updatedDrivers Driver[] @relation("DriverUpdater")
-  createdOrganizations Organization[] @relation("OrganizationCreator")
-  updatedOrganizations Organization[] @relation("OrganizationUpdater")
-  createdOrganizationContacts OrganizationContact[] @relation("OrganizationContactCreator")
-  updatedOrganizationContacts OrganizationContact[] @relation("OrganizationContactUpdater")
-  createdCustomers Customer[] @relation("CustomerCreator")
-  updatedCustomers Customer[] @relation("CustomerUpdater")
-  createdSuppliers Supplier[] @relation("SupplierCreator")
-  updatedSuppliers Supplier[] @relation("SupplierUpdater")
-  createdPaymentTerms PaymentTerms[] @relation("PaymentTermsCreator")
-  updatedPaymentTerms PaymentTerms[] @relation("PaymentTermsUpdater")
-  createdCategories Category[] @relation("CategoryCreator")
-  updatedCategories Category[] @relation("CategoryUpdater")
-  createdBrands Brand[] @relation("BrandCreator")
-  updatedBrands Brand[] @relation("BrandUpdater")
-  createdUnits Unit[] @relation("UnitCreator")
-  updatedUnits Unit[] @relation("UnitUpdater")
-  createdProducts Product[] @relation("ProductCreator")
-  updatedProducts Product[] @relation("ProductUpdater")
-  createdProductVariants ProductVariant[] @relation("ProductVariantCreator")
-  updatedProductVariants ProductVariant[] @relation("ProductVariantUpdater")
-  createdProductImages ProductImage[] @relation("ProductImageCreator")
-  updatedProductImages ProductImage[] @relation("ProductImageUpdater")
-  createdWarehouses Warehouse[] @relation("WarehouseCreator")
-  updatedWarehouses Warehouse[] @relation("WarehouseUpdater")
-  createdWarehouseStocks WarehouseStock[] @relation("WarehouseStockCreator")
-  updatedWarehouseStocks WarehouseStock[] @relation("WarehouseStockUpdater")
-  createdStockMovements StockMovement[] @relation("StockMovementCreator")
-  updatedStockMovements StockMovement[] @relation("StockMovementUpdater")
-  createdStockReservations StockReservation[] @relation("StockReservationCreator")
-  updatedStockReservations StockReservation[] @relation("StockReservationUpdater")
-  createdStockAdjustments StockAdjustment[] @relation("StockAdjustmentCreator")
-  updatedStockAdjustments StockAdjustment[] @relation("StockAdjustmentUpdater")
-  createdStockAdjustmentItems StockAdjustmentItem[] @relation("StockAdjustmentItemCreator")
-  updatedStockAdjustmentItems StockAdjustmentItem[] @relation("StockAdjustmentItemUpdater")
-  createdPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderCreator")
-  updatedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderUpdater")
-  createdPurchaseOrderItems PurchaseOrderItem[] @relation("PurchaseOrderItemCreator")
-  updatedPurchaseOrderItems PurchaseOrderItem[] @relation("PurchaseOrderItemUpdater")
-  createdGoodsReceipts GoodsReceipt[] @relation("GoodsReceiptCreator")
-  updatedGoodsReceipts GoodsReceipt[] @relation("GoodsReceiptUpdater")
-  createdGoodsReceiptItems GoodsReceiptItem[] @relation("GoodsReceiptItemCreator")
-  updatedGoodsReceiptItems GoodsReceiptItem[] @relation("GoodsReceiptItemUpdater")
-  createdSupplierInvoices SupplierInvoice[] @relation("SupplierInvoiceCreator")
-  updatedSupplierInvoices SupplierInvoice[] @relation("SupplierInvoiceUpdater")
-  createdPurchaseReturns PurchaseReturn[] @relation("PurchaseReturnCreator")
-  updatedPurchaseReturns PurchaseReturn[] @relation("PurchaseReturnUpdater")
-  createdPurchaseReturnItems PurchaseReturnItem[] @relation("PurchaseReturnItemCreator")
-  updatedPurchaseReturnItems PurchaseReturnItem[] @relation("PurchaseReturnItemUpdater")
-  createdSalesRequests SalesRequest[] @relation("SalesRequestCreator")
-  updatedSalesRequests SalesRequest[] @relation("SalesRequestUpdater")
-  createdSalesRequestItems SalesRequestItem[] @relation("SalesRequestItemCreator")
-  updatedSalesRequestItems SalesRequestItem[] @relation("SalesRequestItemUpdater")
-  createdQuotations Quotation[] @relation("QuotationCreator")
-  updatedQuotations Quotation[] @relation("QuotationUpdater")
+  createdCompanies                Company[]                 @relation("CompanyCreator")
+  updatedCompanies                Company[]                 @relation("CompanyUpdater")
+  createdBranches                 Branch[]                  @relation("BranchCreator")
+  updatedBranches                 Branch[]                  @relation("BranchUpdater")
+  createdUsers                    User[]                    @relation("UserCreator")
+  updatedUsers                    User[]                    @relation("UserUpdater")
+  createdPersons                  Person[]                  @relation("PersonCreator")
+  updatedPersons                  Person[]                  @relation("PersonUpdater")
+  createdRoles                    Role[]                    @relation("RoleCreator")
+  updatedRoles                    Role[]                    @relation("RoleUpdater")
+  createdPermissions              Permission[]              @relation("PermissionCreator")
+  updatedPermissions              Permission[]              @relation("PermissionUpdater")
+  createdUserRoles                UserRole[]                @relation("UserRoleCreator")
+  updatedUserRoles                UserRole[]                @relation("UserRoleUpdater")
+  createdRolePermissions          RolePermission[]          @relation("RolePermissionCreator")
+  updatedRolePermissions          RolePermission[]          @relation("RolePermissionUpdater")
+  createdEmployees                Employee[]                @relation("EmployeeCreator")
+  updatedEmployees                Employee[]                @relation("EmployeeUpdater")
+  createdJobSpecifications        JobSpecification[]        @relation("JobSpecificationCreator")
+  updatedJobSpecifications        JobSpecification[]        @relation("JobSpecificationUpdater")
+  createdOrganizations            Organization[]            @relation("OrganizationCreator")
+  updatedOrganizations            Organization[]            @relation("OrganizationUpdater")
+  createdOrganizationContacts     OrganizationContact[]     @relation("OrganizationContactCreator")
+  updatedOrganizationContacts     OrganizationContact[]     @relation("OrganizationContactUpdater")
+  createdCustomers                Customer[]                @relation("CustomerCreator")
+  updatedCustomers                Customer[]                @relation("CustomerUpdater")
+  createdSuppliers                Supplier[]                @relation("SupplierCreator")
+  updatedSuppliers                Supplier[]                @relation("SupplierUpdater")
+  createdPaymentTerms             PaymentTerms[]            @relation("PaymentTermsCreator")
+  updatedPaymentTerms             PaymentTerms[]            @relation("PaymentTermsUpdater")
+  createdCategories               Category[]                @relation("CategoryCreator")
+  updatedCategories               Category[]                @relation("CategoryUpdater")
+  createdBrands                   Brand[]                   @relation("BrandCreator")
+  updatedBrands                   Brand[]                   @relation("BrandUpdater")
+  createdUnits                    Unit[]                    @relation("UnitCreator")
+  updatedUnits                    Unit[]                    @relation("UnitUpdater")
+  createdProducts                 Product[]                 @relation("ProductCreator")
+  updatedProducts                 Product[]                 @relation("ProductUpdater")
+  createdProductImages            ProductImage[]            @relation("ProductImageCreator")
+  updatedProductImages            ProductImage[]            @relation("ProductImageUpdater")
+  createdWarehouses               Warehouse[]               @relation("WarehouseCreator")
+  updatedWarehouses               Warehouse[]               @relation("WarehouseUpdater")
+  createdWarehouseStocks          WarehouseStock[]          @relation("WarehouseStockCreator")
+  updatedWarehouseStocks          WarehouseStock[]          @relation("WarehouseStockUpdater")
+  createdStockMovements           StockMovement[]           @relation("StockMovementCreator")
+  updatedStockMovements           StockMovement[]           @relation("StockMovementUpdater")
+  createdStockReservations        StockReservation[]        @relation("StockReservationCreator")
+  updatedStockReservations        StockReservation[]        @relation("StockReservationUpdater")
+  createdStockAdjustments         StockAdjustment[]         @relation("StockAdjustmentCreator")
+  updatedStockAdjustments         StockAdjustment[]         @relation("StockAdjustmentUpdater")
+  createdStockAdjustmentItems     StockAdjustmentItem[]     @relation("StockAdjustmentItemCreator")
+  updatedStockAdjustmentItems     StockAdjustmentItem[]     @relation("StockAdjustmentItemUpdater")
+  createdPurchaseOrders           PurchaseOrder[]           @relation("PurchaseOrderCreator")
+  updatedPurchaseOrders           PurchaseOrder[]           @relation("PurchaseOrderUpdater")
+  createdPurchaseOrderItems       PurchaseOrderItem[]       @relation("PurchaseOrderItemCreator")
+  updatedPurchaseOrderItems       PurchaseOrderItem[]       @relation("PurchaseOrderItemUpdater")
+  createdGoodsReceipts            GoodsReceipt[]            @relation("GoodsReceiptCreator")
+  updatedGoodsReceipts            GoodsReceipt[]            @relation("GoodsReceiptUpdater")
+  createdGoodsReceiptItems        GoodsReceiptItem[]        @relation("GoodsReceiptItemCreator")
+  updatedGoodsReceiptItems        GoodsReceiptItem[]        @relation("GoodsReceiptItemUpdater")
+  createdSupplierInvoices         SupplierInvoice[]         @relation("SupplierInvoiceCreator")
+  updatedSupplierInvoices         SupplierInvoice[]         @relation("SupplierInvoiceUpdater")
+  createdPurchaseReturns          PurchaseReturn[]          @relation("PurchaseReturnCreator")
+  updatedPurchaseReturns          PurchaseReturn[]          @relation("PurchaseReturnUpdater")
+  createdPurchaseReturnItems      PurchaseReturnItem[]      @relation("PurchaseReturnItemCreator")
+  updatedPurchaseReturnItems      PurchaseReturnItem[]      @relation("PurchaseReturnItemUpdater")
+  createdSalesRequestItems        SalesRequestItem[]        @relation("SalesRequestItemCreator")
+  updatedSalesRequestItems        SalesRequestItem[]        @relation("SalesRequestItemUpdater")
+  createdSalesRequests            SalesRequest[]            @relation("SalesRequestCreator")
+  updatedSalesRequests            SalesRequest[]            @relation("SalesRequestUpdater")
+  createdQuotations               Quotation[]               @relation("QuotationCreator")
+  updatedQuotations               Quotation[]               @relation("QuotationUpdater")
   createdSalesOrderQuotationItems SalesOrderQuotationItem[] @relation("SalesOrderQuotationItemCreator")
   updatedSalesOrderQuotationItems SalesOrderQuotationItem[] @relation("SalesOrderQuotationItemUpdater")
-  createdSalesOrders SalesOrder[] @relation("SalesOrderCreator")
-  updatedSalesOrders SalesOrder[] @relation("SalesOrderUpdater")
-  createdSalesOrderItems SalesOrderItem[] @relation("SalesOrderItemCreator")
-  updatedSalesOrderItems SalesOrderItem[] @relation("SalesOrderItemUpdater")
-  createdSalesReturns SalesReturn[] @relation("SalesReturnCreator")
-  updatedSalesReturns SalesReturn[] @relation("SalesReturnUpdater")
-  createdSalesReturnItems SalesReturnItem[] @relation("SalesReturnItemCreator")
-  updatedSalesReturnItems SalesReturnItem[] @relation("SalesReturnItemUpdater")
-  createdVehicles Vehicle[] @relation("VehicleCreator")
-  updatedVehicles Vehicle[] @relation("VehicleUpdater")
-  createdDeliveries Delivery[] @relation("DeliveryCreator")
-  updatedDeliveries Delivery[] @relation("DeliveryUpdater")
-  createdDeliveryItems DeliveryItem[] @relation("DeliveryItemCreator")
-  updatedDeliveryItems DeliveryItem[] @relation("DeliveryItemUpdater")
-  createdDeliveryProofs DeliveryProof[] @relation("DeliveryProofCreator")
-  updatedDeliveryProofs DeliveryProof[] @relation("DeliveryProofUpdater")
-  createdInvoices Invoice[] @relation("InvoiceCreator")
-  updatedInvoices Invoice[] @relation("InvoiceUpdater")
-  createdInvoiceItems InvoiceItem[] @relation("InvoiceItemCreator")
-  updatedInvoiceItems InvoiceItem[] @relation("InvoiceItemUpdater")
-  createdPayments Payment[] @relation("PaymentCreator")
-  updatedPayments Payment[] @relation("PaymentUpdater")
-  createdPaymentAllocations PaymentAllocation[] @relation("PaymentAllocationCreator")
-  updatedPaymentAllocations PaymentAllocation[] @relation("PaymentAllocationUpdater")
-  createdRefunds Refund[] @relation("RefundCreator")
-  updatedRefunds Refund[] @relation("RefundUpdater")
-  createdCredits Credit[] @relation("CreditCreator")
-  updatedCredits Credit[] @relation("CreditUpdater")
-  createdAiQueries AiQuery[] @relation("AiQueryCreator")
-  updatedAiQueries AiQuery[] @relation("AiQueryUpdater")
-  createdAiRecommendations AiRecommendation[] @relation("AiRecommendationCreator")
-  updatedAiRecommendations AiRecommendation[] @relation("AiRecommendationUpdater")
-  createdAiRecommendationSources AiRecommendationSource[] @relation("AiRecommendationSourceCreator")
-  updatedAiRecommendationSources AiRecommendationSource[] @relation("AiRecommendationSourceUpdater")
-  createdNotifications Notification[] @relation("NotificationCreator")
-  updatedNotifications Notification[] @relation("NotificationUpdater")
-  createdAuditLogs AuditLog[] @relation("AuditLogCreator")
-  updatedAuditLogs AuditLog[] @relation("AuditLogUpdater")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  personId     String    @unique @map("person_id") @db.Uuid
-  username     String    @unique
-  passwordHash String    @map("password_hash")
-  isActive     Boolean   @default(true) @map("is_active")
-  lastLoginAt  DateTime? @map("last_login_at")
-  failedLoginAttempts Int @default(0) @map("failed_login_attempts")
-  lockedUntil DateTime? @map("locked_until")
-  refreshTokenHash String? @map("refresh_token_hash")
-  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
-  resetTokenHash String? @map("reset_token_hash")
-  resetTokenExpires DateTime? @map("reset_token_expires")
+  createdSalesOrders              SalesOrder[]              @relation("SalesOrderCreator")
+  updatedSalesOrders              SalesOrder[]              @relation("SalesOrderUpdater")
+  createdSalesOrderItems          SalesOrderItem[]          @relation("SalesOrderItemCreator")
+  updatedSalesOrderItems          SalesOrderItem[]          @relation("SalesOrderItemUpdater")
+  createdSalesReturns             SalesReturn[]             @relation("SalesReturnCreator")
+  updatedSalesReturns             SalesReturn[]             @relation("SalesReturnUpdater")
+  createdSalesReturnItems         SalesReturnItem[]         @relation("SalesReturnItemCreator")
+  updatedSalesReturnItems         SalesReturnItem[]         @relation("SalesReturnItemUpdater")
+  createdVehicles                 Vehicle[]                 @relation("VehicleCreator")
+  updatedVehicles                 Vehicle[]                 @relation("VehicleUpdater")
+  createdDeliveries               Delivery[]                @relation("DeliveryCreator")
+  updatedDeliveries               Delivery[]                @relation("DeliveryUpdater")
+  createdDeliveryItems            DeliveryItem[]            @relation("DeliveryItemCreator")
+  updatedDeliveryItems            DeliveryItem[]            @relation("DeliveryItemUpdater")
+  createdDeliveryProofs           DeliveryProof[]           @relation("DeliveryProofCreator")
+  updatedDeliveryProofs           DeliveryProof[]           @relation("DeliveryProofUpdater")
+  createdInvoices                 Invoice[]                 @relation("InvoiceCreator")
+  updatedInvoices                 Invoice[]                 @relation("InvoiceUpdater")
+  createdInvoiceItems             InvoiceItem[]             @relation("InvoiceItemCreator")
+  updatedInvoiceItems             InvoiceItem[]             @relation("InvoiceItemUpdater")
+  createdPayments                 Payment[]                 @relation("PaymentCreator")
+  updatedPayments                 Payment[]                 @relation("PaymentUpdater")
+  createdPaymentAllocations       PaymentAllocation[]       @relation("PaymentAllocationCreator")
+  updatedPaymentAllocations       PaymentAllocation[]       @relation("PaymentAllocationUpdater")
+  createdRefunds                  Refund[]                  @relation("RefundCreator")
+  updatedRefunds                  Refund[]                  @relation("RefundUpdater")
+  createdCredits                  Credit[]                  @relation("CreditCreator")
+  updatedCredits                  Credit[]                  @relation("CreditUpdater")
+  createdAiQueries                AiQuery[]                 @relation("AiQueryCreator")
+  updatedAiQueries                AiQuery[]                 @relation("AiQueryUpdater")
+  createdAiRecommendations        AiRecommendation[]        @relation("AiRecommendationCreator")
+  updatedAiRecommendations        AiRecommendation[]        @relation("AiRecommendationUpdater")
+  createdAiRecommendationSources  AiRecommendationSource[]  @relation("AiRecommendationSourceCreator")
+  updatedAiRecommendationSources  AiRecommendationSource[]  @relation("AiRecommendationSourceUpdater")
+  createdNotifications            Notification[]            @relation("NotificationCreator")
+  updatedNotifications            Notification[]            @relation("NotificationUpdater")
+  createdAuditLogs                AuditLog[]                @relation("AuditLogCreator")
+  updatedAuditLogs                AuditLog[]                @relation("AuditLogUpdater")
+  createdBy                       User?                     @relation("UserCreator", fields: [createdById], references: [id])
+  updatedBy                       User?                     @relation("UserUpdater", fields: [updatedById], references: [id])
+  person                          Person                    @relation(fields: [personId], references: [id])
+  createdRegions                  Region[]                  @relation("RegionCreator")
+  updatedRegions                  Region[]                  @relation("RegionUpdater")
+  approvedStockAdjustments        StockAdjustment[]         @relation("AdjustmentApprover")
+  orderedPurchaseOrders           PurchaseOrder[]           @relation("PurchaseOrderer")
+  approvedPurchaseOrders          PurchaseOrder[]           @relation("PurchaseApprover")
+  approvedSalesOrders             SalesOrder[]              @relation("SalesOrderApprover")
+  salesOrderStatusChanges         SalesOrderStatusHistory[] @relation("SalesOrderStatusChanger")
+  scheduledDeliveries             Delivery[]                @relation("DeliveryScheduler")
+  createdPriceTiers               PriceTier[]               @relation("PriceTierCreator")
+  updatedPriceTiers               PriceTier[]               @relation("PriceTierUpdater")
+  createdDiscountRules            DiscountRule[]            @relation("DiscountRuleCreator")
+  updatedDiscountRules            DiscountRule[]            @relation("DiscountRuleUpdater")
+  createdSalesQuotas              SalesQuota[]              @relation("SalesQuotaCreator")
+  updatedSalesQuotas              SalesQuota[]              @relation("SalesQuotaUpdater")
+  createdCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressCreator")
+  updatedCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressUpdater")
 
-
-  createdBy User? @relation("UserCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("UserUpdater", fields: [updatedById], references: [id])
-  person Person @relation(fields: [personId], references: [id])
-
-  userRoles UserRole[]
-
-  aiQueries AiQuery[]
-
-  notifications Notification[]
-
-  auditLogs AuditLog[]
-  approvedStockAdjustments StockAdjustment[] @relation("AdjustmentApprover")
-  orderedPurchaseOrders PurchaseOrder[] @relation("PurchaseOrderer")
-  approvedPurchaseOrders PurchaseOrder[] @relation("PurchaseApprover")
-  receivedGoodsReceipts GoodsReceipt[]
-  approvedSalesOrders SalesOrder[] @relation("SalesOrderApprover")
-  receivedPayments Payment[]
-  processedRefunds Refund[]
-
-
-
-  @@index([createdById])
-  @@index([updatedById])
   @@map("users")
 }
+
 model Role {
-
-  id          String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  name        String  @unique
-  description String?
-
-  userRoles      UserRole[]
+  id              String           @id @default(uuid()) @db.Uuid
+  createdById     String?          @map("created_by_id") @db.Uuid
+  updatedById     String?          @map("updated_by_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  isArchived      Boolean          @default(false) @map("is_archived")
+  archivedAt      DateTime?        @map("archived_at")
+  name            String           @unique
+  description     String?
+  userRoles       UserRole[]
   rolePermissions RolePermission[]
-
 
   createdBy User? @relation("RoleCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("RoleUpdater", fields: [updatedById], references: [id])
-  @@index([createdById])
-  @@index([updatedById])
+
   @@map("roles")
 }
+
 model Permission {
-
-  id          String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  name        String  @unique
-  module      String
-  action      String
-  description String?
-
+  id              String           @id @default(uuid()) @db.Uuid
+  createdById     String?          @map("created_by_id") @db.Uuid
+  updatedById     String?          @map("updated_by_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  isArchived      Boolean          @default(false) @map("is_archived")
+  archivedAt      DateTime?        @map("archived_at")
+  name            String           @unique
+  module          String
+  action          String
+  description     String?
   rolePermissions RolePermission[]
-
 
   createdBy User? @relation("PermissionCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("PermissionUpdater", fields: [updatedById], references: [id])
-  @@index([createdById])
-  @@index([updatedById])
-  @@index([module])
+
   @@map("permissions")
 }
+
 model UserRole {
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-
-
-  userId String @map("user_id") @db.Uuid
-  roleId String @map("role_id") @db.Uuid
-
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  userId      String    @map("user_id") @db.Uuid
+  roleId      String    @map("role_id") @db.Uuid
 
   createdBy User? @relation("UserRoleCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("UserRoleUpdater", fields: [updatedById], references: [id])
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@index([createdById])
-  @@index([updatedById])
   @@id([userId, roleId])
   @@map("user_roles")
 }
+
 model RolePermission {
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  isArchived   Boolean   @default(false) @map("is_archived")
+  archivedAt   DateTime? @map("archived_at")
+  roleId       String    @map("role_id") @db.Uuid
+  permissionId String    @map("permission_id") @db.Uuid
 
-
-  roleId       String @map("role_id") @db.Uuid
-  permissionId String @map("permission_id") @db.Uuid
-
-
-  createdBy User? @relation("RolePermissionCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("RolePermissionUpdater", fields: [updatedById], references: [id])
+  createdBy  User?      @relation("RolePermissionCreator", fields: [createdById], references: [id])
+  updatedBy  User?      @relation("RolePermissionUpdater", fields: [updatedById], references: [id])
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  @@index([createdById])
-  @@index([updatedById])
   @@id([roleId, permissionId])
   @@map("role_permissions")
 }
+
+model JobSpecification {
+  id          String     @id @default(uuid()) @db.Uuid
+  createdById String?    @map("created_by_id") @db.Uuid
+  updatedById String?    @map("updated_by_id") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  isArchived  Boolean    @default(false) @map("is_archived")
+  archivedAt  DateTime?  @map("archived_at")
+  code        String     @unique
+  title       String     @unique
+  description String?
+  department  String?
+  status      String     @default("ACTIVE")
+  employees   Employee[]
+
+  createdBy User? @relation("JobSpecificationCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("JobSpecificationUpdater", fields: [updatedById], references: [id])
+
+  @@map("job_specifications")
+}
+
 model Employee {
+  id                 String    @id @default(uuid()) @db.Uuid
+  createdById        String?   @map("created_by_id") @db.Uuid
+  updatedById        String?   @map("updated_by_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  isArchived         Boolean   @default(false) @map("is_archived")
+  archivedAt         DateTime? @map("archived_at")
+  personId           String    @unique @map("person_id") @db.Uuid
+  employeeCode       String    @unique @map("employee_code")
+  hireDate           DateTime  @map("hire_date")
+  department         String?
+  jobSpecificationId String    @map("job_specification_id") @db.Uuid
+  status             String    @default("ACTIVE")
 
-  id           String   @id @default(uuid()) @db.Uuid
+  // Job-specific operational data lives on Employee.
+  commissionRate      Decimal?  @map("commission_rate") @db.Decimal(5, 2)
+  salesTerritory      String?   @map("sales_territory")
+  driverLicenseNumber String?   @map("driver_license_number")
+  driverLicenseExpiry DateTime? @map("driver_license_expiry")
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  personId     String   @unique @map("person_id") @db.Uuid
-  employeeCode String   @unique @map("employee_code")
-  hireDate     DateTime @map("hire_date")
-  department   String?
-  jobTitle     String?  @map("job_title")
-  status       String   @default("ACTIVE")
+  managedWarehouses   Warehouse[]    @relation("ManagedWarehouses")
+  managedBranches     Branch[]       @relation("ManagedBranches")
+  quotations          Quotation[]
+  salesOrders         SalesOrder[]
+  assignedCustomers   Customer[]     @relation("AssignedSalesRep")
+  salesRequests       SalesRequest[]
+  deliveries          Delivery[]
+  branchId            String?        @map("branch_id") @db.Uuid
+  isAvailableForSales Boolean        @default(true) @map("is_available_for_sales")
+  branch              Branch?        @relation("EmployeeBranch", fields: [branchId], references: [id])
 
+  createdBy        User?            @relation("EmployeeCreator", fields: [createdById], references: [id])
+  updatedBy        User?            @relation("EmployeeUpdater", fields: [updatedById], references: [id])
+  person           Person           @relation(fields: [personId], references: [id])
+  jobSpecification JobSpecification @relation(fields: [jobSpecificationId], references: [id])
 
-  createdBy User? @relation("EmployeeCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("EmployeeUpdater", fields: [updatedById], references: [id])
-  person Person @relation(fields: [personId], references: [id])
-
-  salesRepresentative SalesRepresentative?
-  driver              Driver?
-
-  managedWarehouses   Warehouse[]
-
-
-  @@index([personId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("employees")
 }
-model SalesRepresentative {
 
-  id             String  @id @default(uuid()) @db.Uuid
+// ============================================================
+// COMPANY & FACILITIES
+// ============================================================
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  employeeId     String  @unique @map("employee_id") @db.Uuid
-  commissionRate Decimal @default(0) @map("commission_rate") @db.Decimal(5, 2)
-  territory      String?
-  status         String  @default("ACTIVE")
+model Company {
+  id                    String    @id @default(uuid()) @db.Uuid
+  createdById           String?   @map("created_by_id") @db.Uuid
+  updatedById           String?   @map("updated_by_id") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  isArchived            Boolean   @default(false) @map("is_archived")
+  archivedAt            DateTime? @map("archived_at")
+  name                  String
+  legalName             String?   @map("legal_name")
+  tradeLicenseNumber    String?   @unique @map("trade_license_number")
+  tinNumber             String?   @unique @map("tin_number")
+  vatRegistrationNumber String?   @unique @map("vat_registration_number")
+  isVatRegistered       Boolean   @default(false) @map("is_vat_registered")
+  phone                 String?
+  alternatePhone        String?   @map("alternate_phone")
+  email                 String?
+  website               String?
+  logoUrl               String?   @map("logo_url")
+  regionId              String    @map("region_id") @db.Uuid
+  region                Region    @relation(fields: [regionId], references: [id])
+  city                  String?
+  subCity               String?   @map("sub_city")
+  woreda                String?
+  kebele                String?
+  houseNumber           String?   @map("house_number")
+  landmark              String?
+  status                String    @default("ACTIVE")
+  branches              Branch[]
 
+  createdBy User? @relation("CompanyCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("CompanyUpdater", fields: [updatedById], references: [id])
 
-  createdBy User? @relation("SalesRepresentativeCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesRepresentativeUpdater", fields: [updatedById], references: [id])
-  employee Employee @relation(fields: [employeeId], references: [id])
-
-  customers Customer[] @relation("AssignedSalesRep")
-
-  salesRequests SalesRequest[]
-  quotations    Quotation[]
-  salesOrders   SalesOrder[]
-
-  @@index([createdById])
-  @@index([updatedById])
-  @@map("sales_representatives")
+  @@map("companies")
 }
-model Driver {
 
-  id            String   @id @default(uuid()) @db.Uuid
+model Branch {
+  id           String    @id @default(uuid()) @db.Uuid
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  isArchived   Boolean   @default(false) @map("is_archived")
+  archivedAt   DateTime? @map("archived_at")
+  companyId    String    @map("company_id") @db.Uuid
+  branchCode   String    @unique @map("branch_code")
+  name         String
+  isHeadOffice Boolean   @default(false) @map("is_head_office")
+  managerId    String?   @map("manager_id") @db.Uuid
+  phone        String?
+  email        String?
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  employeeId    String   @unique @map("employee_id") @db.Uuid
-  licenseNumber String   @map("license_number")
-  licenseExpiry DateTime @map("license_expiry")
-  status        String   @default("ACTIVE")
+  regionId String @map("region_id") @db.Uuid
+  region   Region @relation(fields: [regionId], references: [id])
 
+  city        String?
+  subCity     String?      @map("sub_city")
+  woreda      String?
+  kebele      String?
+  houseNumber String?      @map("house_number")
+  landmark    String?
+  status      String       @default("ACTIVE")
+  warehouses  Warehouse[]
+  employees   Employee[]   @relation("EmployeeBranch")
+  salesQuotas SalesQuota[]
 
-  createdBy User? @relation("DriverCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("DriverUpdater", fields: [updatedById], references: [id])
-  employee Employee @relation(fields: [employeeId], references: [id])
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  manager   Employee? @relation("ManagedBranches", fields: [managerId], references: [id])
+  createdBy User?     @relation("BranchCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("BranchUpdater", fields: [updatedById], references: [id])
 
-  deliveries Delivery[]
-
-  @@index([createdById])
-  @@index([updatedById])
-  @@index([licenseNumber])
-  @@map("drivers")
+  @@map("branches")
 }
+
+model Warehouse {
+  id              String             @id @default(uuid()) @db.Uuid
+  createdById     String?            @map("created_by_id") @db.Uuid
+  updatedById     String?            @map("updated_by_id") @db.Uuid
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  isArchived      Boolean            @default(false) @map("is_archived")
+  archivedAt      DateTime?          @map("archived_at")
+  code            String             @unique
+  name            String
+  branchId        String             @map("branch_id") @db.Uuid
+  location        String?
+  regionId        String             @map("region_id") @db.Uuid
+  region          Region             @relation(fields: [regionId], references: [id])
+  city            String?
+  subCity         String?            @map("sub_city")
+  woreda          String?
+  kebele          String?
+  houseNumber     String?            @map("house_number")
+  managerId       String?            @map("manager_id") @db.Uuid
+  status          String             @default("ACTIVE")
+  stocks          WarehouseStock[]
+  stockMovements  StockMovement[]
+  reservations    StockReservation[]
+  adjustments     StockAdjustment[]
+  purchaseOrders  PurchaseOrder[]
+  goodsReceipts   GoodsReceipt[]
+  salesOrders     SalesOrder[]
+  salesReturns    SalesReturn[]
+  deliveries      Delivery[]
+  purchaseReturns PurchaseReturn[]
+
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  createdBy User?     @relation("WarehouseCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("WarehouseUpdater", fields: [updatedById], references: [id])
+  manager   Employee? @relation("ManagedWarehouses", fields: [managerId], references: [id])
+
+  @@map("warehouses")
+}
+
+// ============================================================
+// ORGANIZATIONS & PARTNERS
+// ============================================================
+
 model Organization {
-
-  id                 String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
+  id                 String                @id @default(uuid()) @db.Uuid
+  createdById        String?               @map("created_by_id") @db.Uuid
+  updatedById        String?               @map("updated_by_id") @db.Uuid
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  isArchived         Boolean               @default(false) @map("is_archived")
+  archivedAt         DateTime?             @map("archived_at")
   name               String
-  registrationNumber String?  @map("registration_number")
-  taxNumber          String?  @map("tax_number")
+  registrationNumber String?               @map("registration_number")
+  taxNumber          String?               @map("tax_number")
   phone              String?
   email              String?
   address            String?
-  status             String   @default("ACTIVE")
+  status             String                @default("ACTIVE")
+  contacts           OrganizationContact[]
 
-  contacts OrganizationContact[]
-
-
-  createdBy User? @relation("OrganizationCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("OrganizationUpdater", fields: [updatedById], references: [id])
+  createdBy User?      @relation("OrganizationCreator", fields: [createdById], references: [id])
+  updatedBy User?      @relation("OrganizationUpdater", fields: [updatedById], references: [id])
   customers Customer[] @relation("OrganizationCustomer")
   suppliers Supplier[] @relation("OrganizationSupplier")
 
-
-  @@index([name])
-  @@index([registrationNumber])
-  @@index([taxNumber])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("organizations")
 }
+
 model OrganizationContact {
+  id             String    @id @default(uuid()) @db.Uuid
+  createdById    String?   @map("created_by_id") @db.Uuid
+  updatedById    String?   @map("updated_by_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  isArchived     Boolean   @default(false) @map("is_archived")
+  archivedAt     DateTime? @map("archived_at")
+  organizationId String    @map("organization_id") @db.Uuid
+  personId       String    @map("person_id") @db.Uuid
+  position       String?
+  isPrimary      Boolean   @default(false) @map("is_primary")
 
-  id           String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  organizationId String @map("organization_id") @db.Uuid
-  personId     String  @map("person_id") @db.Uuid
-  position     String?
-  isPrimary    Boolean @default(false) @map("is_primary")
-
-
-  createdBy User? @relation("OrganizationContactCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("OrganizationContactUpdater", fields: [updatedById], references: [id])
+  createdBy    User?        @relation("OrganizationContactCreator", fields: [createdById], references: [id])
+  updatedBy    User?        @relation("OrganizationContactUpdater", fields: [updatedById], references: [id])
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   person       Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
 
-  @@unique([organizationId, personId])
-  @@index([organizationId])
-  @@index([personId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("organization_contacts")
 }
+
 model Customer {
+  id                 String            @id @default(uuid()) @db.Uuid
+  createdById        String?           @map("created_by_id") @db.Uuid
+  updatedById        String?           @map("updated_by_id") @db.Uuid
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  isArchived         Boolean           @default(false) @map("is_archived")
+  archivedAt         DateTime?         @map("archived_at")
+  customerCode       String            @unique @map("customer_code")
+  personId           String?           @map("person_id") @db.Uuid
+  organizationId     String?           @map("organization_id") @db.Uuid
+  customerType       CustomerType      @map("customer_type")
+  creditLimit        Decimal           @default(0) @map("credit_limit") @db.Decimal(15, 2)
+  paymentTermsId     String?           @map("payment_terms_id") @db.Uuid
+  status             String            @default("ACTIVE")
+  assignedSalesRepId String?           @map("assigned_sales_rep_id") @db.Uuid
+  quotations         Quotation[]
+  salesOrders        SalesOrder[]
+  salesReturns       SalesReturn[]
+  credits            Credit[]
+  deliveries         Delivery[]
+  invoices           Invoice[]
+  payments           Payment[]
+  refunds            Refund[]
+  addresses          CustomerAddress[]
+  salesQuotaUsages   SalesQuotaUsage[]
+  salesRequests      SalesRequest[]
 
-  id                  String   @id @default(uuid()) @db.Uuid
+  createdBy    User?         @relation("CustomerCreator", fields: [createdById], references: [id])
+  updatedBy    User?         @relation("CustomerUpdater", fields: [updatedById], references: [id])
+  person       Person?       @relation("PersonCustomer", fields: [personId], references: [id])
+  organization Organization? @relation("OrganizationCustomer", fields: [organizationId], references: [id])
+  paymentTerms PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
+  salesRep     Employee?     @relation("AssignedSalesRep", fields: [assignedSalesRepId], references: [id])
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  customerCode        String   @unique @map("customer_code")
-  personId            String?  @map("person_id") @db.Uuid
-  organizationId      String?  @map("organization_id") @db.Uuid
-  customerType        String   @map("customer_type")
-  creditLimit         Decimal  @default(0) @map("credit_limit") @db.Decimal(15, 2)
-  paymentTermsId      String?  @map("payment_terms_id") @db.Uuid
-  status              String   @default("ACTIVE")
-  assignedSalesRepId  String?  @map("assigned_sales_rep_id") @db.Uuid
-
-
-  createdBy User? @relation("CustomerCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("CustomerUpdater", fields: [updatedById], references: [id])
-  person       Person?              @relation("PersonCustomer", fields: [personId], references: [id])
-  organization Organization?        @relation("OrganizationCustomer", fields: [organizationId], references: [id])
-  paymentTerms PaymentTerms?       @relation(fields: [paymentTermsId], references: [id])
-  salesRep      SalesRepresentative? @relation("AssignedSalesRep", fields: [assignedSalesRepId], references: [id])
-
-  salesRequests SalesRequest[]
-  quotations    Quotation[]
-  salesOrders   SalesOrder[]
-  salesReturns SalesReturn[]
-
-  credits Credit[]
-  deliveries    Delivery[]
-  invoices      Invoice[]
-  payments      Payment[]
-  refunds       Refund[]
-
-
-  @@index([personId])
-  @@index([organizationId])
-  @@index([assignedSalesRepId])
-  @@index([paymentTermsId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("customers")
 }
+
 model Supplier {
-
-  id             String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  supplierCode   String   @unique @map("supplier_code")
-  personId       String?  @map("person_id") @db.Uuid
-  organizationId String?  @map("organization_id") @db.Uuid
-  paymentTermsId String?  @map("payment_terms_id") @db.Uuid
-  status         String   @default("ACTIVE")
-
-
-  createdBy User? @relation("SupplierCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SupplierUpdater", fields: [updatedById], references: [id])
-  person       Person?        @relation("PersonSupplier", fields: [personId], references: [id])
-  organization Organization?  @relation("OrganizationSupplier", fields: [organizationId], references: [id])
-  paymentTerms PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
-
+  id               String            @id @default(uuid()) @db.Uuid
+  createdById      String?           @map("created_by_id") @db.Uuid
+  updatedById      String?           @map("updated_by_id") @db.Uuid
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  isArchived       Boolean           @default(false) @map("is_archived")
+  archivedAt       DateTime?         @map("archived_at")
+  supplierCode     String            @unique @map("supplier_code")
+  personId         String?           @map("person_id") @db.Uuid
+  organizationId   String?           @map("organization_id") @db.Uuid
+  paymentTermsId   String?           @map("payment_terms_id") @db.Uuid
+  status           String            @default("ACTIVE")
   purchaseOrders   PurchaseOrder[]
   supplierInvoices SupplierInvoice[]
   purchaseReturns  PurchaseReturn[]
   payments         Payment[]
 
+  createdBy    User?         @relation("SupplierCreator", fields: [createdById], references: [id])
+  updatedBy    User?         @relation("SupplierUpdater", fields: [updatedById], references: [id])
+  person       Person?       @relation("PersonSupplier", fields: [personId], references: [id])
+  organization Organization? @relation("OrganizationSupplier", fields: [organizationId], references: [id])
+  paymentTerms PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
 
-  @@index([personId])
-  @@index([organizationId])
-  @@index([paymentTermsId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("suppliers")
 }
+
 model PaymentTerms {
-
-  id          String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
+  id          String     @id @default(uuid()) @db.Uuid
+  createdById String?    @map("created_by_id") @db.Uuid
+  updatedById String?    @map("updated_by_id") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  isArchived  Boolean    @default(false) @map("is_archived")
+  archivedAt  DateTime?  @map("archived_at")
   name        String
   days        Int
   description String?
-
-  customers Customer[]
-  suppliers Supplier[]
-
+  customers   Customer[]
+  suppliers   Supplier[]
 
   createdBy User? @relation("PaymentTermsCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("PaymentTermsUpdater", fields: [updatedById], references: [id])
-  @@index([createdById])
-  @@index([updatedById])
+
   @@map("payment_terms")
 }
+
+// ============================================================
+// PRODUCT CATALOG
+// ============================================================
+
 model Category {
-
-  id          String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
   name        String
   description String?
-  parentId    String? @map("parent_id") @db.Uuid
-  status      String  @default("ACTIVE")
+  parentId    String?   @map("parent_id") @db.Uuid
+  status      String    @default("ACTIVE")
+  products    Product[]
 
+  createdBy User?      @relation("CategoryCreator", fields: [createdById], references: [id])
+  updatedBy User?      @relation("CategoryUpdater", fields: [updatedById], references: [id])
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
 
-  createdBy User? @relation("CategoryCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("CategoryUpdater", fields: [updatedById], references: [id])
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryHierarchy")
-
-  products Product[]
-
-  @@index([parentId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("categories")
 }
+
 model Brand {
-
-  id          String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  name        String  @unique
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  name        String    @unique
   description String?
-  status      String  @default("ACTIVE")
-
-  products Product[]
-
+  status      String    @default("ACTIVE")
+  products    Product[]
 
   createdBy User? @relation("BrandCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("BrandUpdater", fields: [updatedById], references: [id])
-  @@index([createdById])
-  @@index([updatedById])
+
   @@map("brands")
 }
+
 model Unit {
-
-  id           String @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
+  id           String    @id @default(uuid()) @db.Uuid
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  isArchived   Boolean   @default(false) @map("is_archived")
+  archivedAt   DateTime? @map("archived_at")
   name         String
   abbreviation String
-
-  products Product[]
-  variants ProductVariant[]
-
+  products     Product[]
 
   createdBy User? @relation("UnitCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("UnitUpdater", fields: [updatedById], references: [id])
-  @@index([createdById])
-  @@index([updatedById])
+
   @@map("units")
 }
+
 model Product {
-
-  id                 String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  sku                String  @unique
-  name               String
-  categoryId         String  @map("category_id") @db.Uuid
-  brandId            String? @map("brand_id") @db.Uuid
-  unitId             String  @map("unit_id") @db.Uuid
-  purchasePrice      Decimal @default(0) @map("purchase_price") @db.Decimal(15, 2)
-  sellingPrice       Decimal @default(0) @map("selling_price") @db.Decimal(15, 2)
-  wholesalePrice     Decimal @default(0) @map("wholesale_price") @db.Decimal(15, 2)
-  minimumStockLevel  Decimal @default(0) @map("minimum_stock_level") @db.Decimal(15, 3)
-  reorderLevel       Decimal @default(0) @map("reorder_level") @db.Decimal(15, 3)
-  status             String  @default("ACTIVE")
-
-
-  createdBy User? @relation("ProductCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("ProductUpdater", fields: [updatedById], references: [id])
-  category Category @relation(fields: [categoryId], references: [id])
-  brand    Brand?   @relation(fields: [brandId], references: [id])
-  unit     Unit     @relation(fields: [unitId], references: [id])
-
-  variants ProductVariant[]
-  images   ProductImage[]
-
-  warehouseStocks WarehouseStock[]
-  stockMovements StockMovement[]
-  reservations   StockReservation[]
-  adjustmentItems StockAdjustmentItem[]
-
-  purchaseOrderItems PurchaseOrderItem[]
-  goodsReceiptItems  GoodsReceiptItem[]
+  id                  String                    @id @default(uuid()) @db.Uuid
+  createdById         String?                   @map("created_by_id") @db.Uuid
+  updatedById         String?                   @map("updated_by_id") @db.Uuid
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  isArchived          Boolean                   @default(false) @map("is_archived")
+  archivedAt          DateTime?                 @map("archived_at")
+  sku                 String                    @unique
+  name                String
+  categoryId          String                    @map("category_id") @db.Uuid
+  brandId             String?                   @map("brand_id") @db.Uuid
+  unitId              String                    @map("unit_id") @db.Uuid
+  purchasePrice       Decimal                   @default(0) @map("purchase_price") @db.Decimal(15, 2)
+  sellingPrice        Decimal                   @default(0) @map("selling_price") @db.Decimal(15, 2)
+  wholesalePrice      Decimal                   @default(0) @map("wholesale_price") @db.Decimal(15, 2)
+  minimumStockLevel   Decimal                   @default(0) @map("minimum_stock_level") @db.Decimal(15, 3)
+  reorderLevel        Decimal                   @default(0) @map("reorder_level") @db.Decimal(15, 3)
+  status              String                    @default("ACTIVE")
+  images              ProductImage[]
+  warehouseStocks     WarehouseStock[]
+  stockMovements      StockMovement[]
+  reservations        StockReservation[]
+  adjustmentItems     StockAdjustmentItem[]
+  purchaseOrderItems  PurchaseOrderItem[]
+  goodsReceiptItems   GoodsReceiptItem[]
   purchaseReturnItems PurchaseReturnItem[]
+  salesRequestItems   SalesRequestItem[]
+  items               SalesOrderQuotationItem[]
+  salesOrderItems     SalesOrderItem[]
+  salesReturnItems    SalesReturnItem[]
+  deliveryItems       DeliveryItem[]
+  invoiceItems        InvoiceItem[]
+  priceTiers          PriceTier[]
+  discountRules       DiscountRule[]
+  salesQuotas         SalesQuota[]
 
-  salesRequestItems SalesRequestItem[]
-  items SalesOrderQuotationItem[]
-  salesOrderItems   SalesOrderItem[]
-  salesReturnItems  SalesReturnItem[]
+  createdBy User?    @relation("ProductCreator", fields: [createdById], references: [id])
+  updatedBy User?    @relation("ProductUpdater", fields: [updatedById], references: [id])
+  category  Category @relation(fields: [categoryId], references: [id])
+  brand     Brand?   @relation(fields: [brandId], references: [id])
+  unit      Unit     @relation(fields: [unitId], references: [id])
 
-  deliveryItems DeliveryItem[]
-  invoiceItems  InvoiceItem[]
-
-  @@index([categoryId])
-  @@index([brandId])
-  @@index([unitId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("products")
 }
-model ProductVariant {
 
-  id             String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  productId      String  @map("product_id") @db.Uuid
-  sku            String  @unique
-  name           String
-  unitId         String  @map("unit_id") @db.Uuid
-  purchasePrice  Decimal @default(0) @map("purchase_price") @db.Decimal(15, 2)
-  sellingPrice   Decimal @default(0) @map("selling_price") @db.Decimal(15, 2)
-  wholesalePrice Decimal @default(0) @map("wholesale_price") @db.Decimal(15, 2)
-  status         String  @default("ACTIVE")
-
-
-  createdBy User? @relation("ProductVariantCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("ProductVariantUpdater", fields: [updatedById], references: [id])
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  unit    Unit    @relation(fields: [unitId], references: [id])
-
-  @@index([productId])
-  @@index([unitId])
-  @@index([createdById])
-  @@index([updatedById])
-  @@map("product_variants")
-}
 model ProductImage {
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  productId   String    @map("product_id") @db.Uuid
+  imageUrl    String    @map("image_url")
+  isPrimary   Boolean   @default(false) @map("is_primary")
 
-  id         String  @id @default(uuid()) @db.Uuid
+  createdBy User?   @relation("ProductImageCreator", fields: [createdById], references: [id])
+  updatedBy User?   @relation("ProductImageUpdater", fields: [updatedById], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  productId  String  @map("product_id") @db.Uuid
-  imageUrl   String  @map("image_url")
-  isPrimary  Boolean @default(false) @map("is_primary")
-
-
-  createdBy User? @relation("ProductImageCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("ProductImageUpdater", fields: [updatedById], references: [id])
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("product_images")
 }
-model Warehouse {
 
-  id        String  @id @default(uuid()) @db.Uuid
+// ============================================================
+// INVENTORY
+// ============================================================
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  code      String  @unique
-  name      String
-  location  String?
-  managerId String? @map("manager_id") @db.Uuid
-  status    String  @default("ACTIVE")
-
-
-  createdBy User? @relation("WarehouseCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("WarehouseUpdater", fields: [updatedById], references: [id])
-  manager Employee? @relation(fields: [managerId], references: [id])
-
-  stocks        WarehouseStock[]
-  stockMovements StockMovement[]
-  reservations   StockReservation[]
-  adjustments    StockAdjustment[]
-
-  purchaseOrders PurchaseOrder[]
-  goodsReceipts  GoodsReceipt[]
-
-  salesOrders SalesOrder[]
-  salesReturns SalesReturn[]
-  deliveries Delivery[]
-
-  purchaseReturns PurchaseReturn[]
-
-  @@index([managerId])
-  @@index([createdById])
-  @@index([updatedById])
-  @@map("warehouses")
-}
 model WarehouseStock {
+  id                String    @id @default(uuid()) @db.Uuid
+  createdById       String?   @map("created_by_id") @db.Uuid
+  updatedById       String?   @map("updated_by_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  isArchived        Boolean   @default(false) @map("is_archived")
+  archivedAt        DateTime? @map("archived_at")
+  warehouseId       String    @map("warehouse_id") @db.Uuid
+  productId         String    @map("product_id") @db.Uuid
+  quantity          Decimal   @default(0) @db.Decimal(15, 3)
+  reservedQuantity  Decimal   @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
+  availableQuantity Decimal   @default(0) @map("available_quantity") @db.Decimal(15, 3)
+  minimumStock      Decimal   @default(0) @map("minimum_stock") @db.Decimal(15, 3)
+  reorderLevel      Decimal   @default(0) @map("reorder_level") @db.Decimal(15, 3)
 
-  id               String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  warehouseId      String   @map("warehouse_id") @db.Uuid
-  productId        String   @map("product_id") @db.Uuid
-  quantity         Decimal  @default(0) @db.Decimal(15, 3)
-  reservedQuantity Decimal  @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
-  availableQuantity Decimal @default(0) @map("available_quantity") @db.Decimal(15, 3)
-  minimumStock     Decimal  @default(0) @map("minimum_stock") @db.Decimal(15, 3)
-  reorderLevel     Decimal  @default(0) @map("reorder_level") @db.Decimal(15, 3)
-
-
-  createdBy User? @relation("WarehouseStockCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("WarehouseStockUpdater", fields: [updatedById], references: [id])
+  createdBy User?     @relation("WarehouseStockCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("WarehouseStockUpdater", fields: [updatedById], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id])
 
   @@unique([warehouseId, productId])
+  @@index([warehouseId])
   @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("warehouse_stocks")
 }
+
 model StockMovement {
-
-  id            String             @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  warehouseId   String             @map("warehouse_id") @db.Uuid
-  productId     String             @map("product_id") @db.Uuid
-  movementType  StockMovementType  @map("movement_type")
-  quantity      Decimal            @db.Decimal(15, 3)
-  referenceType String?            @map("reference_type")
-  referenceId   String?            @map("reference_id") @db.Uuid
-  unitCost      Decimal?           @map("unit_cost") @db.Decimal(15, 2)
+  id            String            @id @default(uuid()) @db.Uuid
+  createdById   String?           @map("created_by_id") @db.Uuid
+  updatedById   String?           @map("updated_by_id") @db.Uuid
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  isArchived    Boolean           @default(false) @map("is_archived")
+  archivedAt    DateTime?         @map("archived_at")
+  warehouseId   String            @map("warehouse_id") @db.Uuid
+  productId     String            @map("product_id") @db.Uuid
+  movementType  StockMovementType @map("movement_type")
+  quantity      Decimal           @db.Decimal(15, 3)
+  referenceType String?           @map("reference_type")
+  referenceId   String?           @map("reference_id") @db.Uuid
+  unitCost      Decimal?          @map("unit_cost") @db.Decimal(15, 2)
   notes         String?
 
-
-  createdBy User? @relation("StockMovementCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("StockMovementUpdater", fields: [updatedById], references: [id])
+  createdBy User?     @relation("StockMovementCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("StockMovementUpdater", fields: [updatedById], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   product   Product   @relation(fields: [productId], references: [id])
 
-  @@index([createdById])
-  @@index([updatedById])
-  @@index([warehouseId])
-  @@index([productId])
-  @@index([movementType])
-  @@index([referenceType, referenceId])
   @@map("stock_movements")
 }
+
 model StockReservation {
+  id           String                 @id @default(uuid()) @db.Uuid
+  createdById  String?                @map("created_by_id") @db.Uuid
+  updatedById  String?                @map("updated_by_id") @db.Uuid
+  createdAt    DateTime               @default(now()) @map("created_at")
+  updatedAt    DateTime               @updatedAt @map("updated_at")
+  isArchived   Boolean                @default(false) @map("is_archived")
+  archivedAt   DateTime?              @map("archived_at")
+  salesOrderId String                 @map("sales_order_id") @db.Uuid
+  warehouseId  String                 @map("warehouse_id") @db.Uuid
+  productId    String                 @map("product_id") @db.Uuid
+  quantity     Decimal                @db.Decimal(15, 3)
+  status       StockReservationStatus @default(RESERVED)
+  releasedAt   DateTime?              @map("released_at")
 
-  id            String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  salesOrderId  String   @map("sales_order_id") @db.Uuid
-  warehouseId   String   @map("warehouse_id") @db.Uuid
-  productId     String   @map("product_id") @db.Uuid
-  quantity      Decimal  @db.Decimal(15, 3)
-  status        String   @default("RESERVED")
-  releasedAt    DateTime? @map("released_at")
-
-
-  createdBy User? @relation("StockReservationCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("StockReservationUpdater", fields: [updatedById], references: [id])
+  createdBy  User?      @relation("StockReservationCreator", fields: [createdById], references: [id])
+  updatedBy  User?      @relation("StockReservationUpdater", fields: [updatedById], references: [id])
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   warehouse  Warehouse  @relation(fields: [warehouseId], references: [id])
   product    Product    @relation(fields: [productId], references: [id])
 
-  @@index([salesOrderId])
-  @@index([warehouseId, productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("stock_reservations")
 }
+
 model StockAdjustment {
-
-  id          String    @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  warehouseId String    @map("warehouse_id") @db.Uuid
+  id          String                @id @default(uuid()) @db.Uuid
+  createdById String?               @map("created_by_id") @db.Uuid
+  updatedById String?               @map("updated_by_id") @db.Uuid
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  isArchived  Boolean               @default(false) @map("is_archived")
+  archivedAt  DateTime?             @map("archived_at")
+  warehouseId String                @map("warehouse_id") @db.Uuid
   reason      String
-  status      String    @default("PENDING")
-  approvedBy  String?   @map("approved_by") @db.Uuid
-  approvedAt  DateTime? @map("approved_at")
+  status      String                @default("PENDING")
+  approvedBy  String?               @map("approved_by") @db.Uuid
+  approvedAt  DateTime?             @map("approved_at")
+  items       StockAdjustmentItem[]
 
-
-  createdBy User? @relation("StockAdjustmentCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("StockAdjustmentUpdater", fields: [updatedById], references: [id])
+  createdBy User?     @relation("StockAdjustmentCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("StockAdjustmentUpdater", fields: [updatedById], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   approver  User?     @relation("AdjustmentApprover", fields: [approvedBy], references: [id])
 
-  items StockAdjustmentItem[]
-
-  @@index([createdById])
-  @@index([warehouseId])
-  @@index([approvedBy])
-  @@index([updatedById])
   @@map("stock_adjustments")
 }
+
 model StockAdjustmentItem {
+  id             String    @id @default(uuid()) @db.Uuid
+  createdById    String?   @map("created_by_id") @db.Uuid
+  updatedById    String?   @map("updated_by_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  isArchived     Boolean   @default(false) @map("is_archived")
+  archivedAt     DateTime? @map("archived_at")
+  adjustmentId   String    @map("adjustment_id") @db.Uuid
+  productId      String    @map("product_id") @db.Uuid
+  systemQuantity Decimal   @map("system_quantity") @db.Decimal(15, 3)
+  actualQuantity Decimal   @map("actual_quantity") @db.Decimal(15, 3)
+  difference     Decimal   @db.Decimal(15, 3)
+  reason         String?
 
-  id              String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  adjustmentId    String  @map("adjustment_id") @db.Uuid
-  productId       String  @map("product_id") @db.Uuid
-  systemQuantity  Decimal @map("system_quantity") @db.Decimal(15, 3)
-  actualQuantity  Decimal @map("actual_quantity") @db.Decimal(15, 3)
-  difference      Decimal @db.Decimal(15, 3)
-  reason          String?
-
-
-  createdBy User? @relation("StockAdjustmentItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("StockAdjustmentItemUpdater", fields: [updatedById], references: [id])
+  createdBy  User?           @relation("StockAdjustmentItemCreator", fields: [createdById], references: [id])
+  updatedBy  User?           @relation("StockAdjustmentItemUpdater", fields: [updatedById], references: [id])
   adjustment StockAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
   product    Product         @relation(fields: [productId], references: [id])
 
-  @@index([adjustmentId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("stock_adjustment_items")
 }
+
+// ============================================================
+// PROCUREMENT
+// ============================================================
+
 model PurchaseOrder {
+  id               String              @id @default(uuid()) @db.Uuid
+  createdById      String?             @map("created_by_id") @db.Uuid
+  updatedById      String?             @map("updated_by_id") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  isArchived       Boolean             @default(false) @map("is_archived")
+  archivedAt       DateTime?           @map("archived_at")
+  poNumber         String              @unique @map("po_number")
+  supplierId       String              @map("supplier_id") @db.Uuid
+  warehouseId      String              @map("warehouse_id") @db.Uuid
+  orderedBy        String              @map("ordered_by") @db.Uuid
+  approvedBy       String?             @map("approved_by") @db.Uuid
+  orderDate        DateTime            @map("order_date")
+  expectedDate     DateTime?           @map("expected_date")
+  status           String              @default("DRAFT")
+  subtotal         Decimal             @default(0) @db.Decimal(15, 2)
+  discount         Decimal             @default(0) @db.Decimal(15, 2)
+  tax              Decimal             @default(0) @db.Decimal(15, 2)
+  total            Decimal             @default(0) @db.Decimal(15, 2)
+  items            PurchaseOrderItem[]
+  goodsReceipts    GoodsReceipt[]
+  supplierInvoices SupplierInvoice[]
+  purchaseReturns  PurchaseReturn[]
 
-  id           String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  poNumber     String   @unique @map("po_number")
-  supplierId   String   @map("supplier_id") @db.Uuid
-  warehouseId  String   @map("warehouse_id") @db.Uuid
-  orderedBy    String   @map("ordered_by") @db.Uuid
-  approvedBy   String?  @map("approved_by") @db.Uuid
-  orderDate   DateTime @map("order_date")
-  expectedDate DateTime? @map("expected_date")
-  status       String   @default("DRAFT")
-  subtotal     Decimal  @default(0) @db.Decimal(15, 2)
-  discount     Decimal  @default(0) @db.Decimal(15, 2)
-  tax          Decimal  @default(0) @db.Decimal(15, 2)
-  total        Decimal  @default(0) @db.Decimal(15, 2)
-
-
-  createdBy User? @relation("PurchaseOrderCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("PurchaseOrderUpdater", fields: [updatedById], references: [id])
+  createdBy User?     @relation("PurchaseOrderCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("PurchaseOrderUpdater", fields: [updatedById], references: [id])
   supplier  Supplier  @relation(fields: [supplierId], references: [id])
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
   orderer   User      @relation("PurchaseOrderer", fields: [orderedBy], references: [id])
   approver  User?     @relation("PurchaseApprover", fields: [approvedBy], references: [id])
 
-  items PurchaseOrderItem[]
-
-  goodsReceipts GoodsReceipt[]
-  supplierInvoices SupplierInvoice[]
-  purchaseReturns PurchaseReturn[]
-
-  @@index([createdById])
-  @@index([supplierId])
-  @@index([warehouseId])
-  @@index([orderedBy])
-  @@index([approvedBy])
-  @@index([updatedById])
-  @@index([status])
-  @@index([orderDate])
   @@map("purchase_orders")
 }
+
 model PurchaseOrderItem {
+  id               String    @id @default(uuid()) @db.Uuid
+  createdById      String?   @map("created_by_id") @db.Uuid
+  updatedById      String?   @map("updated_by_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  isArchived       Boolean   @default(false) @map("is_archived")
+  archivedAt       DateTime? @map("archived_at")
+  purchaseOrderId  String    @map("purchase_order_id") @db.Uuid
+  productId        String    @map("product_id") @db.Uuid
+  quantity         Decimal   @db.Decimal(15, 3)
+  unitPrice        Decimal   @map("unit_price") @db.Decimal(15, 2)
+  discount         Decimal   @default(0) @db.Decimal(15, 2)
+  tax              Decimal   @default(0) @db.Decimal(15, 2)
+  total            Decimal   @db.Decimal(15, 2)
+  receivedQuantity Decimal   @default(0) @map("received_quantity") @db.Decimal(15, 3)
 
-  id              String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  purchaseOrderId String  @map("purchase_order_id") @db.Uuid
-  productId       String  @map("product_id") @db.Uuid
-  quantity        Decimal @db.Decimal(15, 3)
-  unitPrice       Decimal @map("unit_price") @db.Decimal(15, 2)
-  discount        Decimal @default(0) @db.Decimal(15, 2)
-  tax             Decimal @default(0) @db.Decimal(15, 2)
-  total           Decimal @db.Decimal(15, 2)
-  receivedQuantity Decimal @default(0) @map("received_quantity") @db.Decimal(15, 3)
-
-
-  createdBy User? @relation("PurchaseOrderItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("PurchaseOrderItemUpdater", fields: [updatedById], references: [id])
+  createdBy     User?         @relation("PurchaseOrderItemCreator", fields: [createdById], references: [id])
+  updatedBy     User?         @relation("PurchaseOrderItemUpdater", fields: [updatedById], references: [id])
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  product      Product       @relation(fields: [productId], references: [id])
+  product       Product       @relation(fields: [productId], references: [id])
 
-  @@index([purchaseOrderId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("purchase_order_items")
 }
+
 model GoodsReceipt {
+  id              String             @id @default(uuid()) @db.Uuid
+  createdById     String?            @map("created_by_id") @db.Uuid
+  updatedById     String?            @map("updated_by_id") @db.Uuid
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  isArchived      Boolean            @default(false) @map("is_archived")
+  archivedAt      DateTime?          @map("archived_at")
+  receiptNumber   String             @unique @map("receipt_number")
+  purchaseOrderId String             @map("purchase_order_id") @db.Uuid
+  warehouseId     String             @map("warehouse_id") @db.Uuid
+  receivedBy      String             @map("received_by") @db.Uuid
+  receivedAt      DateTime           @map("received_at")
+  status          String             @default("RECEIVED")
+  items           GoodsReceiptItem[]
 
-  id             String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  receiptNumber  String   @unique @map("receipt_number")
-  purchaseOrderId String  @map("purchase_order_id") @db.Uuid
-  warehouseId    String   @map("warehouse_id") @db.Uuid
-  receivedBy     String   @map("received_by") @db.Uuid
-  receivedAt     DateTime @map("received_at")
-  status         String   @default("RECEIVED")
-
-
-  createdBy User? @relation("GoodsReceiptCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("GoodsReceiptUpdater", fields: [updatedById], references: [id])
+  createdBy     User?         @relation("GoodsReceiptCreator", fields: [createdById], references: [id])
+  updatedBy     User?         @relation("GoodsReceiptUpdater", fields: [updatedById], references: [id])
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  warehouse    Warehouse     @relation(fields: [warehouseId], references: [id])
-  receiver     User          @relation(fields: [receivedBy], references: [id])
+  warehouse     Warehouse     @relation(fields: [warehouseId], references: [id])
+  receiver      User          @relation(fields: [receivedBy], references: [id])
 
-  items GoodsReceiptItem[]
-
-  @@index([createdById])
-  @@index([purchaseOrderId])
-  @@index([warehouseId])
-  @@index([receivedBy])
-  @@index([updatedById])
   @@map("goods_receipts")
 }
+
 model GoodsReceiptItem {
+  id               String    @id @default(uuid()) @db.Uuid
+  createdById      String?   @map("created_by_id") @db.Uuid
+  updatedById      String?   @map("updated_by_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  isArchived       Boolean   @default(false) @map("is_archived")
+  archivedAt       DateTime? @map("archived_at")
+  goodsReceiptId   String    @map("goods_receipt_id") @db.Uuid
+  productId        String    @map("product_id") @db.Uuid
+  orderedQuantity  Decimal   @map("ordered_quantity") @db.Decimal(15, 3)
+  receivedQuantity Decimal   @map("received_quantity") @db.Decimal(15, 3)
+  damagedQuantity  Decimal   @default(0) @map("damaged_quantity") @db.Decimal(15, 3)
+  unitCost         Decimal   @map("unit_cost") @db.Decimal(15, 2)
 
-  id               String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  goodsReceiptId   String  @map("goods_receipt_id") @db.Uuid
-  productId        String  @map("product_id") @db.Uuid
-  orderedQuantity  Decimal @map("ordered_quantity") @db.Decimal(15, 3)
-  receivedQuantity Decimal @map("received_quantity") @db.Decimal(15, 3)
-  damagedQuantity  Decimal @default(0) @map("damaged_quantity") @db.Decimal(15, 3)
-  unitCost         Decimal @map("unit_cost") @db.Decimal(15, 2)
-
-
-  createdBy User? @relation("GoodsReceiptItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("GoodsReceiptItemUpdater", fields: [updatedById], references: [id])
+  createdBy    User?        @relation("GoodsReceiptItemCreator", fields: [createdById], references: [id])
+  updatedBy    User?        @relation("GoodsReceiptItemUpdater", fields: [updatedById], references: [id])
   goodsReceipt GoodsReceipt @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
   product      Product      @relation(fields: [productId], references: [id])
 
-  @@index([goodsReceiptId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("goods_receipt_items")
 }
+
 model SupplierInvoice {
+  id              String    @id @default(uuid()) @db.Uuid
+  createdById     String?   @map("created_by_id") @db.Uuid
+  updatedById     String?   @map("updated_by_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  isArchived      Boolean   @default(false) @map("is_archived")
+  archivedAt      DateTime? @map("archived_at")
+  invoiceNumber   String    @map("invoice_number")
+  supplierId      String    @map("supplier_id") @db.Uuid
+  purchaseOrderId String?   @map("purchase_order_id") @db.Uuid
+  invoiceDate     DateTime  @map("invoice_date")
+  dueDate         DateTime  @map("due_date")
+  subtotal        Decimal   @default(0) @db.Decimal(15, 2)
+  tax             Decimal   @default(0) @db.Decimal(15, 2)
+  discount        Decimal   @default(0) @db.Decimal(15, 2)
+  total           Decimal   @default(0) @db.Decimal(15, 2)
+  paidAmount      Decimal   @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  balance         Decimal   @default(0) @db.Decimal(15, 2)
+  status          String    @default("UNPAID")
 
-  id             String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  invoiceNumber  String   @map("invoice_number")
-  supplierId     String   @map("supplier_id") @db.Uuid
-  purchaseOrderId String?  @map("purchase_order_id") @db.Uuid
-  invoiceDate    DateTime @map("invoice_date")
-  dueDate        DateTime @map("due_date")
-  subtotal       Decimal  @default(0) @db.Decimal(15, 2)
-  tax            Decimal  @default(0) @db.Decimal(15, 2)
-  discount       Decimal  @default(0) @db.Decimal(15, 2)
-  total          Decimal  @default(0) @db.Decimal(15, 2)
-  paidAmount     Decimal  @default(0) @map("paid_amount") @db.Decimal(15, 2)
-  balance        Decimal  @default(0) @db.Decimal(15, 2)
-  status         String   @default("UNPAID")
-
-
-  createdBy User? @relation("SupplierInvoiceCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SupplierInvoiceUpdater", fields: [updatedById], references: [id])
-  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+  createdBy     User?          @relation("SupplierInvoiceCreator", fields: [createdById], references: [id])
+  updatedBy     User?          @relation("SupplierInvoiceUpdater", fields: [updatedById], references: [id])
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
   @@unique([supplierId, invoiceNumber])
-  @@index([supplierId])
-  @@index([purchaseOrderId])
-  @@index([dueDate])
-  @@index([createdById])
-  @@index([updatedById])
+  @@index([supplierId, status])
   @@map("supplier_invoices")
 }
+
 model PurchaseReturn {
+  id              String               @id @default(uuid()) @db.Uuid
+  createdById     String?              @map("created_by_id") @db.Uuid
+  updatedById     String?              @map("updated_by_id") @db.Uuid
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  isArchived      Boolean              @default(false) @map("is_archived")
+  archivedAt      DateTime?            @map("archived_at")
+  returnNumber    String               @unique @map("return_number")
+  supplierId      String               @map("supplier_id") @db.Uuid
+  warehouseId     String               @map("warehouse_id") @db.Uuid
+  purchaseOrderId String?              @map("purchase_order_id") @db.Uuid
+  reason          String
+  status          String               @default("DRAFT")
+  items           PurchaseReturnItem[]
 
-  id             String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  returnNumber   String   @unique @map("return_number")
-  supplierId     String   @map("supplier_id") @db.Uuid
-  warehouseId    String   @map("warehouse_id") @db.Uuid
-  purchaseOrderId String?  @map("purchase_order_id") @db.Uuid
-  reason         String
-  status         String   @default("DRAFT")
-
-
-  createdBy User? @relation("PurchaseReturnCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("PurchaseReturnUpdater", fields: [updatedById], references: [id])
+  createdBy     User?          @relation("PurchaseReturnCreator", fields: [createdById], references: [id])
+  updatedBy     User?          @relation("PurchaseReturnUpdater", fields: [updatedById], references: [id])
   supplier      Supplier       @relation(fields: [supplierId], references: [id])
   warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
   purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
 
-  items PurchaseReturnItem[]
-
-  @@index([createdById])
-  @@index([supplierId])
-  @@index([warehouseId])
-  @@index([purchaseOrderId])
-  @@index([updatedById])
+  @@unique([supplierId, returnNumber])
+  @@index([supplierId, status])
   @@map("purchase_returns")
 }
+
 model PurchaseReturnItem {
+  id               String    @id @default(uuid()) @db.Uuid
+  createdById      String?   @map("created_by_id") @db.Uuid
+  updatedById      String?   @map("updated_by_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  isArchived       Boolean   @default(false) @map("is_archived")
+  archivedAt       DateTime? @map("archived_at")
+  purchaseReturnId String    @map("purchase_return_id") @db.Uuid
+  productId        String    @map("product_id") @db.Uuid
+  quantity         Decimal   @db.Decimal(15, 3)
+  unitCost         Decimal   @map("unit_cost") @db.Decimal(15, 2)
+  reason           String?
 
-  id             String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  purchaseReturnId String @map("purchase_return_id") @db.Uuid
-  productId      String  @map("product_id") @db.Uuid
-  quantity       Decimal @db.Decimal(15, 3)
-  unitCost       Decimal @map("unit_cost") @db.Decimal(15, 2)
-  reason         String?
-
-
-  createdBy User? @relation("PurchaseReturnItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("PurchaseReturnItemUpdater", fields: [updatedById], references: [id])
+  createdBy      User?          @relation("PurchaseReturnItemCreator", fields: [createdById], references: [id])
+  updatedBy      User?          @relation("PurchaseReturnItemUpdater", fields: [updatedById], references: [id])
   purchaseReturn PurchaseReturn @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
   product        Product        @relation(fields: [productId], references: [id])
 
-  @@index([purchaseReturnId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("purchase_return_items")
 }
+
+// ============================================================
+// PRICING, DISCOUNTS & SALES QUOTAS
+// ============================================================
+
+model PriceTier {
+  id          String            @id @default(uuid()) @db.Uuid
+  createdById String?           @map("created_by_id") @db.Uuid
+  updatedById String?           @map("updated_by_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  productId   String            @map("product_id") @db.Uuid
+  minQuantity Decimal           @map("min_quantity") @db.Decimal(15, 3)
+  maxQuantity Decimal?          @map("max_quantity") @db.Decimal(15, 3)
+  unitPrice   Decimal           @map("unit_price") @db.Decimal(15, 2)
+  status      PricingRuleStatus @default(ACTIVE)
+  startsAt    DateTime?         @map("starts_at")
+  endsAt      DateTime?         @map("ends_at")
+
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  salesOrders     SalesOrder[]
+  salesOrderItems SalesOrderItem[]
+  createdBy       User?            @relation("PriceTierCreator", fields: [createdById], references: [id])
+  updatedBy       User?            @relation("PriceTierUpdater", fields: [updatedById], references: [id])
+
+  @@index([productId, minQuantity, maxQuantity])
+  @@map("price_tiers")
+}
+
+model DiscountRule {
+  id            String            @id @default(uuid()) @db.Uuid
+  createdById   String?           @map("created_by_id") @db.Uuid
+  updatedById   String?           @map("updated_by_id") @db.Uuid
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  name          String
+  productId     String?           @map("product_id") @db.Uuid
+  customerType  CustomerType?     @map("customer_type")
+  minQuantity   Decimal?          @map("min_quantity") @db.Decimal(15, 3)
+  maxQuantity   Decimal?          @map("max_quantity") @db.Decimal(15, 3)
+  discountType  DiscountType      @map("discount_type")
+  discountValue Decimal           @map("discount_value") @db.Decimal(15, 2)
+  status        PricingRuleStatus @default(ACTIVE)
+  startsAt      DateTime?         @map("starts_at")
+  endsAt        DateTime?         @map("ends_at")
+
+  product         Product?         @relation(fields: [productId], references: [id])
+  salesOrders     SalesOrder[]
+  salesOrderItems SalesOrderItem[]
+  createdBy       User?            @relation("DiscountRuleCreator", fields: [createdById], references: [id])
+  updatedBy       User?            @relation("DiscountRuleUpdater", fields: [updatedById], references: [id])
+
+  @@index([productId, status])
+  @@map("discount_rules")
+}
+
+model SalesQuota {
+  id           String            @id @default(uuid()) @db.Uuid
+  createdById  String?           @map("created_by_id") @db.Uuid
+  updatedById  String?           @map("updated_by_id") @db.Uuid
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  name         String
+  productId    String?           @map("product_id") @db.Uuid
+  customerType CustomerType?     @map("customer_type")
+  branchId     String?           @map("branch_id") @db.Uuid
+  maxQuantity  Decimal           @map("max_quantity") @db.Decimal(15, 3)
+  startsAt     DateTime          @map("starts_at")
+  endsAt       DateTime          @map("ends_at")
+  status       PricingRuleStatus @default(ACTIVE)
+
+  product     Product?          @relation(fields: [productId], references: [id])
+  branch      Branch?           @relation(fields: [branchId], references: [id])
+  salesOrders SalesOrder[]
+  usages      SalesQuotaUsage[]
+  createdBy   User?             @relation("SalesQuotaCreator", fields: [createdById], references: [id])
+  updatedBy   User?             @relation("SalesQuotaUpdater", fields: [updatedById], references: [id])
+
+  @@index([productId, branchId, status])
+  @@map("sales_quotas")
+}
+
+model SalesQuotaUsage {
+  id           String   @id @default(uuid()) @db.Uuid
+  quotaId      String   @map("quota_id") @db.Uuid
+  customerId   String   @map("customer_id") @db.Uuid
+  salesOrderId String   @map("sales_order_id") @db.Uuid
+  quantity     Decimal  @db.Decimal(15, 3)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  quota      SalesQuota @relation(fields: [quotaId], references: [id])
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+
+  @@unique([quotaId, salesOrderId])
+  @@index([quotaId, customerId])
+  @@map("sales_quota_usages")
+}
+
+model CustomerAddress {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdById String?  @map("created_by_id") @db.Uuid
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  customerId  String   @map("customer_id") @db.Uuid
+  label       String?
+  address     String
+  city        String?
+  subCity     String?  @map("sub_city")
+  woreda      String?
+  landmark    String?
+  latitude    Decimal? @db.Decimal(10, 7)
+  longitude   Decimal? @db.Decimal(10, 7)
+  isDefault   Boolean  @default(false) @map("is_default")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  salesOrders SalesOrder[]
+  createdBy   User?        @relation("CustomerAddressCreator", fields: [createdById], references: [id])
+  updatedBy   User?        @relation("CustomerAddressUpdater", fields: [updatedById], references: [id])
+
+  @@index([customerId, isActive])
+  @@map("customer_addresses")
+}
+
+// ============================================================
+// SALES
+// ============================================================
+
 model SalesRequest {
-
-  id            String        @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  requestNumber String        @unique @map("request_number")
-  customerId    String        @map("customer_id") @db.Uuid
-  salesRepId    String?       @map("sales_rep_id") @db.Uuid
+  id            String             @id @default(uuid()) @db.Uuid
+  createdById   String?            @map("created_by_id") @db.Uuid
+  updatedById   String?            @map("updated_by_id") @db.Uuid
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  isArchived    Boolean            @default(false) @map("is_archived")
+  archivedAt    DateTime?          @map("archived_at")
+  requestNumber String             @unique @map("request_number")
+  customerId    String             @map("customer_id") @db.Uuid
+  salesRepId    String?            @map("sales_rep_id") @db.Uuid
   source        RequestSource
   subject       String
   message       String?
-  status        String        @default("SUBMITTED")
+  status        String             @default("SUBMITTED")
+  items         SalesRequestItem[]
+  quotation     Quotation?
 
+  createdBy User?     @relation("SalesRequestCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("SalesRequestUpdater", fields: [updatedById], references: [id])
+  customer  Customer  @relation(fields: [customerId], references: [id])
+  salesRep  Employee? @relation(fields: [salesRepId], references: [id])
 
-  createdBy User? @relation("SalesRequestCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesRequestUpdater", fields: [updatedById], references: [id])
-  customer Customer            @relation(fields: [customerId], references: [id])
-  salesRep SalesRepresentative? @relation(fields: [salesRepId], references: [id])
-
-  items SalesRequestItem[]
-
-  quotation Quotation?
-
-  @@index([customerId])
-  @@index([salesRepId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("sales_requests")
 }
+
 model SalesRequestItem {
+  id             String    @id @default(uuid()) @db.Uuid
+  createdById    String?   @map("created_by_id") @db.Uuid
+  updatedById    String?   @map("updated_by_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  isArchived     Boolean   @default(false) @map("is_archived")
+  archivedAt     DateTime? @map("archived_at")
+  salesRequestId String    @map("sales_request_id") @db.Uuid
+  productId      String    @map("product_id") @db.Uuid
+  quantity       Decimal   @db.Decimal(15, 3)
+  notes          String?
 
-  id            String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  salesRequestId String @map("sales_request_id") @db.Uuid
-  productId     String  @map("product_id") @db.Uuid
-  quantity      Decimal @db.Decimal(15, 3)
-  notes         String?
-
-
-  createdBy User? @relation("SalesRequestItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesRequestItemUpdater", fields: [updatedById], references: [id])
+  createdBy    User?        @relation("SalesRequestItemCreator", fields: [createdById], references: [id])
+  updatedBy    User?        @relation("SalesRequestItemUpdater", fields: [updatedById], references: [id])
   salesRequest SalesRequest @relation(fields: [salesRequestId], references: [id], onDelete: Cascade)
   product      Product      @relation(fields: [productId], references: [id])
 
-  @@index([salesRequestId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("sales_request_items")
 }
+
 model Quotation {
+  id              String                    @id @default(uuid()) @db.Uuid
+  createdById     String?                   @map("created_by_id") @db.Uuid
+  updatedById     String?                   @map("updated_by_id") @db.Uuid
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  isArchived      Boolean                   @default(false) @map("is_archived")
+  archivedAt      DateTime?                 @map("archived_at")
+  quotationNumber String                    @unique @map("quotation_number")
+  customerId      String                    @map("customer_id") @db.Uuid
+  salesRepId      String                    @map("sales_rep_id") @db.Uuid
+  salesRequestId  String?                   @unique @map("sales_request_id") @db.Uuid
+  quotationDate   DateTime                  @map("quotation_date")
+  validUntil      DateTime                  @map("valid_until")
+  status          String                    @default("DRAFT")
+  subtotal        Decimal                   @default(0) @db.Decimal(15, 2)
+  discount        Decimal                   @default(0) @db.Decimal(15, 2)
+  tax             Decimal                   @default(0) @db.Decimal(15, 2)
+  total           Decimal                   @default(0) @db.Decimal(15, 2)
+  items           SalesOrderQuotationItem[]
+  salesOrder      SalesOrder?
 
-  id             String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  quotationNumber String   @unique @map("quotation_number")
-  customerId     String   @map("customer_id") @db.Uuid
-  salesRepId     String   @map("sales_rep_id") @db.Uuid
-  salesRequestId String?  @unique @map("sales_request_id") @db.Uuid
-  quotationDate  DateTime @map("quotation_date")
-  validUntil     DateTime @map("valid_until")
-  status         String   @default("DRAFT")
-  subtotal       Decimal  @default(0) @db.Decimal(15, 2)
-  discount       Decimal  @default(0) @db.Decimal(15, 2)
-  tax            Decimal  @default(0) @db.Decimal(15, 2)
-  total          Decimal  @default(0) @db.Decimal(15, 2)
-
-
-  createdBy User? @relation("QuotationCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("QuotationUpdater", fields: [updatedById], references: [id])
-  customer Customer         @relation(fields: [customerId], references: [id])
-  salesRep SalesRepresentative @relation(fields: [salesRepId], references: [id])
+  createdBy    User?         @relation("QuotationCreator", fields: [createdById], references: [id])
+  updatedBy    User?         @relation("QuotationUpdater", fields: [updatedById], references: [id])
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  salesRep     Employee      @relation(fields: [salesRepId], references: [id])
   salesRequest SalesRequest? @relation(fields: [salesRequestId], references: [id])
 
-  items SalesOrderQuotationItem[]
-
-  salesOrder SalesOrder?
-
-  @@index([customerId])
-  @@index([salesRepId])
-  @@index([validUntil])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("quotations")
 }
+
 model SalesOrderQuotationItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  quotationId String    @map("quotation_id") @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  quantity    Decimal   @db.Decimal(15, 3)
+  unitPrice   Decimal   @map("unit_price") @db.Decimal(15, 2)
+  discount    Decimal   @default(0) @db.Decimal(15, 2)
+  tax         Decimal   @default(0) @db.Decimal(15, 2)
+  total       Decimal   @db.Decimal(15, 2)
 
-  id           String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  quotationId  String  @map("quotation_id") @db.Uuid
-  productId   String  @map("product_id") @db.Uuid
-  quantity     Decimal @db.Decimal(15, 3)
-  unitPrice    Decimal @map("unit_price") @db.Decimal(15, 2)
-  discount     Decimal @default(0) @db.Decimal(15, 2)
-  tax          Decimal @default(0) @db.Decimal(15, 2)
-  total        Decimal @db.Decimal(15, 2)
-
-
-  createdBy User? @relation("SalesOrderQuotationItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesOrderQuotationItemUpdater", fields: [updatedById], references: [id])
+  createdBy User?     @relation("SalesOrderQuotationItemCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("SalesOrderQuotationItemUpdater", fields: [updatedById], references: [id])
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id])
 
-  @@index([quotationId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
-  @@map("quotation_items")
+  @@map("sales_order_quotation_items")
 }
+
 model SalesOrder {
+  id                String                    @id @default(uuid()) @db.Uuid
+  createdById       String?                   @map("created_by_id") @db.Uuid
+  updatedById       String?                   @map("updated_by_id") @db.Uuid
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  isArchived        Boolean                   @default(false) @map("is_archived")
+  archivedAt        DateTime?                 @map("archived_at")
+  orderNumber       String                    @unique @map("order_number")
+  customerId        String                    @map("customer_id") @db.Uuid
+  salesRepId        String?                   @map("sales_rep_id") @db.Uuid
+  warehouseId       String                    @map("warehouse_id") @db.Uuid
+  quotationId       String?                   @unique @map("quotation_id") @db.Uuid
+  deliveryAddressId String?                   @map("delivery_address_id") @db.Uuid
+  priceTierId       String?                   @map("price_tier_id") @db.Uuid
+  discountRuleId    String?                   @map("discount_rule_id") @db.Uuid
+  salesQuotaId      String?                   @map("sales_quota_id") @db.Uuid
+  source            SalesOrderSource          @default(CUSTOMER_PORTAL)
+  orderDate         DateTime                  @map("order_date")
+  requiredDate      DateTime?                 @map("required_date")
+  status            SalesOrderStatus          @default(DRAFT)
+  rejectionReason   String?                   @map("rejection_reason")
+  adjustmentReason  String?                   @map("adjustment_reason")
+  subtotal          Decimal                   @default(0) @db.Decimal(15, 2)
+  discount          Decimal                   @default(0) @db.Decimal(15, 2)
+  tax               Decimal                   @default(0) @db.Decimal(15, 2)
+  total             Decimal                   @default(0) @db.Decimal(15, 2)
+  approvedBy        String?                   @map("approved_by") @db.Uuid
+  approvedAt        DateTime?                 @map("approved_at")
+  items             SalesOrderItem[]
+  reservations      StockReservation[]
+  deliveries        Delivery[]
+  invoices          Invoice[]
+  salesReturns      SalesReturn[]
+  statusHistory     SalesOrderStatusHistory[]
+  quotaUsages       SalesQuotaUsage[]
 
-  id            String   @id @default(uuid()) @db.Uuid
+  createdBy       User?            @relation("SalesOrderCreator", fields: [createdById], references: [id])
+  updatedBy       User?            @relation("SalesOrderUpdater", fields: [updatedById], references: [id])
+  customer        Customer         @relation(fields: [customerId], references: [id])
+  salesRep        Employee?        @relation(fields: [salesRepId], references: [id])
+  warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
+  quotation       Quotation?       @relation(fields: [quotationId], references: [id])
+  approver        User?            @relation("SalesOrderApprover", fields: [approvedBy], references: [id])
+  deliveryAddress CustomerAddress? @relation(fields: [deliveryAddressId], references: [id])
+  priceTier       PriceTier?       @relation(fields: [priceTierId], references: [id])
+  discountRule    DiscountRule?    @relation(fields: [discountRuleId], references: [id])
+  salesQuota      SalesQuota?      @relation(fields: [salesQuotaId], references: [id])
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  orderNumber   String   @unique @map("order_number")
-  customerId    String   @map("customer_id") @db.Uuid
-  salesRepId    String   @map("sales_rep_id") @db.Uuid
-  warehouseId   String   @map("warehouse_id") @db.Uuid
-  quotationId   String?  @unique @map("quotation_id") @db.Uuid
-  orderDate     DateTime @map("order_date")
-  requiredDate  DateTime? @map("required_date")
-  status        String   @default("DRAFT")
-  subtotal      Decimal  @default(0) @db.Decimal(15, 2)
-  discount      Decimal  @default(0) @db.Decimal(15, 2)
-  tax           Decimal  @default(0) @db.Decimal(15, 2)
-  total         Decimal  @default(0) @db.Decimal(15, 2)
-  approvedBy    String?  @map("approved_by") @db.Uuid
-  approvedAt    DateTime? @map("approved_at")
-
-
-  createdBy User? @relation("SalesOrderCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesOrderUpdater", fields: [updatedById], references: [id])
-  customer  Customer            @relation(fields: [customerId], references: [id])
-  salesRep  SalesRepresentative @relation(fields: [salesRepId], references: [id])
-  warehouse Warehouse           @relation(fields: [warehouseId], references: [id])
-  quotation Quotation?          @relation(fields: [quotationId], references: [id])
-  approver  User?              @relation("SalesOrderApprover", fields: [approvedBy], references: [id])
-
-  items SalesOrderItem[]
-
-  reservations StockReservation[]
-  deliveries   Delivery[]
-  invoices     Invoice[]
-  salesReturns SalesReturn[]
-
-  @@index([createdById])
-  @@index([customerId])
-  @@index([salesRepId])
-  @@index([warehouseId])
-  @@index([status])
-  @@index([orderDate])
-  @@index([updatedById])
+  @@index([customerId, status])
+  @@index([warehouseId, status])
+  @@index([salesRepId, status])
   @@map("sales_orders")
 }
+
 model SalesOrderItem {
+  id                String         @id @default(uuid()) @db.Uuid
+  createdById       String?        @map("created_by_id") @db.Uuid
+  updatedById       String?        @map("updated_by_id") @db.Uuid
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  isArchived        Boolean        @default(false) @map("is_archived")
+  archivedAt        DateTime?      @map("archived_at")
+  salesOrderId      String         @map("sales_order_id") @db.Uuid
+  productId         String         @map("product_id") @db.Uuid
+  quantity          Decimal        @db.Decimal(15, 3)
+  unitPrice         Decimal        @map("unit_price") @db.Decimal(15, 2)
+  priceTierId       String?        @map("price_tier_id") @db.Uuid
+  discountRuleId    String?        @map("discount_rule_id") @db.Uuid
+  discount          Decimal        @default(0) @db.Decimal(15, 2)
+  tax               Decimal        @default(0) @db.Decimal(15, 2)
+  total             Decimal        @db.Decimal(15, 2)
+  reservedQuantity  Decimal        @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
+  fulfilledQuantity Decimal        @default(0) @map("fulfilled_quantity") @db.Decimal(15, 3)
+  deliveryItems     DeliveryItem[]
 
-  id             String  @id @default(uuid()) @db.Uuid
+  createdBy    User?         @relation("SalesOrderItemCreator", fields: [createdById], references: [id])
+  updatedBy    User?         @relation("SalesOrderItemUpdater", fields: [updatedById], references: [id])
+  salesOrder   SalesOrder    @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product      Product       @relation(fields: [productId], references: [id])
+  priceTier    PriceTier?    @relation(fields: [priceTierId], references: [id])
+  discountRule DiscountRule? @relation(fields: [discountRuleId], references: [id])
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  salesOrderId   String  @map("sales_order_id") @db.Uuid
-  productId      String  @map("product_id") @db.Uuid
-  quantity       Decimal @db.Decimal(15, 3)
-  unitPrice      Decimal @map("unit_price") @db.Decimal(15, 2)
-  discount       Decimal @default(0) @db.Decimal(15, 2)
-  tax            Decimal @default(0) @db.Decimal(15, 2)
-  total          Decimal @db.Decimal(15, 2)
-  reservedQuantity Decimal @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
-  fulfilledQuantity Decimal @default(0) @map("fulfilled_quantity") @db.Decimal(15, 3)
-
-
-  createdBy User? @relation("SalesOrderItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesOrderItemUpdater", fields: [updatedById], references: [id])
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  product   Product    @relation(fields: [productId], references: [id])
-
-  deliveryItems DeliveryItem[]
-
-  @@index([salesOrderId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("sales_order_items")
 }
+
 model SalesReturn {
-
-  id           String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  returnNumber String   @unique @map("return_number")
-  salesOrderId String   @map("sales_order_id") @db.Uuid
-  customerId   String   @map("customer_id") @db.Uuid
-  warehouseId  String   @map("warehouse_id") @db.Uuid
+  id           String            @id @default(uuid()) @db.Uuid
+  createdById  String?           @map("created_by_id") @db.Uuid
+  updatedById  String?           @map("updated_by_id") @db.Uuid
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  isArchived   Boolean           @default(false) @map("is_archived")
+  archivedAt   DateTime?         @map("archived_at")
+  returnNumber String            @unique @map("return_number")
+  salesOrderId String            @map("sales_order_id") @db.Uuid
+  customerId   String            @map("customer_id") @db.Uuid
+  warehouseId  String            @map("warehouse_id") @db.Uuid
   reason       String
-  status       String   @default("DRAFT")
+  status       ReturnStatus      @default(DRAFT)
+  items        SalesReturnItem[]
+  credits      Credit[]
 
-
-  createdBy User? @relation("SalesReturnCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesReturnUpdater", fields: [updatedById], references: [id])
+  createdBy  User?      @relation("SalesReturnCreator", fields: [createdById], references: [id])
+  updatedBy  User?      @relation("SalesReturnUpdater", fields: [updatedById], references: [id])
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   customer   Customer   @relation(fields: [customerId], references: [id])
   warehouse  Warehouse  @relation(fields: [warehouseId], references: [id])
 
-  items SalesReturnItem[]
-
-  credits Credit[]
-
-  @@index([createdById])
-  @@index([salesOrderId])
-  @@index([customerId])
-  @@index([warehouseId])
-  @@index([updatedById])
   @@map("sales_returns")
 }
+
 model SalesReturnItem {
-
-  id            String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  salesReturnId String  @map("sales_return_id") @db.Uuid
-  productId     String  @map("product_id") @db.Uuid
-  quantity      Decimal @db.Decimal(15, 3)
-  unitPrice     Decimal @map("unit_price") @db.Decimal(15, 2)
+  id            String    @id @default(uuid()) @db.Uuid
+  createdById   String?   @map("created_by_id") @db.Uuid
+  updatedById   String?   @map("updated_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  isArchived    Boolean   @default(false) @map("is_archived")
+  archivedAt    DateTime? @map("archived_at")
+  salesReturnId String    @map("sales_return_id") @db.Uuid
+  productId     String    @map("product_id") @db.Uuid
+  quantity      Decimal   @db.Decimal(15, 3)
+  unitPrice     Decimal   @map("unit_price") @db.Decimal(15, 2)
   condition     String?
   reason        String?
 
-
-  createdBy User? @relation("SalesReturnItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("SalesReturnItemUpdater", fields: [updatedById], references: [id])
+  createdBy   User?       @relation("SalesReturnItemCreator", fields: [createdById], references: [id])
+  updatedBy   User?       @relation("SalesReturnItemUpdater", fields: [updatedById], references: [id])
   salesReturn SalesReturn @relation(fields: [salesReturnId], references: [id], onDelete: Cascade)
   product     Product     @relation(fields: [productId], references: [id])
 
-  @@index([salesReturnId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("sales_return_items")
 }
+
+model SalesOrderStatusHistory {
+  id           String                  @id @default(uuid()) @db.Uuid
+  salesOrderId String                  @map("sales_order_id") @db.Uuid
+  fromStatus   SalesOrderStatus?       @map("from_status")
+  toStatus     SalesOrderStatus        @map("to_status")
+  action       SalesOrderHistoryAction
+  reason       String?
+  changedById  String                  @map("changed_by_id") @db.Uuid
+  changedAt    DateTime                @default(now()) @map("changed_at")
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  changedBy  User       @relation("SalesOrderStatusChanger", fields: [changedById], references: [id])
+
+  @@index([salesOrderId, changedAt])
+  @@map("sales_order_status_histories")
+}
+
+// ============================================================
+// LOGISTICS
+// ============================================================
+
 model Vehicle {
-
-  id          String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  plateNumber String  @unique @map("plate_number")
-  vehicleType String  @map("vehicle_type")
-  model       String?
-  capacity    Decimal? @db.Decimal(15, 3)
-  status      String  @default("ACTIVE")
-
+  id          String     @id @default(uuid()) @db.Uuid
+  createdById String?    @map("created_by_id") @db.Uuid
+  updatedById String?    @map("updated_by_id") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  isArchived  Boolean    @default(false) @map("is_archived")
+  archivedAt  DateTime?  @map("archived_at")
+  plateNumber String     @unique @map("plate_number")
+  vehicleType String     @map("vehicle_type")
+  capacity    Decimal?   @db.Decimal(15, 3)
+  status      String     @default("ACTIVE")
   deliveries Delivery[]
-
 
   createdBy User? @relation("VehicleCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("VehicleUpdater", fields: [updatedById], references: [id])
-  @@index([createdById])
-  @@index([updatedById])
+
   @@map("vehicles")
 }
+
 model Delivery {
+  id                String          @id @default(uuid()) @db.Uuid
+  createdById       String?         @map("created_by_id") @db.Uuid
+  updatedById       String?         @map("updated_by_id") @db.Uuid
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  isArchived        Boolean         @default(false) @map("is_archived")
+  archivedAt        DateTime?       @map("archived_at")
+  deliveryNumber    String          @unique @map("delivery_number")
+  salesOrderId      String          @map("sales_order_id") @db.Uuid
+  customerId        String          @map("customer_id") @db.Uuid
+  warehouseId       String          @map("warehouse_id") @db.Uuid
+  driverId          String          @map("driver_id") @db.Uuid
+  vehicleId         String          @map("vehicle_id") @db.Uuid
+  scheduledDate     DateTime        @map("scheduled_date")
+  deliveryDate      DateTime?       @map("delivery_date")
+  status            DeliveryStatus  @default(SCHEDULED)
+  deliveryAddress   String          @map("delivery_address")
+  deliveryLatitude  Decimal?        @map("delivery_latitude") @db.Decimal(10, 7)
+  deliveryLongitude Decimal?        @map("delivery_longitude") @db.Decimal(10, 7)
+  scheduledBy       String?         @map("scheduled_by") @db.Uuid
+  notes             String?
+  items             DeliveryItem[]
+  proofs            DeliveryProof[]
+  scheduledByUser   User?           @relation("DeliveryScheduler", fields: [scheduledBy], references: [id])
 
-  id             String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  deliveryNumber String   @unique @map("delivery_number")
-  salesOrderId   String   @map("sales_order_id") @db.Uuid
-  customerId     String   @map("customer_id") @db.Uuid
-  warehouseId    String   @map("warehouse_id") @db.Uuid
-  driverId       String   @map("driver_id") @db.Uuid
-  vehicleId      String   @map("vehicle_id") @db.Uuid
-  scheduledDate  DateTime @map("scheduled_date")
-  deliveryDate   DateTime? @map("delivery_date")
-  status         String   @default("SCHEDULED")
-  deliveryAddress String  @map("delivery_address")
-  notes          String?
-
-
-  createdBy User? @relation("DeliveryCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("DeliveryUpdater", fields: [updatedById], references: [id])
+  createdBy  User?      @relation("DeliveryCreator", fields: [createdById], references: [id])
+  updatedBy  User?      @relation("DeliveryUpdater", fields: [updatedById], references: [id])
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
   customer   Customer   @relation(fields: [customerId], references: [id])
   warehouse  Warehouse  @relation(fields: [warehouseId], references: [id])
-  driver     Driver     @relation(fields: [driverId], references: [id])
+  driver     Employee   @relation(fields: [driverId], references: [id])
   vehicle    Vehicle    @relation(fields: [vehicleId], references: [id])
 
-  items DeliveryItem[]
-  proofs DeliveryProof[]
-
-  @@index([salesOrderId])
-  @@index([customerId])
-  @@index([warehouseId])
-  @@index([driverId])
-  @@index([vehicleId])
-  @@index([scheduledDate])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("deliveries")
 }
+
 model DeliveryItem {
+  id                String    @id @default(uuid()) @db.Uuid
+  createdById       String?   @map("created_by_id") @db.Uuid
+  updatedById       String?   @map("updated_by_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  isArchived        Boolean   @default(false) @map("is_archived")
+  archivedAt        DateTime? @map("archived_at")
+  deliveryId        String    @map("delivery_id") @db.Uuid
+  salesOrderItemId  String    @map("sales_order_item_id") @db.Uuid
+  productId         String    @map("product_id") @db.Uuid
+  quantity          Decimal   @db.Decimal(15, 3)
+  deliveredQuantity Decimal   @default(0) @map("delivered_quantity") @db.Decimal(15, 3)
+  returnedQuantity  Decimal   @default(0) @map("returned_quantity") @db.Decimal(15, 3)
 
-  id               String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  deliveryId       String  @map("delivery_id") @db.Uuid
-  salesOrderItemId String  @map("sales_order_item_id") @db.Uuid
-  productId        String  @map("product_id") @db.Uuid
-  quantity         Decimal @db.Decimal(15, 3)
-  deliveredQuantity Decimal @default(0) @map("delivered_quantity") @db.Decimal(15, 3)
-  returnedQuantity Decimal @default(0) @map("returned_quantity") @db.Decimal(15, 3)
-
-
-  createdBy User? @relation("DeliveryItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("DeliveryItemUpdater", fields: [updatedById], references: [id])
-  delivery      Delivery      @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  createdBy      User?          @relation("DeliveryItemCreator", fields: [createdById], references: [id])
+  updatedBy      User?          @relation("DeliveryItemUpdater", fields: [updatedById], references: [id])
+  delivery       Delivery       @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
   salesOrderItem SalesOrderItem @relation(fields: [salesOrderItemId], references: [id])
-  product       Product       @relation(fields: [productId], references: [id])
+  product        Product        @relation(fields: [productId], references: [id])
 
-  @@index([deliveryId])
-  @@index([salesOrderItemId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("delivery_items")
 }
+
 model DeliveryProof {
+  id                 String    @id @default(uuid()) @db.Uuid
+  createdById        String?   @map("created_by_id") @db.Uuid
+  updatedById        String?   @map("updated_by_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  isArchived         Boolean   @default(false) @map("is_archived")
+  archivedAt         DateTime? @map("archived_at")
+  deliveryId         String    @map("delivery_id") @db.Uuid
+  proofType          String    @map("proof_type")
+  fileUrl            String?   @map("file_url")
+  recipientName      String?   @map("recipient_name")
+  recipientSignature String?   @map("recipient_signature")
+  notes              String?
 
-  id               String   @id @default(uuid()) @db.Uuid
+  createdBy User?    @relation("DeliveryProofCreator", fields: [createdById], references: [id])
+  updatedBy User?    @relation("DeliveryProofUpdater", fields: [updatedById], references: [id])
+  delivery  Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  deliveryId       String   @map("delivery_id") @db.Uuid
-  proofType        String   @map("proof_type")
-  fileUrl          String?  @map("file_url")
-  recipientName    String?  @map("recipient_name")
-  recipientSignature String? @map("recipient_signature")
-  notes            String?
-
-
-  createdBy User? @relation("DeliveryProofCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("DeliveryProofUpdater", fields: [updatedById], references: [id])
-  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-
-  @@index([deliveryId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("delivery_proofs")
 }
+
+// ============================================================
+// FINANCE
+// ============================================================
+
 model Invoice {
-
-  id            String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  invoiceNumber String   @unique @map("invoice_number")
-  customerId    String   @map("customer_id") @db.Uuid
-  salesOrderId  String   @map("sales_order_id") @db.Uuid
-  invoiceDate   DateTime @map("invoice_date")
-  dueDate       DateTime @map("due_date")
-  subtotal      Decimal  @default(0) @db.Decimal(15, 2)
-  discount      Decimal  @default(0) @db.Decimal(15, 2)
-  tax           Decimal  @default(0) @db.Decimal(15, 2)
-  total         Decimal  @default(0) @db.Decimal(15, 2)
-  paidAmount    Decimal  @default(0) @map("paid_amount") @db.Decimal(15, 2)
-  balance       Decimal  @default(0) @db.Decimal(15, 2)
-  status        String   @default("UNPAID")
-
-
-  createdBy User? @relation("InvoiceCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("InvoiceUpdater", fields: [updatedById], references: [id])
-  customer  Customer   @relation(fields: [customerId], references: [id])
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
-
-  items InvoiceItem[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  createdById        String?             @map("created_by_id") @db.Uuid
+  updatedById        String?             @map("updated_by_id") @db.Uuid
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  isArchived         Boolean             @default(false) @map("is_archived")
+  archivedAt         DateTime?           @map("archived_at")
+  invoiceNumber      String              @unique @map("invoice_number")
+  customerId         String              @map("customer_id") @db.Uuid
+  salesOrderId       String              @map("sales_order_id") @db.Uuid
+  invoiceDate        DateTime            @map("invoice_date")
+  dueDate            DateTime            @map("due_date")
+  subtotal           Decimal             @default(0) @db.Decimal(15, 2)
+  discount           Decimal             @default(0) @db.Decimal(15, 2)
+  tax                Decimal             @default(0) @db.Decimal(15, 2)
+  total              Decimal             @default(0) @db.Decimal(15, 2)
+  paidAmount         Decimal             @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  balance            Decimal             @default(0) @db.Decimal(15, 2)
+  status             InvoiceStatus       @default(DRAFT)
+  items              InvoiceItem[]
   paymentAllocations PaymentAllocation[]
 
-  @@index([customerId])
-  @@index([salesOrderId])
-  @@index([dueDate])
-  @@index([createdById])
-  @@index([updatedById])
+  createdBy  User?      @relation("InvoiceCreator", fields: [createdById], references: [id])
+  updatedBy  User?      @relation("InvoiceUpdater", fields: [updatedById], references: [id])
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+
   @@map("invoices")
 }
+
 model InvoiceItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  invoiceId   String    @map("invoice_id") @db.Uuid
+  productId   String    @map("product_id") @db.Uuid
+  quantity    Decimal   @db.Decimal(15, 3)
+  unitPrice   Decimal   @map("unit_price") @db.Decimal(15, 2)
+  discount    Decimal   @default(0) @db.Decimal(15, 2)
+  tax         Decimal   @default(0) @db.Decimal(15, 2)
+  total       Decimal   @db.Decimal(15, 2)
 
-  id         String  @id @default(uuid()) @db.Uuid
+  createdBy User?   @relation("InvoiceItemCreator", fields: [createdById], references: [id])
+  updatedBy User?   @relation("InvoiceItemUpdater", fields: [updatedById], references: [id])
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  invoiceId  String  @map("invoice_id") @db.Uuid
-  productId  String  @map("product_id") @db.Uuid
-  quantity   Decimal @db.Decimal(15, 3)
-  unitPrice  Decimal @map("unit_price") @db.Decimal(15, 2)
-  discount   Decimal @default(0) @db.Decimal(15, 2)
-  tax        Decimal @default(0) @db.Decimal(15, 2)
-  total      Decimal @db.Decimal(15, 2)
-
-
-  createdBy User? @relation("InvoiceItemCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("InvoiceItemUpdater", fields: [updatedById], references: [id])
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
-
-  @@index([invoiceId])
-  @@index([productId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("invoice_items")
 }
+
 model Payment {
+  id              String              @id @default(uuid()) @db.Uuid
+  createdById     String?             @map("created_by_id") @db.Uuid
+  updatedById     String?             @map("updated_by_id") @db.Uuid
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  isArchived      Boolean             @default(false) @map("is_archived")
+  archivedAt      DateTime?           @map("archived_at")
+  paymentNumber   String              @unique @map("payment_number")
+  customerId      String?             @map("customer_id") @db.Uuid
+  supplierId      String?             @map("supplier_id") @db.Uuid
+  paymentType     PaymentType         @map("payment_type")
+  paymentMethod   PaymentMethod       @map("payment_method")
+  amount          Decimal             @db.Decimal(15, 2)
+  paymentDate     DateTime            @map("payment_date")
+  referenceNumber String?             @map("reference_number")
+  status          String              @default("COMPLETED")
+  receivedBy      String?             @map("received_by") @db.Uuid
+  allocations     PaymentAllocation[]
+  refunds         Refund[]
 
-  id              String        @id @default(uuid()) @db.Uuid
+  createdBy User?     @relation("PaymentCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("PaymentUpdater", fields: [updatedById], references: [id])
+  customer  Customer? @relation(fields: [customerId], references: [id])
+  supplier  Supplier? @relation(fields: [supplierId], references: [id])
+  receiver  User?     @relation(fields: [receivedBy], references: [id])
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  paymentNumber   String        @unique @map("payment_number")
-  customerId      String?       @map("customer_id") @db.Uuid
-  supplierId      String?       @map("supplier_id") @db.Uuid
-  paymentType     PaymentType   @map("payment_type")
-  paymentMethod   PaymentMethod @map("payment_method")
-  amount          Decimal       @db.Decimal(15, 2)
-  paymentDate     DateTime      @map("payment_date")
-  referenceNumber String?       @map("reference_number")
-  status          String        @default("COMPLETED")
-  receivedBy      String?       @map("received_by") @db.Uuid
-
-
-  createdBy User? @relation("PaymentCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("PaymentUpdater", fields: [updatedById], references: [id])
-  customer Customer? @relation(fields: [customerId], references: [id])
-  supplier Supplier? @relation(fields: [supplierId], references: [id])
-  receiver User?     @relation(fields: [receivedBy], references: [id])
-
-  allocations PaymentAllocation[]
-  refunds     Refund[]
-
-  @@index([createdById])
-  @@index([customerId])
-  @@index([supplierId])
-  @@index([paymentDate])
-  @@index([receivedBy])
-  @@index([updatedById])
   @@map("payments")
 }
+
 model PaymentAllocation {
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  paymentId   String    @map("payment_id") @db.Uuid
+  invoiceId   String    @map("invoice_id") @db.Uuid
+  amount      Decimal   @db.Decimal(15, 2)
+  allocatedAt DateTime  @default(now()) @map("allocated_at")
 
-  id          String   @id @default(uuid()) @db.Uuid
+  createdBy User?   @relation("PaymentAllocationCreator", fields: [createdById], references: [id])
+  updatedBy User?   @relation("PaymentAllocationUpdater", fields: [updatedById], references: [id])
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  paymentId   String   @map("payment_id") @db.Uuid
-  invoiceId   String   @map("invoice_id") @db.Uuid
-  amount      Decimal  @db.Decimal(15, 2)
-  allocatedAt DateTime @default(now()) @map("allocated_at")
-
-
-  createdBy User? @relation("PaymentAllocationCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("PaymentAllocationUpdater", fields: [updatedById], references: [id])
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  invoice Invoice @relation(fields: [invoiceId], references: [id])
-
-  @@unique([paymentId, invoiceId])
-  @@index([invoiceId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("payment_allocations")
 }
+
 model Refund {
-
-  id           String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  refundNumber String   @unique @map("refund_number")
-  paymentId    String   @map("payment_id") @db.Uuid
-  customerId   String   @map("customer_id") @db.Uuid
-  amount       Decimal  @db.Decimal(15, 2)
+  id           String    @id @default(uuid()) @db.Uuid
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  isArchived   Boolean   @default(false) @map("is_archived")
+  archivedAt   DateTime? @map("archived_at")
+  refundNumber String    @unique @map("refund_number")
+  paymentId    String    @map("payment_id") @db.Uuid
+  customerId   String    @map("customer_id") @db.Uuid
+  amount       Decimal   @db.Decimal(15, 2)
   reason       String
-  refundDate   DateTime @map("refund_date")
-  status       String   @default("PENDING")
-  processedBy  String   @map("processed_by") @db.Uuid
+  refundDate   DateTime  @map("refund_date")
+  status       String    @default("PENDING")
+  processedBy  String    @map("processed_by") @db.Uuid
 
+  createdBy User?    @relation("RefundCreator", fields: [createdById], references: [id])
+  updatedBy User?    @relation("RefundUpdater", fields: [updatedById], references: [id])
+  payment   Payment  @relation(fields: [paymentId], references: [id])
+  customer  Customer @relation(fields: [customerId], references: [id])
+  processor User     @relation(fields: [processedBy], references: [id])
 
-  createdBy User? @relation("RefundCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("RefundUpdater", fields: [updatedById], references: [id])
-  payment    Payment  @relation(fields: [paymentId], references: [id])
-  customer   Customer @relation(fields: [customerId], references: [id])
-  processor  User     @relation(fields: [processedBy], references: [id])
-
-  @@index([createdById])
-  @@index([paymentId])
-  @@index([customerId])
-  @@index([processedBy])
-  @@index([updatedById])
   @@map("refunds")
 }
+
 model Credit {
-
-  id            String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  creditNumber  String   @unique @map("credit_number")
-  customerId    String   @map("customer_id") @db.Uuid
-  salesReturnId String?  @map("sales_return_id") @db.Uuid
-  amount        Decimal  @db.Decimal(15, 2)
+  id            String    @id @default(uuid()) @db.Uuid
+  createdById   String?   @map("created_by_id") @db.Uuid
+  updatedById   String?   @map("updated_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  isArchived    Boolean   @default(false) @map("is_archived")
+  archivedAt    DateTime? @map("archived_at")
+  creditNumber  String    @unique @map("credit_number")
+  customerId    String    @map("customer_id") @db.Uuid
+  salesReturnId String?   @map("sales_return_id") @db.Uuid
+  amount        Decimal   @db.Decimal(15, 2)
   reason        String
-  status        String   @default("ACTIVE")
+  status        String    @default("ACTIVE")
 
-
-  createdBy User? @relation("CreditCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("CreditUpdater", fields: [updatedById], references: [id])
-  customer   Customer    @relation(fields: [customerId], references: [id])
+  createdBy   User?        @relation("CreditCreator", fields: [createdById], references: [id])
+  updatedBy   User?        @relation("CreditUpdater", fields: [updatedById], references: [id])
+  customer    Customer     @relation(fields: [customerId], references: [id])
   salesReturn SalesReturn? @relation(fields: [salesReturnId], references: [id])
 
-  @@index([customerId])
-  @@index([salesReturnId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("credits")
 }
+
+// ============================================================
+// AI & INTELLIGENCE
+// ============================================================
+
 model AiQuery {
-
-  id        String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  userId    String   @map("user_id") @db.Uuid
-  question  String
-  intent    String?
-
+  id              String             @id @default(uuid()) @db.Uuid
+  createdById     String?            @map("created_by_id") @db.Uuid
+  updatedById     String?            @map("updated_by_id") @db.Uuid
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  isArchived      Boolean            @default(false) @map("is_archived")
+  archivedAt      DateTime?          @map("archived_at")
+  userId          String             @map("user_id") @db.Uuid
+  question        String
+  intent          String?
+  recommendations AiRecommendation[]
 
   createdBy User? @relation("AiQueryCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("AiQueryUpdater", fields: [updatedById], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  user      User  @relation(fields: [userId], references: [id])
 
-  recommendations AiRecommendation[]
-
-  @@index([createdById])
-  @@index([userId])
-  @@index([createdAt])
-  @@index([updatedById])
   @@map("ai_queries")
 }
+
 model AiRecommendation {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  createdById        String?                  @map("created_by_id") @db.Uuid
+  updatedById        String?                  @map("updated_by_id") @db.Uuid
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+  isArchived         Boolean                  @default(false) @map("is_archived")
+  archivedAt         DateTime?                @map("archived_at")
+  aiQueryId          String                   @map("ai_query_id") @db.Uuid
+  recommendationType String                   @map("recommendation_type")
+  title              String
+  description        String
+  confidenceScore    Decimal?                 @map("confidence_score") @db.Decimal(5, 4)
+  sources            AiRecommendationSource[]
 
-  id               String  @id @default(uuid()) @db.Uuid
+  createdBy User?   @relation("AiRecommendationCreator", fields: [createdById], references: [id])
+  updatedBy User?   @relation("AiRecommendationUpdater", fields: [updatedById], references: [id])
+  aiQuery   AiQuery @relation(fields: [aiQueryId], references: [id], onDelete: Cascade)
 
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  aiQueryId        String  @map("ai_query_id") @db.Uuid
-  recommendationType String @map("recommendation_type")
-  title            String
-  description      String
-  confidenceScore  Decimal? @map("confidence_score") @db.Decimal(5, 4)
-
-
-  createdBy User? @relation("AiRecommendationCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("AiRecommendationUpdater", fields: [updatedById], references: [id])
-  aiQuery AiQuery @relation(fields: [aiQueryId], references: [id], onDelete: Cascade)
-
-  sources AiRecommendationSource[]
-
-  @@index([aiQueryId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("ai_recommendations")
 }
+
 model AiRecommendationSource {
+  id               String    @id @default(uuid()) @db.Uuid
+  createdById      String?   @map("created_by_id") @db.Uuid
+  updatedById      String?   @map("updated_by_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  isArchived       Boolean   @default(false) @map("is_archived")
+  archivedAt       DateTime? @map("archived_at")
+  recommendationId String    @map("recommendation_id") @db.Uuid
+  sourceType       String    @map("source_type")
+  sourceId         String    @map("source_id") @db.Uuid
+  metricName       String?   @map("metric_name")
+  metricValue      Decimal?  @map("metric_value") @db.Decimal(15, 4)
+  explanation      String?
 
-  id             String  @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  recommendationId String @map("recommendation_id") @db.Uuid
-  sourceType     String  @map("source_type")
-  sourceId       String  @map("source_id") @db.Uuid
-  metricName     String? @map("metric_name")
-  metricValue    Decimal? @map("metric_value") @db.Decimal(15, 4)
-  explanation    String?
-
-
-  createdBy User? @relation("AiRecommendationSourceCreator", fields: [createdById], references: [id])
-  updatedBy User? @relation("AiRecommendationSourceUpdater", fields: [updatedById], references: [id])
+  createdBy      User?            @relation("AiRecommendationSourceCreator", fields: [createdById], references: [id])
+  updatedBy      User?            @relation("AiRecommendationSourceUpdater", fields: [updatedById], references: [id])
   recommendation AiRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
 
-  @@index([recommendationId])
-  @@index([sourceType, sourceId])
-  @@index([createdById])
-  @@index([updatedById])
   @@map("ai_recommendation_sources")
 }
+
+// ============================================================
+// SYSTEM
+// ============================================================
+
 model Notification {
-
-  id        String    @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  userId    String    @map("user_id") @db.Uuid
-  title     String
-  message   String
-  type      String
-  isRead    Boolean   @default(false) @map("is_read")
-  readAt    DateTime? @map("read_at")
-
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  userId      String    @map("user_id") @db.Uuid
+  title       String
+  message     String
+  type        String
+  isRead      Boolean   @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
 
   createdBy User? @relation("NotificationCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("NotificationUpdater", fields: [updatedById], references: [id])
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([createdById])
-  @@index([userId, isRead])
-  @@index([createdAt])
-  @@index([updatedById])
   @@map("notifications")
 }
+
 model AuditLog {
-
-  id         String   @id @default(uuid()) @db.Uuid
-
-  createdById String? @map("created_by_id") @db.Uuid
-  updatedById String? @map("updated_by_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  isArchived Boolean @default(false) @map("is_archived")
-  archivedAt DateTime? @map("archived_at")
-  userId     String?  @map("user_id") @db.Uuid
-  action     String
-  entityType String   @map("entity_type")
-  entityId   String   @map("entity_id") @db.Uuid
-  oldValues  Json?    @map("old_values")
-  newValues  Json?    @map("new_values")
-  ipAddress  String?  @map("ip_address")
-  userAgent  String?  @map("user_agent")
-
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+  userId      String?   @map("user_id") @db.Uuid
+  action      String
+  entityType  String    @map("entity_type")
+  entityId    String    @map("entity_id") @db.Uuid
+  oldValues   Json?     @map("old_values")
+  newValues   Json?     @map("new_values")
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
 
   createdBy User? @relation("AuditLogCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("AuditLogUpdater", fields: [updatedById], references: [id])
-  user User? @relation(fields: [userId], references: [id])
+  user      User? @relation(fields: [userId], references: [id])
 
-  @@index([createdById])
-  @@index([userId])
-  @@index([entityType, entityId])
-  @@index([createdAt])
-  @@index([updatedById])
   @@map("audit_logs")
 }

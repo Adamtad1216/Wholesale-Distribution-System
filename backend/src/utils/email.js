@@ -66,3 +66,34 @@ export async function sendResetPasswordEmail(to, token, name) {
     throw error;
   }
 }
+
+export async function sendInvitationEmail(to, token, name) {
+  const invitationUrl = `${env.BASE_URL}/accept-invitation?token=${token}`;
+  const displayName = name || 'User';
+
+  const mailOptions = {
+    from: env.SMTP_FROM,
+    to,
+    subject: 'You are invited to join Wholesale Distribution',
+    text: `Hello ${displayName},\n\nYou have been invited to join Wholesale Distribution.\n\nPlease use the link below to set up your username and password:\n${invitationUrl}\n\nThis link will expire in 7 days.\n\nRegards,\nWholesale Distribution`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <p>Hello ${displayName},</p>
+        <p>You have been invited to join Wholesale Distribution.</p>
+        <p>Please use the link below to set up your username and password:</p>
+        <a href="${invitationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 4px; margin: 16px 0;">Accept Invitation</a>
+        <p style="color: #666; font-size: 14px;">This link will expire in 7 days. If you didn't expect this invitation, please ignore this email.</p>
+        <p>Regards,<br>Wholesale Distribution</p>
+      </div>
+    `,
+  };
+
+  const currentTransporter = await getTransporter();
+  try {
+    await currentTransporter.sendMail(mailOptions);
+    logger.info({ to }, 'Invitation email sent');
+  } catch (error) {
+    logger.error({ error, to }, 'Failed to send invitation email');
+    throw error;
+  }
+}
