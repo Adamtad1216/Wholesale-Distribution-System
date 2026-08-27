@@ -23,3 +23,18 @@ Thumbs.db
 *.p12
 *.pfx
 package-lock.json
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp / uploads
+temp/
+tmp/
+uploads/
