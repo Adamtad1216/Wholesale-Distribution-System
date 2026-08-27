@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import catalogRoutes from '../modules/03-product-catalog/catalog.routes.js';
 import authRoutes from '../modules/01-identity-access/auth/auth.routes.js';
 import customersRoutes from '../modules/09-customers/customers/customers.routes.js';
 import usersRoutes from '../modules/01-identity-access/users/users.routes.js';
@@ -17,6 +18,7 @@ import employeesRoutes from '../modules/01-identity-access/employees/employees.r
 
 const router = Router();
 
+router.use('/v1/catalog', catalogRoutes);
 router.use('/v1/auth', authRoutes);
 router.use('/v1/customers', customersRoutes);
 router.use('/v1/companies', companiesRoutes);
