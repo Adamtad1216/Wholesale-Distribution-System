@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import { verifyAccessToken } from '../utils/jwt.js';
+import { logger } from '../utils/logger.js';
 
 export async function authenticate(req, res, next) {
   let token;
@@ -48,15 +49,7 @@ export async function authenticate(req, res, next) {
     req.user = user;
     next();
   } catch (e) {
-    const fs = await import('fs');
-    const logData = {
-      message: e.message,
-      stack: e.stack,
-      code: e.code,
-      meta: e.meta,
-      full: JSON.stringify(e, null, 2),
-    };
-    fs.appendFileSync('C:/Users/A/AppData/Local/Temp/kilo/auth_error.log', JSON.stringify(logData, null, 2) + '\n---\n');
+    logger.warn({ error: e.message }, 'Authentication failed');
     return res.status(401).json({
       status: 'error',
       message: 'Invalid or expired token',
