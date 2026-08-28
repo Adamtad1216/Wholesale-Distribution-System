@@ -1,4 +1,4 @@
-import { sendSuccess, sendPaginatedSuccess, sendCreated, sendNoContent, sendError } from "../../../utils/api-response.js";
+import { sendSuccess, sendPaginatedSuccess, sendCreated, sendError, sendDeleted, sendUpdated } from "../../../utils/api-response.js";
 import { categoryIdSchema } from "./categories.validation.js";
 import {
   createCategory,
@@ -47,7 +47,7 @@ export async function modifyCategory(req, res, next) {
       return sendError(res, 'Invalid category ID', 400);
     }
     const category = await updateCategory(idResult.data.id, req.body, req.user.id, req);
-    sendSuccess(res, category);
+    sendUpdated(res, category, 'Category updated successfully');
   } catch (err) {
     next(err);
   }
@@ -60,7 +60,7 @@ export async function removeCategory(req, res, next) {
       return sendError(res, 'Invalid category ID', 400);
     }
     await deleteCategory(idResult.data.id, req.user.id, req);
-    sendNoContent(res);
+    sendDeleted(res, 'Category deleted successfully');
   } catch (err) {
     next(err);
   }

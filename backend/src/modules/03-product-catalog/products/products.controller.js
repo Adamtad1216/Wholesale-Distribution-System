@@ -1,4 +1,4 @@
-import { sendSuccess, sendPaginatedSuccess, sendCreated, sendNoContent, sendError } from "../../../utils/api-response.js";
+import { sendSuccess, sendPaginatedSuccess, sendCreated, sendError, sendDeleted, sendUpdated } from "../../../utils/api-response.js";
 import { productIdSchema } from "./products.validation.js";
 import {
   createProduct,
@@ -55,7 +55,7 @@ export async function modifyProduct(req, res, next) {
       return sendError(res, 'Invalid product ID', 400);
     }
     const product = await updateProduct(idResult.data.id, req.body, req.user.id, req);
-    sendSuccess(res, product);
+    sendUpdated(res, product, 'Product updated successfully');
   } catch (err) {
     next(err);
   }
@@ -68,7 +68,7 @@ export async function removeProduct(req, res, next) {
       return sendError(res, 'Invalid product ID', 400);
     }
     await deleteProduct(idResult.data.id, req.user.id, req);
-    sendNoContent(res);
+    sendDeleted(res, 'Product deleted successfully');
   } catch (err) {
     next(err);
   }
@@ -80,7 +80,8 @@ export async function addImage(req, res, next) {
     if (!idResult.success) {
       return sendError(res, 'Invalid product ID', 400);
     }
-    const image = await addProductImage(idResult.data.id, req.body, req.user.id, req);
+    const isPrimary = req.body.isPrimary === 'true' || req.body.isPrimary === true;
+    const image = await addProductImage(idResult.data.id, req.file, isPrimary, req.user.id, req);
     sendCreated(res, image);
   } catch (err) {
     next(err);
@@ -98,7 +99,7 @@ export async function removeImage(req, res, next) {
       return sendError(res, 'Invalid image ID', 400);
     }
     await removeProductImage(idResult.data.id, imageIdResult.data.imageId, req.user.id, req);
-    sendNoContent(res);
+    sendDeleted(res, 'Image removed successfully');
   } catch (err) {
     next(err);
   }
@@ -128,7 +129,7 @@ export async function modifyTier(req, res, next) {
       return sendError(res, 'Invalid tier ID', 400);
     }
     const tier = await updatePriceTier(idResult.data.id, tierIdResult.data.tierId, req.body, req.user.id, req);
-    sendSuccess(res, tier);
+    sendUpdated(res, tier, 'Price tier updated successfully');
   } catch (err) {
     next(err);
   }
@@ -145,7 +146,7 @@ export async function removeTier(req, res, next) {
       return sendError(res, 'Invalid tier ID', 400);
     }
     await removePriceTier(idResult.data.id, tierIdResult.data.tierId, req.user.id, req);
-    sendNoContent(res);
+    sendDeleted(res, 'Price tier removed successfully');
   } catch (err) {
     next(err);
   }
@@ -175,7 +176,7 @@ export async function modifyDiscount(req, res, next) {
       return sendError(res, 'Invalid rule ID', 400);
     }
     const rule = await updateDiscountRule(idResult.data.id, ruleIdResult.data.ruleId, req.body, req.user.id, req);
-    sendSuccess(res, rule);
+    sendUpdated(res, rule, 'Discount rule updated successfully');
   } catch (err) {
     next(err);
   }
@@ -192,7 +193,7 @@ export async function removeDiscount(req, res, next) {
       return sendError(res, 'Invalid rule ID', 400);
     }
     await removeDiscountRule(idResult.data.id, ruleIdResult.data.ruleId, req.user.id, req);
-    sendNoContent(res);
+    sendDeleted(res, 'Discount rule removed successfully');
   } catch (err) {
     next(err);
   }

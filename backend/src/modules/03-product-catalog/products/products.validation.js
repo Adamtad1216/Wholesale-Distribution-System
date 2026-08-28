@@ -25,7 +25,6 @@ export const createProductSchema = z.object({
   wholesalePrice: z.coerce.number().min(0),
   minimumStockLevel: z.coerce.number().min(0).default(0),
   reorderLevel: z.coerce.number().min(0).default(0),
-  status: z.string().default('ACTIVE'),
   images: z.array(
     z.object({
       imageUrl: z.string().url(),
@@ -45,7 +44,6 @@ export const updateProductSchema = z.object({
   wholesalePrice: z.coerce.number().min(0).optional(),
   minimumStockLevel: z.coerce.number().min(0).optional(),
   reorderLevel: z.coerce.number().min(0).optional(),
-  status: z.string().optional(),
 });
 
 export const productImageSchema = z.object({

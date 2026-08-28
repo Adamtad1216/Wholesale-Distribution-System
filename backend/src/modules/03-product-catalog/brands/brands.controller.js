@@ -1,4 +1,4 @@
-import { sendSuccess, sendPaginatedSuccess, sendCreated, sendNoContent, sendError } from "../../../utils/api-response.js";
+import { sendSuccess, sendPaginatedSuccess, sendCreated, sendError, sendDeleted, sendUpdated } from "../../../utils/api-response.js";
 import { brandIdSchema } from "./brands.validation.js";
 import {
   createBrand,
@@ -47,7 +47,7 @@ export async function modifyBrand(req, res, next) {
       return sendError(res, 'Invalid brand ID', 400);
     }
     const brand = await updateBrand(idResult.data.id, req.body, req.user.id, req);
-    sendSuccess(res, brand);
+    sendUpdated(res, brand, 'Brand updated successfully');
   } catch (err) {
     next(err);
   }
@@ -60,7 +60,7 @@ export async function removeBrand(req, res, next) {
       return sendError(res, 'Invalid brand ID', 400);
     }
     await deleteBrand(idResult.data.id, req.user.id, req);
-    sendNoContent(res);
+    sendDeleted(res, 'Brand deleted successfully');
   } catch (err) {
     next(err);
   }

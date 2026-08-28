@@ -14,11 +14,9 @@ export const brandIdSchema = z.object({
 export const createBrandSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(1000).optional(),
-  status: z.string().default('ACTIVE'),
 });
 
 export const updateBrandSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().max(1000).optional(),
-  status: z.string().optional(),
 });

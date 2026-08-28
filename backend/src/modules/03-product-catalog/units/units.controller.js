@@ -1,4 +1,4 @@
-import { sendSuccess, sendPaginatedSuccess, sendCreated, sendNoContent, sendError } from "../../../utils/api-response.js";
+import { sendSuccess, sendPaginatedSuccess, sendCreated, sendError, sendDeleted, sendUpdated } from "../../../utils/api-response.js";
 import { unitIdSchema } from "./units.validation.js";
 import {
   createUnit,
@@ -47,7 +47,7 @@ export async function modifyUnit(req, res, next) {
       return sendError(res, 'Invalid unit ID', 400);
     }
     const unit = await updateUnit(idResult.data.id, req.body, req.user.id, req);
-    sendSuccess(res, unit);
+    sendUpdated(res, unit, 'Unit updated successfully');
   } catch (err) {
     next(err);
   }
@@ -60,7 +60,7 @@ export async function removeUnit(req, res, next) {
       return sendError(res, 'Invalid unit ID', 400);
     }
     await deleteUnit(idResult.data.id, req.user.id, req);
-    sendNoContent(res);
+    sendDeleted(res, 'Unit deleted successfully');
   } catch (err) {
     next(err);
   }
