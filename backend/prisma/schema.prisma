@@ -759,7 +759,7 @@ model Category {
   createdById String?   @map("created_by_id") @db.Uuid
   updatedById String?   @map("updated_by_id") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedAt   DateTime? @map("updated_at")
   isArchived  Boolean   @default(false) @map("is_archived")
   archivedAt  DateTime? @map("archived_at")
   name        String
@@ -781,7 +781,7 @@ model Brand {
   createdById String?   @map("created_by_id") @db.Uuid
   updatedById String?   @map("updated_by_id") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  updatedAt   DateTime? @map("updated_at")
   isArchived  Boolean   @default(false) @map("is_archived")
   archivedAt  DateTime? @map("archived_at")
   name        String    @unique
@@ -800,7 +800,7 @@ model Unit {
   createdById  String?   @map("created_by_id") @db.Uuid
   updatedById  String?   @map("updated_by_id") @db.Uuid
   createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  updatedAt    DateTime? @map("updated_at")
   isArchived   Boolean   @default(false) @map("is_archived")
   archivedAt   DateTime? @map("archived_at")
   name         String
@@ -818,7 +818,7 @@ model Product {
   createdById         String?                   @map("created_by_id") @db.Uuid
   updatedById         String?                   @map("updated_by_id") @db.Uuid
   createdAt           DateTime                  @default(now()) @map("created_at")
-  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  updatedAt           DateTime?                 @map("updated_at")
   isArchived          Boolean                   @default(false) @map("is_archived")
   archivedAt          DateTime?                 @map("archived_at")
   sku                 String                    @unique
@@ -860,16 +860,17 @@ model Product {
 }
 
 model ProductImage {
-  id          String    @id @default(uuid()) @db.Uuid
-  createdById String?   @map("created_by_id") @db.Uuid
-  updatedById String?   @map("updated_by_id") @db.Uuid
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  isArchived  Boolean   @default(false) @map("is_archived")
-  archivedAt  DateTime? @map("archived_at")
-  productId   String    @map("product_id") @db.Uuid
-  imageUrl    String    @map("image_url")
-  isPrimary   Boolean   @default(false) @map("is_primary")
+  id                String    @id @default(uuid()) @db.Uuid
+  createdById       String?   @map("created_by_id") @db.Uuid
+  updatedById       String?   @map("updated_by_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime? @map("updated_at")
+  isArchived        Boolean   @default(false) @map("is_archived")
+  archivedAt        DateTime? @map("archived_at")
+  productId         String    @map("product_id") @db.Uuid
+  imageUrl          String    @map("image_url")
+  cloudinaryPublicId String?  @map("cloudinary_public_id")
+  isPrimary         Boolean   @default(false) @map("is_primary")
 
   createdBy User?   @relation("ProductImageCreator", fields: [createdById], references: [id])
   updatedBy User?   @relation("ProductImageUpdater", fields: [updatedById], references: [id])
