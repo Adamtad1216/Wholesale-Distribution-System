@@ -2,6 +2,7 @@ import prisma from "../../../config/prisma.js";
 import { logAudit } from "../../../middleware/audit.middleware.js";
 import { AppError } from "../../../utils/errors.js";
 import { getPaginationParams, buildPaginationMeta } from "../../../utils/pagination.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../../../config/cloudinary.js";
 
 export const generateProductCode = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -13,8 +14,8 @@ export const ensureUniqueSku = async (tx, sku) => {
   let uniqueSku = sku;
   let attempts = 0;
   while (attempts < 5) {
-    const existing = await tx.product.findUnique({
-      where: { sku: uniqueSku },
+    const existing = await tx.product.findFirst({
+      where: { sku: uniqueSku, isArchived: false },
     });
     if (!existing) return uniqueSku;
     uniqueSku = `${sku}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -52,8 +53,8 @@ export async function createProduct(data, createdById, req) {
     ? await ensureUniqueSku(prisma, data.sku)
     : generateProductCode();
 
-  const existingSku = await prisma.product.findUnique({
-    where: { sku },
+  const existingSku = await prisma.product.findFirst({
+    where: { sku, isArchived: false },
   });
   if (existingSku) {
     throw new AppError('Product SKU already exists', 409);
@@ -71,9 +72,8 @@ export async function createProduct(data, createdById, req) {
       wholesalePrice: data.wholesalePrice,
       minimumStockLevel: data.minimumStockLevel,
       reorderLevel: data.reorderLevel,
-      status: data.status || 'ACTIVE',
+      status: 'ACTIVE',
       createdById,
-      updatedById: createdById,
     },
     include: {
       category: {
@@ -297,22 +297,52 @@ export async function updateProduct(id, data, createdById, req) {
     }
   }
 
+  const updateData = {};
+
+  if (data.sku !== undefined && data.sku !== existingProduct.sku) {
+    updateData.sku = data.sku;
+  }
+  if (data.name !== undefined && data.name !== existingProduct.name) {
+    updateData.name = data.name;
+  }
+  if (data.categoryId !== undefined && data.categoryId !== existingProduct.categoryId) {
+    updateData.categoryId = data.categoryId;
+  }
+  if (data.brandId !== undefined && data.brandId !== existingProduct.brandId) {
+    updateData.brandId = data.brandId;
+  }
+  if (data.unitId !== undefined && data.unitId !== existingProduct.unitId) {
+    updateData.unitId = data.unitId;
+  }
+  if (data.purchasePrice !== undefined && data.purchasePrice !== existingProduct.purchasePrice) {
+    updateData.purchasePrice = data.purchasePrice;
+  }
+  if (data.sellingPrice !== undefined && data.sellingPrice !== existingProduct.sellingPrice) {
+    updateData.sellingPrice = data.sellingPrice;
+  }
+  if (data.wholesalePrice !== undefined && data.wholesalePrice !== existingProduct.wholesalePrice) {
+    updateData.wholesalePrice = data.wholesalePrice;
+  }
+  if (data.minimumStockLevel !== undefined && data.minimumStockLevel !== existingProduct.minimumStockLevel) {
+    updateData.minimumStockLevel = data.minimumStockLevel;
+  }
+  if (data.reorderLevel !== undefined && data.reorderLevel !== existingProduct.reorderLevel) {
+    updateData.reorderLevel = data.reorderLevel;
+  }
+  if (data.status !== undefined && data.status !== existingProduct.status) {
+    updateData.status = data.status;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return getProductById(id);
+  }
+
+  updateData.updatedById = createdById;
+  updateData.updatedAt = new Date();
+
   const updatedProduct = await prisma.product.update({
     where: { id },
-    data: {
-      sku: data.sku,
-      name: data.name,
-      categoryId: data.categoryId,
-      brandId: data.brandId,
-      unitId: data.unitId,
-      purchasePrice: data.purchasePrice,
-      sellingPrice: data.sellingPrice,
-      wholesalePrice: data.wholesalePrice,
-      minimumStockLevel: data.minimumStockLevel,
-      reorderLevel: data.reorderLevel,
-      status: data.status,
-      updatedById: createdById,
-    },
+    data: updateData,
     include: {
       category: {
         select: {
@@ -388,6 +418,7 @@ export async function deleteProduct(id, createdById, req) {
     data: {
       isArchived: true,
       archivedAt: new Date(),
+      status: 'Inactive',
       updatedById: createdById,
     },
   });
@@ -404,7 +435,7 @@ export async function deleteProduct(id, createdById, req) {
   return { message: 'Product deleted successfully' };
 }
 
-export async function addProductImage(productId, data, createdById, req) {
+export async function addProductImage(productId, file, isPrimary, createdById, req) {
   const product = await prisma.product.findFirst({
     where: { id: productId, isArchived: false },
   });
@@ -413,7 +444,13 @@ export async function addProductImage(productId, data, createdById, req) {
     throw new AppError('Product not found', 404);
   }
 
-  if (data.isPrimary) {
+  if (!file) {
+    throw new AppError('Image file is required', 400);
+  }
+
+  const { url, publicId } = await uploadToCloudinary(file.buffer);
+
+  if (isPrimary) {
     await prisma.productImage.updateMany({
       where: { productId },
       data: { isPrimary: false },
@@ -423,10 +460,10 @@ export async function addProductImage(productId, data, createdById, req) {
   const image = await prisma.productImage.create({
     data: {
       productId,
-      imageUrl: data.imageUrl,
-      isPrimary: data.isPrimary || false,
+      imageUrl: url,
+      cloudinaryPublicId: publicId,
+      isPrimary: isPrimary || false,
       createdById,
-      updatedById: createdById,
     },
   });
 
@@ -435,7 +472,7 @@ export async function addProductImage(productId, data, createdById, req) {
     action: 'PRODUCT_IMAGE_ADDED',
     entityType: 'ProductImage',
     entityId: image.id,
-    newValues: { productId, imageUrl: data.imageUrl },
+    newValues: { productId, imageUrl: url },
     req,
   });
 
@@ -449,6 +486,10 @@ export async function removeProductImage(productId, imageId, createdById, req) {
 
   if (!image) {
     throw new AppError('Image not found', 404);
+  }
+
+  if (image.cloudinaryPublicId) {
+    await deleteFromCloudinary(image.cloudinaryPublicId);
   }
 
   await prisma.productImage.delete({

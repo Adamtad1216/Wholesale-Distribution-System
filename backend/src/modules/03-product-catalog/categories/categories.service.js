@@ -49,9 +49,8 @@ export async function createCategory(data, createdById, req) {
       name: data.name,
       description: data.description,
       parentId: data.parentId,
-      status: data.status || 'ACTIVE',
+      status: 'ACTIVE',
       createdById,
-      updatedById: createdById,
     },
     include: {
       parent: {
@@ -234,15 +233,31 @@ export async function updateCategory(id, data, createdById, req) {
     throw new AppError('Category name already exists under this parent', 409);
   }
 
+  const updateData = {};
+
+  if (data.name !== undefined && data.name !== existingCategory.name) {
+    updateData.name = data.name;
+  }
+  if (data.description !== undefined && data.description !== existingCategory.description) {
+    updateData.description = data.description;
+  }
+  if (data.parentId !== undefined && data.parentId !== existingCategory.parentId) {
+    updateData.parentId = data.parentId;
+  }
+  if (data.status !== undefined && data.status !== existingCategory.status) {
+    updateData.status = data.status;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return getCategoryById(id);
+  }
+
+  updateData.updatedById = createdById;
+  updateData.updatedAt = new Date();
+
   const updatedCategory = await prisma.category.update({
     where: { id },
-    data: {
-      name: data.name,
-      description: data.description,
-      parentId: data.parentId,
-      status: data.status,
-      updatedById: createdById,
-    },
+    data: updateData,
     include: {
       parent: {
         select: {
@@ -324,6 +339,7 @@ export async function deleteCategory(id, createdById, req) {
     data: {
       isArchived: true,
       archivedAt: new Date(),
+      status: 'Inactive',
       updatedById: createdById,
     },
   });

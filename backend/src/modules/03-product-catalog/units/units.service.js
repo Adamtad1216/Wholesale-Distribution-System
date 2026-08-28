@@ -23,8 +23,15 @@ const sanitizeUnit = (unit) => {
 };
 
 export async function createUnit(data, createdById, req) {
+  const existingName = await prisma.unit.findFirst({
+    where: { name: data.name, isArchived: false },
+  });
+  if (existingName) {
+    throw new AppError('Unit name already exists', 409);
+  }
+
   const existingAbbreviation = await prisma.unit.findFirst({
-    where: { abbreviation: data.abbreviation },
+    where: { abbreviation: data.abbreviation, isArchived: false },
   });
   if (existingAbbreviation) {
     throw new AppError('Unit abbreviation already exists', 409);
@@ -35,7 +42,6 @@ export async function createUnit(data, createdById, req) {
       name: data.name,
       abbreviation: data.abbreviation,
       createdById,
-      updatedById: createdById,
     },
     include: {
       createdBy: {
@@ -184,13 +190,25 @@ export async function updateUnit(id, data, createdById, req) {
     }
   }
 
+  const updateData = {};
+
+  if (data.name !== undefined && data.name !== existingUnit.name) {
+    updateData.name = data.name;
+  }
+  if (data.abbreviation !== undefined && data.abbreviation !== existingUnit.abbreviation) {
+    updateData.abbreviation = data.abbreviation;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return getUnitById(id);
+  }
+
+  updateData.updatedById = createdById;
+  updateData.updatedAt = new Date();
+
   const updatedUnit = await prisma.unit.update({
     where: { id },
-    data: {
-      name: data.name,
-      abbreviation: data.abbreviation,
-      updatedById: createdById,
-    },
+    data: updateData,
     include: {
       createdBy: {
         include: {
@@ -252,6 +270,7 @@ export async function deleteUnit(id, createdById, req) {
     data: {
       isArchived: true,
       archivedAt: new Date(),
+      status: 'Inactive',
       updatedById: createdById,
     },
   });

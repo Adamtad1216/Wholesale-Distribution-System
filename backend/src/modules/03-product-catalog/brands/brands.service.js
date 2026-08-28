@@ -24,7 +24,7 @@ const sanitizeBrand = (brand) => {
 
 export async function createBrand(data, createdById, req) {
   const existingName = await prisma.brand.findFirst({
-    where: { name: data.name },
+    where: { name: data.name, isArchived: false },
   });
   if (existingName) {
     throw new AppError('Brand name already exists', 409);
@@ -34,9 +34,8 @@ export async function createBrand(data, createdById, req) {
     data: {
       name: data.name,
       description: data.description,
-      status: data.status || 'ACTIVE',
+      status: 'ACTIVE',
       createdById,
-      updatedById: createdById,
     },
     include: {
       createdBy: {
@@ -176,14 +175,28 @@ export async function updateBrand(id, data, createdById, req) {
     }
   }
 
+  const updateData = {};
+
+  if (data.name !== undefined && data.name !== existingBrand.name) {
+    updateData.name = data.name;
+  }
+  if (data.description !== undefined && data.description !== existingBrand.description) {
+    updateData.description = data.description;
+  }
+  if (data.status !== undefined && data.status !== existingBrand.status) {
+    updateData.status = data.status;
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return getBrandById(id);
+  }
+
+  updateData.updatedById = createdById;
+  updateData.updatedAt = new Date();
+
   const updatedBrand = await prisma.brand.update({
     where: { id },
-    data: {
-      name: data.name,
-      description: data.description,
-      status: data.status,
-      updatedById: createdById,
-    },
+    data: updateData,
     include: {
       createdBy: {
         include: {
@@ -245,6 +258,7 @@ export async function deleteBrand(id, createdById, req) {
     data: {
       isArchived: true,
       archivedAt: new Date(),
+      status: 'Inactive',
       updatedById: createdById,
     },
   });
