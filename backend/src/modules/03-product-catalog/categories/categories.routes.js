@@ -112,7 +112,6 @@ router.get(
  *           example:
  *             name: Electronics
  *             description: Electronic products
- *             status: ACTIVE
  *             parentId: null
  *     responses:
  *       201:

@@ -30,3 +30,18 @@ export const sendCreated = (res, data) => {
 export const sendNoContent = (res) => {
   return res.status(204).send();
 };
+
+export const sendDeleted = (res, message = 'Resource deleted successfully') => {
+  return res.status(200).json({
+    status: 'success',
+    message,
+  });
+};
+
+export const sendUpdated = (res, data, message = 'Resource updated successfully') => {
+  return res.status(200).json({
+    status: 'success',
+    message,
+    data,
+  });
+};

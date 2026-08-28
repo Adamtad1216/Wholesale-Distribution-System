@@ -26,6 +26,7 @@ import {
 import { validate } from "../../../middleware/validation.middleware.js";
 import { requirePermission } from "../../../middleware/permission.middleware.js";
 import { authenticate } from "../../../middleware/auth.middleware.js";
+import { uploadSingleImage } from "../../../middleware/upload.middleware.js";
 
 const router = Router();
 
@@ -144,7 +145,6 @@ router.get(
  *             wholesalePrice: 120
  *             minimumStockLevel: 10
  *             reorderLevel: 5
- *             status: ACTIVE
  *             images:
  *               - imageUrl: https://example.com/image.jpg
  *                 isPrimary: true
@@ -437,7 +437,7 @@ router.delete(
  */
 router.post(
   "/:id/images",
-  validate(productImageSchema),
+  uploadSingleImage,
   requirePermission("products:update"),
   addImage,
 );

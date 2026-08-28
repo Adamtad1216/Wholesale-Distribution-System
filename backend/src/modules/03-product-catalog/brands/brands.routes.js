@@ -106,7 +106,6 @@ router.get(
  *           example:
  *             name: Samsung
  *             description: Electronics brand
- *             status: ACTIVE
  *     responses:
  *       201:
  *         description: Brand created successfully
