@@ -45,6 +45,80 @@ const ALL_PERMISSIONS = [
   { name: 'users:read', module: 'users', action: 'read', description: 'Read users' },
   { name: 'users:update', module: 'users', action: 'update', description: 'Update users' },
   { name: 'users:resetPassword', module: 'users', action: 'resetPassword', description: 'Reset user passwords' },
+  { name: 'inventory:stock:create', module: 'inventory', action: 'stock:create', description: 'Create warehouse stock' },
+  { name: 'inventory:stock:read', module: 'inventory', action: 'stock:read', description: 'Read warehouse stock' },
+  { name: 'inventory:stock:update', module: 'inventory', action: 'stock:update', description: 'Update warehouse stock' },
+  { name: 'inventory:stock:delete', module: 'inventory', action: 'stock:delete', description: 'Delete warehouse stock' },
+  { name: 'inventory:movements:read', module: 'inventory', action: 'movements:read', description: 'Read stock movements' },
+  { name: 'inventory:movements:create', module: 'inventory', action: 'movements:create', description: 'Create stock movements' },
+  { name: 'inventory:movements:delete', module: 'inventory', action: 'movements:delete', description: 'Delete stock movements' },
+  { name: 'inventory:adjustments:create', module: 'inventory', action: 'adjustments:create', description: 'Create stock adjustments' },
+  { name: 'inventory:adjustments:read', module: 'inventory', action: 'adjustments:read', description: 'Read stock adjustments' },
+  { name: 'inventory:adjustments:approve', module: 'inventory', action: 'adjustments:approve', description: 'Approve stock adjustments' },
+  { name: 'inventory:adjustments:delete', module: 'inventory', action: 'adjustments:delete', description: 'Delete stock adjustments' },
+  { name: 'inventory:reservations:create', module: 'inventory', action: 'reservations:create', description: 'Create stock reservations' },
+  { name: 'inventory:reservations:read', module: 'inventory', action: 'reservations:read', description: 'Read stock reservations' },
+  { name: 'inventory:reservations:release', module: 'inventory', action: 'reservations:release', description: 'Release stock reservations' },
+  { name: 'inventory:reservations:delete', module: 'inventory', action: 'reservations:delete', description: 'Delete stock reservations' },
+  { name: 'inventory:fulfillment:create', module: 'inventory', action: 'fulfillment:create', description: 'Create fulfillment' },
+  { name: 'inventory:fulfillment:read', module: 'inventory', action: 'fulfillment:read', description: 'Read fulfillment' },
+  { name: 'inventory:transfers:create', module: 'inventory', action: 'transfers:create', description: 'Create transfers' },
+  { name: 'inventory:transfers:read', module: 'inventory', action: 'transfers:read', description: 'Read transfers' },
+];
+
+// Role definitions with specific permissions for testing
+const ROLE_DEFINITIONS = [
+  {
+    name: 'INVENTORY_MANAGER',
+    description: 'Full inventory management access',
+    permissions: [
+      'inventory:stock:create', 'inventory:stock:read', 'inventory:stock:update', 'inventory:stock:delete',
+      'inventory:movements:create', 'inventory:movements:read', 'inventory:movements:delete',
+      'inventory:adjustments:create', 'inventory:adjustments:read', 'inventory:adjustments:approve', 'inventory:adjustments:delete',
+      'inventory:reservations:create', 'inventory:reservations:read', 'inventory:reservations:release', 'inventory:reservations:delete',
+      'inventory:fulfillment:create', 'inventory:fulfillment:read',
+      'inventory:transfers:create', 'inventory:transfers:read',
+    ],
+  },
+  {
+    name: 'WAREHOUSE_OPERATOR',
+    description: 'Can create and update stock and movements',
+    permissions: [
+      'inventory:stock:create', 'inventory:stock:read', 'inventory:stock:update',
+      'inventory:movements:create', 'inventory:movements:read',
+      'inventory:adjustments:create', 'inventory:adjustments:read',
+      'inventory:reservations:create', 'inventory:reservations:read',
+    ],
+  },
+  {
+    name: 'STOCK_AUDITOR',
+    description: 'Read-only access to all inventory data',
+    permissions: [
+      'inventory:stock:read',
+      'inventory:movements:read',
+      'inventory:adjustments:read',
+      'inventory:reservations:read',
+      'inventory:fulfillment:read',
+      'inventory:transfers:read',
+    ],
+  },
+  {
+    name: 'SALES_REP',
+    description: 'Can view stock and create reservations',
+    permissions: [
+      'inventory:stock:read',
+      'inventory:movements:read',
+      'inventory:reservations:create', 'inventory:reservations:read', 'inventory:reservations:release',
+    ],
+  },
+  {
+    name: 'ADJUSTMENT_APPROVER',
+    description: 'Can approve or reject stock adjustments',
+    permissions: [
+      'inventory:stock:read',
+      'inventory:adjustments:read', 'inventory:adjustments:approve',
+    ],
+  },
 ];
 
 async function main() {
@@ -63,6 +137,9 @@ async function main() {
   if (existingUser) {
     console.log(`Admin user already exists: ${existingUser.username} (${existingUser.id})`);
     await ensureAdminPermissions(existingUser.id);
+    await seedRolesAndUsers(existingUser.id);
+    await seedCompanyBranchWarehouse(existingUser.id);
+    await seedInventoryData(existingUser.id);
     console.log('Seed completed (idempotent).');
     return;
   }
@@ -150,7 +227,301 @@ async function main() {
 
   console.log(`Admin user created: ${user.username} (${user.id})`);
   console.log(`Admin person created: ${person.firstName} ${person.lastName} (${person.id})`);
+  await seedRolesAndUsers(user.id);
+  await seedCompanyBranchWarehouse(user.id);
+  await seedInventoryData(user.id);
   console.log('Seed completed successfully.');
+}
+
+async function seedInventoryData(adminId) {
+  console.log('Seeding inventory data...');
+
+  const warehouses = await prisma.warehouse.findMany();
+  const products = await prisma.product.findMany({ where: { isArchived: false } });
+
+  if (warehouses.length === 0 || products.length === 0) {
+    console.log('No warehouses or products found. Skipping inventory seed.');
+    return;
+  }
+
+  const warehouse = warehouses[0];
+
+  for (const product of products.slice(0, 5)) {
+    const existingStock = await prisma.warehouseStock.findFirst({
+      where: { warehouseId: warehouse.id, productId: product.id },
+    });
+
+    if (!existingStock) {
+      const quantity = Math.floor(Math.random() * 500) + 100;
+      await prisma.warehouseStock.create({
+        data: {
+          warehouseId: warehouse.id,
+          productId: product.id,
+          quantity,
+          reservedQuantity: 0,
+          availableQuantity: quantity,
+          minimumStock: 10,
+          reorderLevel: 50,
+          createdById: adminId,
+        },
+      });
+    }
+  }
+
+  const stockMovements = await prisma.stockMovement.count();
+  if (stockMovements === 0) {
+    const stocks = await prisma.warehouseStock.findMany({
+      where: { warehouseId: warehouse.id },
+      take: 3,
+    });
+
+    for (const stock of stocks) {
+      await prisma.stockMovement.create({
+        data: {
+          warehouseId: warehouse.id,
+          productId: stock.productId,
+          movementType: 'PURCHASE_RECEIPT',
+          quantity: stock.quantity,
+          referenceType: 'PURCHASE_ORDER',
+          unitCost: 100,
+          notes: 'Initial stock receipt',
+          createdById: adminId,
+        },
+      });
+    }
+  }
+
+  const adjustments = await prisma.stockAdjustment.count();
+  if (adjustments === 0) {
+    const stock = await prisma.warehouseStock.findFirst({
+      where: { warehouseId: warehouse.id },
+    });
+
+    if (stock) {
+      const adjustment = await prisma.stockAdjustment.create({
+        data: {
+          warehouseId: warehouse.id,
+          reason: 'Initial inventory count',
+          status: 'APPROVED',
+          approvedBy: adminId,
+          approvedAt: new Date(),
+          createdById: adminId,
+          items: {
+            create: {
+              productId: stock.productId,
+              systemQuantity: stock.quantity,
+              actualQuantity: stock.quantity,
+              difference: 0,
+              reason: 'Verified during initial count',
+              createdById: adminId,
+            },
+          },
+        },
+      });
+      console.log(`Created stock adjustment: ${adjustment.id}`);
+    }
+  }
+
+  console.log('Inventory data seeded.');
+}
+
+async function seedCompanyBranchWarehouse(adminId) {
+  console.log('Seeding company, branch, warehouse data...');
+
+  const existingCompany = await prisma.company.findFirst();
+  if (existingCompany) {
+    console.log('Company already exists. Skipping company/branch/warehouse seed.');
+    return;
+  }
+
+  // Create region first
+  let region = await prisma.region.findFirst({ where: { code: 'ADD' } });
+  if (!region) {
+    region = await prisma.region.create({
+      data: {
+        name: 'Addis Ababa',
+        code: 'ADD',
+        description: 'Capital city of Ethiopia',
+        isActive: true,
+        createdById: adminId,
+      },
+    });
+    console.log(`Created region: ${region.name} (${region.id})`);
+  }
+
+  // Create company
+  const company = await prisma.company.create({
+    data: {
+      name: 'Ethio Wholesale Distribution',
+      legalName: 'Ethiopian Wholesale Distribution PLC',
+      tradeLicenseNumber: 'TL-2024-001',
+      tinNumber: 'TIN-0012345678',
+      vatRegistrationNumber: 'VAT-0012345678',
+      isVatRegistered: true,
+      phone: '+251111234567',
+      alternatePhone: '+251111234568',
+      email: 'info@ethiowholesale.com',
+      website: 'https://ethiowholesale.com',
+      regionId: region.id,
+      city: 'Addis Ababa',
+      subCity: 'Bole',
+      woreda: '03',
+      kebele: '12',
+      houseNumber: '1234',
+      landmark: 'Near Bole International Airport',
+      status: 'ACTIVE',
+      createdById: adminId,
+    },
+  });
+  console.log(`Created company: ${company.name} (${company.id})`);
+
+  // Create branch
+  const branch = await prisma.branch.create({
+    data: {
+      companyId: company.id,
+      branchCode: 'BR-001',
+      name: 'Addis Ababa Main Branch',
+      isHeadOffice: true,
+      phone: '+251111234567',
+      email: 'addis@ethiowholesale.com',
+      regionId: region.id,
+      city: 'Addis Ababa',
+      subCity: 'Bole',
+      woreda: '03',
+      kebele: '12',
+      houseNumber: '1234',
+      landmark: 'Near Bole International Airport',
+      status: 'ACTIVE',
+      createdById: adminId,
+    },
+  });
+  console.log(`Created branch: ${branch.name} (${branch.id})`);
+
+  // Create warehouse
+  const warehouse = await prisma.warehouse.create({
+    data: {
+      code: 'WH-001',
+      name: 'Bole Central Warehouse',
+      branchId: branch.id,
+      location: 'Bole Sub City, Addis Ababa',
+      regionId: region.id,
+      city: 'Addis Ababa',
+      subCity: 'Bole',
+      woreda: '03',
+      kebele: '12',
+      houseNumber: '5678',
+      status: 'ACTIVE',
+      createdById: adminId,
+    },
+  });
+  console.log(`Created warehouse: ${warehouse.name} (${warehouse.id})`);
+
+  // Create a second warehouse
+  const warehouse2 = await prisma.warehouse.create({
+    data: {
+      code: 'WH-002',
+      name: 'Megenagna Warehouse',
+      branchId: branch.id,
+      location: 'Megenagna Area, Addis Ababa',
+      regionId: region.id,
+      city: 'Addis Ababa',
+      subCity: 'Kirkos',
+      woreda: '05',
+      kebele: '08',
+      houseNumber: '9101',
+      status: 'ACTIVE',
+      createdById: adminId,
+    },
+  });
+  console.log(`Created warehouse: ${warehouse2.name} (${warehouse2.id})`);
+
+  console.log('Company, branch, warehouse data seeded.');
+}
+
+async function seedRolesAndUsers(adminId) {
+  console.log('Seeding roles and test users...');
+
+  // Get all permissions
+  const allPermissions = await prisma.permission.findMany();
+  const permissionMap = new Map(allPermissions.map((p) => [p.name, p]));
+
+  // Create roles with their permissions
+  for (const roleDef of ROLE_DEFINITIONS) {
+    const role = await prisma.role.upsert({
+      where: { name: roleDef.name },
+      update: { description: roleDef.description },
+      create: { name: roleDef.name, description: roleDef.description },
+    });
+
+    // Get permissions for this role
+    const rolePermissions = roleDef.permissions
+      .map((permName) => permissionMap.get(permName))
+      .filter(Boolean);
+
+    // Clear existing role permissions and add new ones
+    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+
+    for (const perm of rolePermissions) {
+      await prisma.rolePermission.create({
+        data: { roleId: role.id, permissionId: perm.id },
+      });
+    }
+
+    console.log(`  Role ${roleDef.name}: ${rolePermissions.length} permissions`);
+  }
+
+  // Create test users
+  const testUsers = [
+    { username: 'minte', password: 'Minte@123', firstName: 'Minte', lastName: 'Worku', email: 'minte@ethiowholesale.com', role: 'INVENTORY_MANAGER' },
+    { username: 'operator', password: 'Operator@123', firstName: 'Abebe', lastName: 'Kebede', email: 'abebe@ethiowholesale.com', role: 'WAREHOUSE_OPERATOR' },
+    { username: 'auditor', password: 'Auditor@123', firstName: 'Sara', lastName: 'Mohamed', email: 'sara@ethiowholesale.com', role: 'STOCK_AUDITOR' },
+    { username: 'sales', password: 'Sales@123', firstName: 'Dawit', lastName: 'Tadesse', email: 'dawit@ethiowholesale.com', role: 'SALES_REP' },
+    { username: 'approver', password: 'Approver@123', firstName: 'Helen', lastName: 'Girma', email: 'helen@ethiowholesale.com', role: 'ADJUSTMENT_APPROVER' },
+  ];
+
+  for (const testUser of testUsers) {
+    const existingUser = await prisma.user.findUnique({
+      where: { username: testUser.username },
+    });
+
+    if (existingUser) {
+      console.log(`  User ${testUser.username} already exists`);
+      continue;
+    }
+
+    const passwordHash = await bcrypt.hash(testUser.password, 12);
+
+    const person = await prisma.person.create({
+      data: {
+        firstName: testUser.firstName,
+        lastName: testUser.lastName,
+        email: testUser.email,
+        status: 'ACTIVE',
+        createdById: adminId,
+      },
+    });
+
+    const user = await prisma.user.create({
+      data: {
+        personId: person.id,
+        username: testUser.username,
+        passwordHash,
+        isActive: true,
+        createdById: adminId,
+      },
+    });
+
+    const role = await prisma.role.findUnique({ where: { name: testUser.role } });
+    if (role) {
+      await prisma.userRole.create({
+        data: { userId: user.id, roleId: role.id },
+      });
+    }
+
+    console.log(`  Created user: ${testUser.username} (${testUser.role})`);
+  }
+
+  console.log('Roles and test users seeded.');
 }
 
 async function ensureAdminPermissions(userId) {
@@ -161,21 +532,55 @@ async function ensureAdminPermissions(userId) {
 
   if (!user) return;
 
+  const adminRole = await prisma.role.findUnique({
+    where: { name: 'ADMIN' },
+  });
+
+  if (!adminRole) {
+    console.log('ADMIN role not found');
+    return;
+  }
+
   const hasAdminRole = user.userRoles.some((ur) => ur.role.name === 'ADMIN');
   if (!hasAdminRole) {
-    const adminRole = await prisma.role.findUnique({
-      where: { name: 'ADMIN' },
+    await prisma.userRole.create({
+      data: {
+        userId: user.id,
+        roleId: adminRole.id,
+      },
     });
+    console.log(`Assigned ADMIN role to existing user: ${user.username}`);
+  }
 
-    if (adminRole) {
-      await prisma.userRole.create({
-        data: {
-          userId: user.id,
-          roleId: adminRole.id,
-        },
-      });
-      console.log(`Assigned ADMIN role to existing user: ${user.username}`);
-    }
+  // Upsert all permissions from ALL_PERMISSIONS list
+  const createdPermissions = [];
+  for (const perm of ALL_PERMISSIONS) {
+    const p = await prisma.permission.upsert({
+      where: { name: perm.name },
+      update: {},
+      create: perm,
+    });
+    createdPermissions.push(p);
+  }
+
+  const existingRolePermissions = await prisma.rolePermission.findMany({
+    where: { roleId: adminRole.id },
+  });
+
+  const existingPermissionIds = new Set(existingRolePermissions.map((rp) => rp.permissionId));
+  const missingPermissions = createdPermissions.filter((p) => !existingPermissionIds.has(p.id));
+
+  for (const perm of missingPermissions) {
+    await prisma.rolePermission.create({
+      data: {
+        roleId: adminRole.id,
+        permissionId: perm.id,
+      },
+    });
+  }
+
+  if (missingPermissions.length > 0) {
+    console.log(`Added ${missingPermissions.length} permissions to ADMIN role`);
   }
 }
 
@@ -187,3 +592,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
