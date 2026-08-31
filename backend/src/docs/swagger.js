@@ -19,7 +19,15 @@ const swaggerOptions = {
       },
     ],
     tags: [
-      { name: '01-identity-access', description: 'Authentication, users, employees, and job specifications' },
+      { name: '01 - Auth', description: 'Authentication and session management' },
+      { name: '01 - Users', description: 'User account management' },
+      { name: '01 - Roles', description: 'Role-based access control roles' },
+      { name: '01 - Permissions', description: 'Role-based access control permissions' },
+      { name: '01 - Employees', description: 'Employee records and tracking' },
+      { name: '01 - Job Specifications', description: 'Job titles and specifications' },
+      { name: '02 - Suppliers', description: 'Supplier management' },
+      { name: '03 - Procurement', description: 'Purchase orders and goods receipts' },
+      { name: '04 - Finance', description: 'Finance and payment operations' },
       { name: '06-branches-warehouses', description: 'Companies, branches, warehouses, and regions' },
       { name: '09-customers', description: 'Customer management (PERSON and ORGANIZATION)' },
       { name: '10-sales', description: 'Sales requests, quotations, and sales orders' },
@@ -28,6 +36,7 @@ const swaggerOptions = {
       { name: '14-notifications', description: 'Notification operations' },
       { name: '16-reporting-dashboards', description: 'Reporting and analytics' },
       { name: '17-ai', description: 'AI assistant and recommendations' },
+      { name: '18 - Documents', description: 'Document Management and file attachments' },
     ],
     components: {
       securitySchemes: {

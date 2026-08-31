@@ -23,7 +23,7 @@ router.use(authenticate);
  * @swagger
  * /api/v1/employees:
  *   get:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Employees"]
  *     summary: List employees
  *     description: Retrieve a paginated list of employees with optional filtering.
  *     security:
@@ -93,7 +93,7 @@ router.get(
  * @swagger
  * /api/v1/employees:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Employees"]
  *     summary: Create an employee
  *     description: |
  *       Create a new employee. Set `needsUserAccount` to `true` if the employee should receive an invitation email to set up their username and password.
@@ -176,7 +176,7 @@ router.post(
  * @swagger
  * /api/v1/employees/{id}:
  *   get:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Employees"]
  *     summary: Get employee by ID
  *     description: Retrieve detailed information for a specific employee including person and job specification.
  *     security:
@@ -227,7 +227,7 @@ router.get("/:id", requirePermission("employees:read"), getEmployee);
  * @swagger
  * /api/v1/employees/{id}:
  *   patch:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Employees"]
  *     summary: Update an employee
  *     description: Update employee details. If switching to needsUserAccount=true, an invitation will be sent.
  *     security:
@@ -301,7 +301,7 @@ router.patch(
  * @swagger
  * /api/v1/employees/{id}:
  *   delete:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Employees"]
  *     summary: Delete an employee
  *     description: Soft-delete an employee by ID. The employee will be marked as archived and excluded from future listings.
  *     security:

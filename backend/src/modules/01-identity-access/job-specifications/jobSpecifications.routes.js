@@ -23,7 +23,7 @@ router.use(authenticate);
  * @swagger
  * /api/v1/job-specifications:
  *   get:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Job Specifications"]
  *     summary: List job specifications
  *     description: Retrieve a paginated list of job specifications with optional filtering.
  *     security:
@@ -87,7 +87,7 @@ router.get(
  * @swagger
  * /api/v1/job-specifications:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Job Specifications"]
  *     summary: Create a job specification
  *     description: Create a new job specification for employee classification.
  *     security:
@@ -153,7 +153,7 @@ router.post(
  * @swagger
  * /api/v1/job-specifications/{id}:
  *   get:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Job Specifications"]
  *     summary: Get job specification by ID
  *     description: Retrieve detailed information for a specific job specification.
  *     security:
@@ -204,7 +204,7 @@ router.get("/:id", requirePermission("jobSpecifications:read"), getJobSpecificat
  * @swagger
  * /api/v1/job-specifications/{id}:
  *   patch:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Job Specifications"]
  *     summary: Update a job specification
  *     description: Update job specification details.
  *     security:
@@ -278,7 +278,7 @@ router.patch(
  * @swagger
  * /api/v1/job-specifications/{id}:
  *   delete:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Job Specifications"]
  *     summary: Delete a job specification
  *     description: Soft-delete a job specification by ID.
  *     security:

@@ -222,6 +222,7 @@ model User {
   auditLogs                AuditLog[]
   receivedGoodsReceipts    GoodsReceipt[]
   receivedPayments         Payment[]
+  processedPayments        Payment[]         @relation("PaymentProcessor")
   processedRefunds         Refund[]
 
   createdCompanies                Company[]                 @relation("CompanyCreator")
@@ -326,6 +327,7 @@ model User {
   updatedRefunds                  Refund[]                  @relation("RefundUpdater")
   createdCredits                  Credit[]                  @relation("CreditCreator")
   updatedCredits                  Credit[]                  @relation("CreditUpdater")
+  createdCreditAllocations        CreditAllocation[]        @relation("CreditAllocationCreator")
   createdAiQueries                AiQuery[]                 @relation("AiQueryCreator")
   updatedAiQueries                AiQuery[]                 @relation("AiQueryUpdater")
   createdAiRecommendations        AiRecommendation[]        @relation("AiRecommendationCreator")
@@ -336,6 +338,10 @@ model User {
   updatedNotifications            Notification[]            @relation("NotificationUpdater")
   createdAuditLogs                AuditLog[]                @relation("AuditLogCreator")
   updatedAuditLogs                AuditLog[]                @relation("AuditLogUpdater")
+  createdDocumentTypes            DocumentType[]            @relation("DocumentTypeCreator")
+  updatedDocumentTypes            DocumentType[]            @relation("DocumentTypeUpdater")
+  createdDocuments                Document[]                @relation("DocumentCreator")
+  updatedDocuments                Document[]                @relation("DocumentUpdater")
   createdBy                       User?                     @relation("UserCreator", fields: [createdById], references: [id])
   updatedBy                       User?                     @relation("UserUpdater", fields: [updatedById], references: [id])
   person                          Person                    @relation(fields: [personId], references: [id])
@@ -1475,6 +1481,7 @@ model SalesOrder {
   priceTier       PriceTier?       @relation(fields: [priceTierId], references: [id])
   discountRule    DiscountRule?    @relation(fields: [discountRuleId], references: [id])
   salesQuota      SalesQuota?      @relation(fields: [salesQuotaId], references: [id])
+  payments        Payment[]
 
   @@index([customerId, status])
   @@index([warehouseId, status])
@@ -1595,7 +1602,7 @@ model Vehicle {
   vehicleType String     @map("vehicle_type")
   capacity    Decimal?   @db.Decimal(15, 3)
   status      String     @default("ACTIVE")
-  deliveries Delivery[]
+  deliveries  Delivery[]
 
   createdBy User? @relation("VehicleCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("VehicleUpdater", fields: [updatedById], references: [id])
@@ -1712,6 +1719,7 @@ model Invoice {
   status             InvoiceStatus       @default(DRAFT)
   items              InvoiceItem[]
   paymentAllocations PaymentAllocation[]
+  creditAllocations  CreditAllocation[]
 
   createdBy  User?      @relation("InvoiceCreator", fields: [createdById], references: [id])
   updatedBy  User?      @relation("InvoiceUpdater", fields: [updatedById], references: [id])
@@ -1746,31 +1754,50 @@ model InvoiceItem {
 }
 
 model Payment {
-  id              String              @id @default(uuid()) @db.Uuid
-  createdById     String?             @map("created_by_id") @db.Uuid
-  updatedById     String?             @map("updated_by_id") @db.Uuid
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
-  isArchived      Boolean             @default(false) @map("is_archived")
-  archivedAt      DateTime?           @map("archived_at")
-  paymentNumber   String              @unique @map("payment_number")
-  customerId      String?             @map("customer_id") @db.Uuid
-  supplierId      String?             @map("supplier_id") @db.Uuid
-  paymentType     PaymentType         @map("payment_type")
-  paymentMethod   PaymentMethod       @map("payment_method")
-  amount          Decimal             @db.Decimal(15, 2)
-  paymentDate     DateTime            @map("payment_date")
-  referenceNumber String?             @map("reference_number")
-  status          String              @default("COMPLETED")
-  receivedBy      String?             @map("received_by") @db.Uuid
-  allocations     PaymentAllocation[]
-  refunds         Refund[]
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
 
-  createdBy User?     @relation("PaymentCreator", fields: [createdById], references: [id])
-  updatedBy User?     @relation("PaymentUpdater", fields: [updatedById], references: [id])
-  customer  Customer? @relation(fields: [customerId], references: [id])
-  supplier  Supplier? @relation(fields: [supplierId], references: [id])
-  receiver  User?     @relation(fields: [receivedBy], references: [id])
+  paymentNumber String  @unique @default(uuid()) @map("payment_number")
+  customerId    String? @map("customer_id") @db.Uuid
+  supplierId    String? @map("supplier_id") @db.Uuid
+  orderId       String? @map("order_id") @db.Uuid
+
+  amount         Decimal @db.Decimal(15, 2)
+  currency       String  @default("ETB")
+  status         String  @default("PENDING")
+  method         String?
+  timing         String?
+  provider       String?
+  transactionRef String? @unique @map("transaction_ref")
+
+  paidAt        DateTime? @map("paid_at")
+  processedById String?   @map("processed_by_id") @db.Uuid
+
+  paymentType     PaymentType?   @map("payment_type")
+  paymentMethod   PaymentMethod? @map("payment_method")
+  paymentDate     DateTime?      @map("payment_date")
+  referenceNumber String?        @map("reference_number")
+  receivedBy      String?        @map("received_by") @db.Uuid
+
+  allocations PaymentAllocation[]
+  refunds     Refund[]
+  attempts    PaymentAttempt[]
+  proofs      PaymentProof[]
+  webhooks    PaymentWebhook[]
+  auditLogs   PaymentAuditLog[]
+
+  createdBy   User?       @relation("PaymentCreator", fields: [createdById], references: [id])
+  updatedBy   User?       @relation("PaymentUpdater", fields: [updatedById], references: [id])
+  customer    Customer?   @relation(fields: [customerId], references: [id])
+  supplier    Supplier?   @relation(fields: [supplierId], references: [id])
+  salesOrder  SalesOrder? @relation(fields: [orderId], references: [id])
+  processedBy User?       @relation("PaymentProcessor", fields: [processedById], references: [id])
+  receiver    User?       @relation(fields: [receivedBy], references: [id])
 
   @@map("payments")
 }
@@ -1797,27 +1824,35 @@ model PaymentAllocation {
 }
 
 model Refund {
-  id           String    @id @default(uuid()) @db.Uuid
-  createdById  String?   @map("created_by_id") @db.Uuid
-  updatedById  String?   @map("updated_by_id") @db.Uuid
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  isArchived   Boolean   @default(false) @map("is_archived")
-  archivedAt   DateTime? @map("archived_at")
-  refundNumber String    @unique @map("refund_number")
-  paymentId    String    @map("payment_id") @db.Uuid
-  customerId   String    @map("customer_id") @db.Uuid
-  amount       Decimal   @db.Decimal(15, 2)
-  reason       String
-  refundDate   DateTime  @map("refund_date")
-  status       String    @default("PENDING")
-  processedBy  String    @map("processed_by") @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
 
-  createdBy User?    @relation("RefundCreator", fields: [createdById], references: [id])
-  updatedBy User?    @relation("RefundUpdater", fields: [updatedById], references: [id])
-  payment   Payment  @relation(fields: [paymentId], references: [id])
-  customer  Customer @relation(fields: [customerId], references: [id])
-  processor User     @relation(fields: [processedBy], references: [id])
+  refundNumber String  @unique @default(uuid()) @map("refund_number")
+  paymentId    String  @map("payment_id") @db.Uuid
+  customerId   String? @map("customer_id") @db.Uuid
+  amount       Decimal @db.Decimal(15, 2)
+  reason       String?
+  status       String  @default("PENDING")
+
+  provider          String?
+  providerReference String?   @map("provider_reference")
+  requestedById     String?   @map("requested_by_id") @db.Uuid
+  approvedById      String?   @map("approved_by_id") @db.Uuid
+  processedAt       DateTime? @map("processed_at")
+
+  refundDate  DateTime? @map("refund_date")
+  processedBy String?   @map("processed_by") @db.Uuid
+
+  createdBy User?     @relation("RefundCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("RefundUpdater", fields: [updatedById], references: [id])
+  payment   Payment   @relation(fields: [paymentId], references: [id])
+  customer  Customer? @relation(fields: [customerId], references: [id])
+  processor User?     @relation(fields: [processedBy], references: [id])
 
   @@map("refunds")
 }
@@ -1833,16 +1868,34 @@ model Credit {
   creditNumber  String    @unique @map("credit_number")
   customerId    String    @map("customer_id") @db.Uuid
   salesReturnId String?   @map("sales_return_id") @db.Uuid
-  amount        Decimal   @db.Decimal(15, 2)
-  reason        String
-  status        String    @default("ACTIVE")
+  amount           Decimal   @db.Decimal(15, 2)
+  usedAmount       Decimal   @default(0) @map("used_amount") @db.Decimal(15, 2)
+  remainingBalance Decimal   @default(0) @map("remaining_balance") @db.Decimal(15, 2)
+  reason           String?
+  status           String    @default("ACTIVE")
 
-  createdBy   User?        @relation("CreditCreator", fields: [createdById], references: [id])
-  updatedBy   User?        @relation("CreditUpdater", fields: [updatedById], references: [id])
-  customer    Customer     @relation(fields: [customerId], references: [id])
-  salesReturn SalesReturn? @relation(fields: [salesReturnId], references: [id])
+  createdBy         User?              @relation("CreditCreator", fields: [createdById], references: [id])
+  updatedBy         User?              @relation("CreditUpdater", fields: [updatedById], references: [id])
+  customer          Customer           @relation(fields: [customerId], references: [id])
+  salesReturn       SalesReturn?       @relation(fields: [salesReturnId], references: [id])
+  creditAllocations CreditAllocation[]
 
   @@map("credits")
+}
+
+model CreditAllocation {
+  id          String   @id @default(uuid()) @db.Uuid
+  creditId    String   @map("credit_id") @db.Uuid
+  invoiceId   String   @map("invoice_id") @db.Uuid
+  amount      Decimal  @db.Decimal(15, 2)
+  allocatedAt DateTime @default(now()) @map("allocated_at")
+
+  createdById String? @map("created_by_id") @db.Uuid
+  createdBy   User?   @relation("CreditAllocationCreator", fields: [createdById], references: [id])
+  credit      Credit  @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("credit_allocations")
 }
 
 // ============================================================
@@ -1961,4 +2014,139 @@ model AuditLog {
   user      User? @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model PaymentAttempt {
+  id                String   @id @default(uuid()) @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  paymentId         String   @map("payment_id") @db.Uuid
+  provider          String
+  providerReference String?  @map("provider_reference")
+  amount            Decimal  @db.Decimal(15, 2)
+  status            String
+  requestData       Json?    @map("request_data")
+  responseData      Json?    @map("response_data")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("payment_attempts")
+}
+
+model PaymentProof {
+  id              String    @id @default(uuid()) @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  paymentId       String    @map("payment_id") @db.Uuid
+  fileUrl         String    @map("file_url")
+  fileName        String?   @map("file_name")
+  fileType        String?   @map("file_type")
+  fileSize        Int?      @map("file_size")
+  status          String    @default("PENDING")
+  uploadedById    String?   @map("uploaded_by_id") @db.Uuid
+  verifiedById    String?   @map("verified_by_id") @db.Uuid
+  verifiedAt      DateTime? @map("verified_at")
+  rejectionReason String?   @map("rejection_reason")
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("payment_proofs")
+}
+
+model PaymentWebhook {
+  id                String    @id @default(uuid()) @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  paymentId         String?   @map("payment_id") @db.Uuid
+  provider          String
+  event             String
+  providerReference String?   @map("provider_reference")
+  payload           Json?
+  status            String
+  processedAt       DateTime? @map("processed_at")
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@map("payment_webhooks")
+}
+
+model PaymentAuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  paymentId     String   @map("payment_id") @db.Uuid
+  action        String
+  performedById String?  @map("performed_by_id") @db.Uuid
+  oldStatus     String?  @map("old_status")
+  newStatus     String?  @map("new_status")
+  metadata      Json?
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("payment_audit_logs")
+}
+
+model PaymentProvider {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  code      String   @unique
+  type      String   @default("MANUAL")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  methods PaymentMethodOption[]
+
+  @@map("payment_providers")
+}
+
+model PaymentMethodOption {
+  id            String   @id @default(uuid()) @db.Uuid
+  providerId    String   @map("provider_id") @db.Uuid
+  name          String
+  code          String
+  isActive      Boolean  @default(true) @map("is_active")
+  requiresProof Boolean  @default(false) @map("requires_proof")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  provider PaymentProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("payment_method_options")
+}
+
+model DocumentType {
+  id          String     @id @default(uuid()) @db.Uuid
+  code        String     @unique
+  name        String
+  description String?
+  documents   Document[]
+  
+  createdById String?    @map("created_by_id") @db.Uuid
+  updatedById String?    @map("updated_by_id") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  createdBy User? @relation("DocumentTypeCreator", fields: [createdById], references: [id])
+  updatedBy User? @relation("DocumentTypeUpdater", fields: [updatedById], references: [id])
+
+  @@map("document_types")
+}
+
+model Document {
+  id             String       @id @default(uuid()) @db.Uuid
+  documentTypeId String       @map("document_type_id") @db.Uuid
+  entityType     String       @map("entity_type")
+  entityId       String       @map("entity_id") @db.Uuid
+  fileUrl        String       @map("file_url")
+  fileName       String       @map("file_name")
+  notes          String?
+  status         String       @default("PENDING_REVIEW")
+  
+  createdById    String?      @map("created_by_id") @db.Uuid
+  updatedById    String?      @map("updated_by_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+  createdBy      User?        @relation("DocumentCreator", fields: [createdById], references: [id])
+  updatedBy      User?        @relation("DocumentUpdater", fields: [updatedById], references: [id])
+
+  @@map("documents")
 }
