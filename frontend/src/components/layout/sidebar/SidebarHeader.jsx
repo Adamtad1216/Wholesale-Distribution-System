@@ -11,7 +11,7 @@ export default function SidebarHeader() {
           Wholesale System
         </h1>
         <p className="text-[10px] text-violet-400 font-semibold tracking-wider uppercase">
-          Enterprise B2B
+          Enterprise
         </p>
       </div>
     </div>

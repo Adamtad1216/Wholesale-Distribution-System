@@ -12,7 +12,7 @@ export default function SidebarUserProfile({ user }) {
           {initial}
         </div>
         <div className="overflow-hidden">
-          <p className="text-xs font-semibold text-white truncate">{name}hello</p>
+          <p className="text-xs font-semibold text-white truncate">{name}</p>
           <p className="text-[10px] text-slate-400 truncate">{type}</p>
         </div>
       </div>
