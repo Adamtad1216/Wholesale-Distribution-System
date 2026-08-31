@@ -1,4 +1,5 @@
 import { sendSuccess, sendPaginatedSuccess, sendCreated, sendNoContent, sendError } from "../../../utils/api-response.js";
+import { z } from "zod";
 import { productIdSchema } from "./products.validation.js";
 import {
   createProduct,

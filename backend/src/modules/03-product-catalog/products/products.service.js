@@ -504,14 +504,32 @@ export async function addPriceTier(productId, data, createdById, req) {
     throw new AppError('Product not found', 404);
   }
 
+  if (data.warehouseId) {
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { id: data.warehouseId, isArchived: false },
+    });
+    if (!warehouse) {
+      throw new AppError('Warehouse not found', 404);
+    }
+  }
+
   const tier = await prisma.priceTier.create({
     data: {
       productId,
+      warehouseId: data.warehouseId || null,
       minQuantity: data.minQuantity,
       maxQuantity: data.maxQuantity,
       unitPrice: data.unitPrice,
+      startsAt: data.startsAt ? new Date(data.startsAt) : null,
+      endsAt: data.endsAt ? new Date(data.endsAt) : null,
+      status: data.status || 'ACTIVE',
       createdById,
       updatedById: createdById,
+    },
+    include: {
+      warehouse: {
+        select: { id: true, name: true, code: true },
+      },
     },
   });
 
@@ -520,7 +538,7 @@ export async function addPriceTier(productId, data, createdById, req) {
     action: 'PRICE_TIER_CREATED',
     entityType: 'PriceTier',
     entityId: tier.id,
-    newValues: { productId, name: data.name, minQuantity: data.minQuantity, price: data.price },
+    newValues: { productId, warehouseId: data.warehouseId, minQuantity: data.minQuantity, unitPrice: data.unitPrice },
     req,
   });
 
@@ -536,13 +554,31 @@ export async function updatePriceTier(productId, tierId, data, createdById, req)
     throw new AppError('Price tier not found', 404);
   }
 
+  if (data.warehouseId) {
+    const warehouse = await prisma.warehouse.findFirst({
+      where: { id: data.warehouseId, isArchived: false },
+    });
+    if (!warehouse) {
+      throw new AppError('Warehouse not found', 404);
+    }
+  }
+
   const updatedTier = await prisma.priceTier.update({
     where: { id: tierId },
     data: {
-      minQuantity: data.minQuantity,
-      maxQuantity: data.maxQuantity,
-      unitPrice: data.unitPrice,
+      minQuantity: data.minQuantity ?? tier.minQuantity,
+      maxQuantity: data.maxQuantity ?? tier.maxQuantity,
+      unitPrice: data.unitPrice ?? tier.unitPrice,
+      warehouseId: data.warehouseId !== undefined ? data.warehouseId : tier.warehouseId,
+      startsAt: data.startsAt ? new Date(data.startsAt) : tier.startsAt,
+      endsAt: data.endsAt ? new Date(data.endsAt) : tier.endsAt,
+      status: data.status ?? tier.status,
       updatedById: createdById,
+    },
+    include: {
+      warehouse: {
+        select: { id: true, name: true, code: true },
+      },
     },
   });
 
@@ -551,8 +587,8 @@ export async function updatePriceTier(productId, tierId, data, createdById, req)
     action: 'PRICE_TIER_UPDATED',
     entityType: 'PriceTier',
     entityId: tierId,
-    oldValues: { name: tier.name, price: tier.price },
-    newValues: { name: data.name, price: data.price },
+    oldValues: { minQuantity: tier.minQuantity, unitPrice: tier.unitPrice },
+    newValues: { minQuantity: updatedTier.minQuantity, unitPrice: updatedTier.unitPrice },
     req,
   });
 

@@ -521,6 +521,10 @@ router.delete(
  *             minQuantity: 10
  *             maxQuantity: 100
  *             unitPrice: 70
+ *             warehouseId: 123e4567-e89b-12d3-a456-426614174000
+ *             startsAt: "2026-01-01T00:00:00Z"
+ *             endsAt: "2026-12-31T23:59:59Z"
+ *             status: ACTIVE
  *     responses:
  *       201:
  *         description: Price tier added successfully

@@ -54,9 +54,13 @@ export const productImageSchema = z.object({
 });
 
 export const priceTierSchema = z.object({
-  minQuantity: z.coerce.number().min(0),
+  minQuantity: z.coerce.number().min(0).optional(),
   maxQuantity: z.coerce.number().min(0).optional(),
-  unitPrice: z.coerce.number().min(0),
+  unitPrice: z.coerce.number().min(0).optional(),
+  warehouseId: z.string().uuid().optional(),
+  startsAt: z.string().optional(),
+  endsAt: z.string().optional(),
+  status: z.string().default('ACTIVE'),
 });
 
 export const discountRuleSchema = z.object({
