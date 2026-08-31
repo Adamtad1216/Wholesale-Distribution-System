@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as docController from './document.controller.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
+import { uploadMiddleware } from '../../middleware/upload.middleware.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -100,5 +101,32 @@ router.post('/', docController.createDocument);
  *         description: Status updated
  */
 router.patch('/:id/status', docController.updateDocumentStatus);
+
+/**
+ * @swagger
+ * /api/v1/documents/upload:
+ *   post:
+ *     summary: Upload a File to Cloudinary
+ *     tags: [18 - Documents]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               folder:
+ *                 type: string
+ *                 default: wholesale_docs
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully
+ */
+router.post('/upload', uploadMiddleware.single('file'), docController.uploadDocumentFile);
 
 export default router;

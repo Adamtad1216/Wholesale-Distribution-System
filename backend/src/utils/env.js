@@ -25,6 +25,9 @@ const envSchema = z.object({
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().default('Wholesale Distribution <noreply@wholesale.com>'),
   SMTP_REJECT_UNAUTHORIZED: z.string().default('true'),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
 });
 
 export function validateEnv() {

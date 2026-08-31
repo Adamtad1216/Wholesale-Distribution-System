@@ -1,4 +1,5 @@
 import documentService from './document.service.js';
+import { uploadToCloudinary } from '../../utils/cloudinary.js';
 
 export const createDocumentType = async (req, res, next) => {
   try {
@@ -36,3 +37,28 @@ export const updateDocumentStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+export const uploadDocumentFile = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    const folder = req.body.folder || 'wholesale_docs';
+    const uploadResult = await uploadToCloudinary(req.file.buffer, folder);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        fileUrl: uploadResult.secure_url,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype,
+        fileSize: req.file.size,
+        publicId: uploadResult.public_id,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
