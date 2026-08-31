@@ -144,3 +144,9 @@ vite.config.ts.timestamp-*
 
 # Custom
 mydocs/
+
+# Editor & Agent metadata
+.claude/
+.windsurf/
+.agents/
+
