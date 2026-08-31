@@ -353,10 +353,12 @@ model User {
   updatedDiscountRules            DiscountRule[]            @relation("DiscountRuleUpdater")
   createdSalesQuotas              SalesQuota[]              @relation("SalesQuotaCreator")
   updatedSalesQuotas              SalesQuota[]              @relation("SalesQuotaUpdater")
-  createdCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressCreator")
-  updatedCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressUpdater")
+   createdCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressCreator")
+   updatedCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressUpdater")
+   createdWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceCreator")
+   updatedWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceUpdater")
 
-  @@map("users")
+   @@map("users")
 }
 
 model Role {
@@ -606,6 +608,8 @@ model Warehouse {
   salesReturns    SalesReturn[]
   deliveries      Delivery[]
   purchaseReturns PurchaseReturn[]
+  sellingPrices   WarehouseSellingPrice[]
+  priceTiers      PriceTier[]
 
   branch    Branch    @relation(fields: [branchId], references: [id])
   createdBy User?     @relation("WarehouseCreator", fields: [createdById], references: [id])
@@ -849,6 +853,7 @@ model Product {
   priceTiers          PriceTier[]
   discountRules       DiscountRule[]
   salesQuotas         SalesQuota[]
+  warehouseSellingPrices WarehouseSellingPrice[]
 
   createdBy User?    @relation("ProductCreator", fields: [createdById], references: [id])
   updatedBy User?    @relation("ProductUpdater", fields: [updatedById], references: [id])
@@ -907,6 +912,37 @@ model WarehouseStock {
   @@index([warehouseId])
   @@index([productId])
   @@map("warehouse_stocks")
+}
+
+model WarehouseSellingPrice {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdById String?  @map("created_by_id") @db.Uuid
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  isArchived  Boolean  @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+
+  // Relations
+  productId   String   @map("product_id") @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+
+  // Price fields
+  sellingPrice   Decimal @map("selling_price") @db.Decimal(15, 2)
+  wholesalePrice Decimal @map("wholesale_price") @db.Decimal(15, 2)
+
+  // Status
+  status   String @default("ACTIVE")
+
+  // Relations
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("WarehouseSellingPriceCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("WarehouseSellingPriceUpdater", fields: [updatedById], references: [id])
+
+  @@unique([productId, warehouseId])
+  @@index([productId, warehouseId, status])
+  @@map("warehouse_selling_prices")
 }
 
 model StockMovement {
@@ -1204,7 +1240,14 @@ model PriceTier {
   updatedById String?           @map("updated_by_id") @db.Uuid
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
+  isArchived  Boolean           @default(false) @map("is_archived")
+  archivedAt  DateTime?         @map("archived_at")
+
+  // Relations
   productId   String            @map("product_id") @db.Uuid
+  warehouseId String?           @map("warehouse_id") @db.Uuid
+
+  // Price tier fields
   minQuantity Decimal           @map("min_quantity") @db.Decimal(15, 3)
   maxQuantity Decimal?          @map("max_quantity") @db.Decimal(15, 3)
   unitPrice   Decimal           @map("unit_price") @db.Decimal(15, 2)
@@ -1212,13 +1255,16 @@ model PriceTier {
   startsAt    DateTime?         @map("starts_at")
   endsAt      DateTime?         @map("ends_at")
 
+  // Relations
   product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse       Warehouse?       @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
   salesOrders     SalesOrder[]
   salesOrderItems SalesOrderItem[]
   createdBy       User?            @relation("PriceTierCreator", fields: [createdById], references: [id])
   updatedBy       User?            @relation("PriceTierUpdater", fields: [updatedById], references: [id])
 
   @@index([productId, minQuantity, maxQuantity])
+  @@index([warehouseId])
   @@map("price_tiers")
 }
 

@@ -287,20 +287,12 @@ export async function updateAdjustment(id, data, updatedById, req) {
   }
 
   const adjustment = await prisma.$transaction(async (tx) => {
-    const updatedAdjustment = await tx.stockAdjustment.update({
+    await tx.stockAdjustment.update({
       where: { id },
       data: {
         reason: data.reason ?? existing.reason,
         updatedById,
         updatedAt: new Date(),
-      },
-      include: {
-        items: {
-          include: {
-            product: { select: { id: true, name: true, sku: true } },
-          },
-        },
-        warehouse: { select: { id: true, name: true, code: true } },
       },
     });
 
