@@ -348,14 +348,12 @@ export async function updateProduct(id, data, createdById, req) {
         select: {
           id: true,
           name: true,
-          code: true,
         },
       },
       brand: {
         select: {
           id: true,
           name: true,
-          code: true,
         },
       },
       unit: {
