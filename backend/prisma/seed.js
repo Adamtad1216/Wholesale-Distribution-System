@@ -126,11 +126,27 @@ async function main() {
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
   const [person, user] = await prisma.$transaction(async (tx) => {
+    const nameParts = ADMIN_FULL_NAME.trim().split(/\s+/);
+    let firstName = 'System';
+    let middleName = undefined;
+    let lastName = 'Administrator';
+
+    if (nameParts.length === 1) {
+      firstName = nameParts[0];
+    } else if (nameParts.length === 2) {
+      firstName = nameParts[0];
+      lastName = nameParts[1];
+    } else if (nameParts.length > 2) {
+      firstName = nameParts[0];
+      middleName = nameParts[1];
+      lastName = nameParts.slice(2).join(' ');
+    }
+
     const person = await tx.person.create({
       data: {
-        firstName: ADMIN_FULL_NAME.split(' ')[0] || 'System',
-        middleName: ADMIN_FULL_NAME.split(' ')[1] || undefined,
-        lastName: ADMIN_FULL_NAME.split(' ').slice(2).join(' ') || 'Administrator',
+        firstName,
+        middleName,
+        lastName,
         email: ADMIN_EMAIL,
         status: 'ACTIVE',
       },
