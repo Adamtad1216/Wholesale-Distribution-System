@@ -46,8 +46,7 @@ export default function Login() {
       }
     },
     onError: (err) => {
-      const errMsg = err.message || 'Invalid username or password';
-      toast.error(errMsg, { duration: 6000 });
+      // Error is displayed inline in the form, no toast needed.
     },
   });
 
