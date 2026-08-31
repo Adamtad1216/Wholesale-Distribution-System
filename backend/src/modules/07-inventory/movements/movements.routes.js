@@ -125,13 +125,6 @@ router.get(
  *               quantity:
  *                 type: number
  *                 example: 100
- *               referenceType:
- *                 type: string
- *                 example: PURCHASE_ORDER
- *               referenceId:
- *                 type: string
- *                 format: uuid
- *                 example: 123e4567-e89b-12d3-a456-426614174002
  *               unitCost:
  *                 type: number
  *                 example: 50

@@ -1039,8 +1039,30 @@ const swaggerOptions = {
             availableQuantity: { type: 'number', example: 100 },
             minimumStock: { type: 'number', example: 10 },
             reorderLevel: { type: 'number', example: 50 },
-            warehouse: { type: 'object' },
-            product: { type: 'object' },
+            warehouse: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Bole Central Warehouse' },
+                code: { type: 'string', example: 'WH-001' },
+              },
+            },
+            product: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Coca-Cola 500ml' },
+                sku: { type: 'string', example: 'CC-500' },
+                unit: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    name: { type: 'string', example: 'Piece' },
+                    abbreviation: { type: 'string', example: 'pc' },
+                  },
+                },
+              },
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time', nullable: true },
           },
@@ -1053,11 +1075,26 @@ const swaggerOptions = {
             productId: { type: 'string', format: 'uuid' },
             movementType: { type: 'string', enum: ['PURCHASE_RECEIPT', 'SALES_RESERVATION', 'SALES_FULFILLMENT', 'SALES_RETURN', 'PURCHASE_RETURN', 'ADJUSTMENT_IN', 'ADJUSTMENT_OUT', 'TRANSFER_IN', 'TRANSFER_OUT'] },
             quantity: { type: 'number', example: 100 },
-            referenceType: { type: 'string', nullable: true },
-            referenceId: { type: 'string', format: 'uuid', nullable: true },
             unitCost: { type: 'number', nullable: true },
             notes: { type: 'string', nullable: true },
+            warehouse: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Bole Central Warehouse' },
+                code: { type: 'string', example: 'WH-001' },
+              },
+            },
+            product: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Coca-Cola 500ml' },
+                sku: { type: 'string', example: 'CC-500' },
+              },
+            },
             createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
           },
         },
         StockAdjustment: {
@@ -1069,7 +1106,30 @@ const swaggerOptions = {
             status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED'] },
             approvedBy: { type: 'string', format: 'uuid', nullable: true },
             approvedAt: { type: 'string', format: 'date-time', nullable: true },
-            items: { type: 'array', items: { type: 'object' } },
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  adjustmentId: { type: 'string', format: 'uuid' },
+                  productId: { type: 'string', format: 'uuid' },
+                  systemQuantity: { type: 'number', example: 100 },
+                  actualQuantity: { type: 'number', example: 95 },
+                  difference: { type: 'number', example: -5 },
+                  reason: { type: 'string', nullable: true },
+                  product: { type: 'object' },
+                },
+              },
+            },
+            warehouse: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Bole Central Warehouse' },
+                code: { type: 'string', example: 'WH-001' },
+              },
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time', nullable: true },
           },
@@ -1084,6 +1144,37 @@ const swaggerOptions = {
             quantity: { type: 'number', example: 10 },
             status: { type: 'string', enum: ['RESERVED', 'PARTIALLY_FULFILLED', 'FULFILLED', 'RELEASED', 'CANCELLED'] },
             releasedAt: { type: 'string', format: 'date-time', nullable: true },
+            warehouse: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Bole Central Warehouse' },
+                code: { type: 'string', example: 'WH-001' },
+              },
+            },
+            product: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Coca-Cola 500ml' },
+                sku: { type: 'string', example: 'CC-500' },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        Notification: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            userId: { type: 'string', format: 'uuid' },
+            title: { type: 'string', example: 'Stock Movement Created' },
+            message: { type: 'string', example: 'Added 50 units of Coca-Cola 500ml to Bole Central Warehouse' },
+            type: { type: 'string', enum: ['INVENTORY_STOCK_CREATED', 'INVENTORY_STOCK_UPDATED', 'INVENTORY_STOCK_DELETED', 'INVENTORY_MOVEMENT_CREATED', 'INVENTORY_MOVEMENT_DELETED', 'INVENTORY_ADJUSTMENT_CREATED', 'INVENTORY_ADJUSTMENT_PROCESSED', 'INVENTORY_ADJUSTMENT_DELETED', 'INVENTORY_RESERVATION_CREATED', 'INVENTORY_RESERVATION_RELEASED', 'INVENTORY_RESERVATION_DELETED'] },
+            isRead: { type: 'boolean', example: false },
+            readAt: { type: 'string', format: 'date-time', nullable: true },
+            user: { type: 'object' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time', nullable: true },
           },
