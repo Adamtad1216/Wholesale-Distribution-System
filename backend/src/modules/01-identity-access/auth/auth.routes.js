@@ -26,7 +26,7 @@ const router = Router();
  * @swagger
  * /api/v1/auth/register:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Register a new customer account
  *     description: |
  *       Register as either a **PERSON** customer or an **ORGANIZATION** customer.
@@ -102,7 +102,7 @@ router.post("/register", validate(registerSchema), registerUser);
  * @swagger
  * /api/v1/auth/login:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Login customer or user
  *     description: Authenticate with username and password to receive access and refresh tokens.
  *     requestBody:
@@ -137,7 +137,7 @@ router.post("/login", validate(loginSchema), loginUser);
  * @swagger
  * /api/v1/auth/refresh:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Refresh access token
  *     description: Use a valid refresh token to get a new access token.
  *     requestBody:
@@ -182,7 +182,7 @@ router.post("/refresh", validate(refreshSchema), refreshUserTokens);
  * @swagger
  * /api/v1/auth/logout:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Logout user
  *     description: Invalidate the current refresh token session.
  *     security:
@@ -217,7 +217,7 @@ router.post("/logout", authenticate, logoutUser);
  * @swagger
  * /api/v1/auth/me:
  *   get:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Get current user profile
  *     description: Returns the authenticated user's profile including roles and permissions.
  *     security:
@@ -248,7 +248,7 @@ router.get("/me", authenticate, getCurrentUser);
  * @swagger
  * /api/v1/auth/forgot-password:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Request password reset
  *     description: Request a password reset token for the given email address. If the email exists, a reset link will be sent.
  *     requestBody:
@@ -302,7 +302,7 @@ router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
  * @swagger
  * /api/v1/auth/reset-password:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Reset password with token
  *     description: Reset password using the token received via email.
  *     requestBody:
@@ -351,7 +351,7 @@ router.post(
  * @swagger
  * /api/v1/auth/accept-invitation:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Auth"]
  *     summary: Accept invitation
  *     description: Accept an employee invitation by providing the token from the email, along with a new username and password.
  *     requestBody:

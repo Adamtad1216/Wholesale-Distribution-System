@@ -89,6 +89,17 @@ async function ensureAdmin() {
       });
     }
 
+    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        passwordHash,
+        isActive: true,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    });
+
     return existing;
   }
 

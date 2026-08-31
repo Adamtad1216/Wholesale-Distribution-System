@@ -25,7 +25,7 @@ router.use(authenticate);
  * @swagger
  * /api/v1/users:
  *   get:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Users"]
  *     summary: List users
  *     description: Retrieve a paginated list of users with optional filtering by role and status.
  *     security:
@@ -97,7 +97,7 @@ router.get(
  * @swagger
  * /api/v1/users:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Users"]
  *     summary: Create a new user
  *     description: Create a new user account with Person record and assigned roles. Password is set during creation.
  *     security:
@@ -193,7 +193,7 @@ router.post(
  * @swagger
  * /api/v1/users/{id}:
  *   get:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Users"]
  *     summary: Get user by ID
  *     description: Retrieve detailed information for a specific user including roles and permissions.
  *     security:
@@ -248,7 +248,7 @@ router.get(
  * @swagger
  * /api/v1/users/{id}:
  *   patch:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Users"]
  *     summary: Update a user
  *     description: Update user details and roles. Password cannot be updated through this endpoint; use reset-password instead.
  *     security:
@@ -354,7 +354,7 @@ router.patch(
  * @swagger
  * /api/v1/users/{id}/reset-password:
  *   post:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Users"]
  *     summary: Reset user password
  *     description: Set a new password for a user. This invalidates all existing sessions.
  *     security:
@@ -431,7 +431,7 @@ router.post(
  * @swagger
  * /api/v1/users/{id}:
  *   delete:
- *     tags: [01-identity-access]
+ *     tags: ["01 - Users"]
  *     summary: Delete a user
  *     description: Soft-delete a user by ID. The user will be marked as archived and excluded from future listings.
  *     security:

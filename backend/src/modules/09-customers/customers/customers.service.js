@@ -89,6 +89,24 @@ const createUserAccountForCustomer = async (tx, personId, username, password, cr
   return user;
 };
 
+const getDefaultPaymentTermsId = async (tx) => {
+  let defaultTerms = await tx.paymentTerms.findFirst({
+    where: { days: 0, isArchived: false },
+  });
+
+  if (!defaultTerms) {
+    defaultTerms = await tx.paymentTerms.create({
+      data: {
+        name: 'Cash on Delivery (COD)',
+        days: 0,
+        description: 'Default payment term: Immediate payment required upon receipt (0 Days)',
+      },
+    });
+  }
+
+  return defaultTerms.id;
+};
+
 export async function createCustomer(data, createdById, req) {
   const customerCode = data.customerCode
     ? await ensureUniqueCode(prisma, data.customerCode)
@@ -123,13 +141,15 @@ export async function createCustomer(data, createdById, req) {
         await createUserAccountForCustomer(tx, person.id, data.username, data.password, createdById);
       }
 
+      const paymentTermsId = data.paymentTermsId || (await getDefaultPaymentTermsId(tx));
+
       return tx.customer.create({
         data: {
           customerCode,
           customerType: 'PERSON',
           personId: person.id,
-          creditLimit: data.creditLimit,
-          paymentTermsId: data.paymentTermsId,
+          creditLimit: data.creditLimit || 0,
+          paymentTermsId,
           assignedSalesRepId: data.assignedSalesRepId,
           status: data.status || 'ACTIVE',
           createdById: createdById,
@@ -293,13 +313,15 @@ export async function createCustomer(data, createdById, req) {
         await createUserAccountForCustomer(tx, orgPerson.id, data.username, data.password, createdById);
       }
 
+      const paymentTermsId = data.paymentTermsId || (await getDefaultPaymentTermsId(tx));
+
       return tx.customer.create({
         data: {
           customerCode,
           customerType: 'ORGANIZATION',
           organizationId: organization.id,
-          creditLimit: data.creditLimit,
-          paymentTermsId: data.paymentTermsId,
+          creditLimit: data.creditLimit || 0,
+          paymentTermsId,
           assignedSalesRepId: data.assignedSalesRepId,
           status: data.status || 'ACTIVE',
           createdById: createdById,

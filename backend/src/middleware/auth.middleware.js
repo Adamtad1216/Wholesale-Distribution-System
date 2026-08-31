@@ -56,10 +56,16 @@ export async function authenticate(req, res, next) {
       meta: e.meta,
       full: JSON.stringify(e, null, 2),
     };
-    fs.appendFileSync('C:/Users/A/AppData/Local/Temp/kilo/auth_error.log', JSON.stringify(logData, null, 2) + '\n---\n');
+    try {
+      fs.appendFileSync('C:/Users/A/AppData/Local/Temp/kilo/auth_error.log', JSON.stringify(logData, null, 2) + '\n---\n');
+    } catch (err) {
+      // Ignore logging error if the hardcoded directory does not exist
+    }
     return res.status(401).json({
       status: 'error',
       message: 'Invalid or expired token',
     });
   }
 }
+
+export const requireAuth = authenticate;
