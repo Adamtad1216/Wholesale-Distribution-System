@@ -32,6 +32,10 @@
 }
 
 /* Sidebar text & icons */
+.light aside .text-white {
+  color: #ffffff !important;
+}
+
 .light aside .text-slate-400,
 .light aside .text-slate-450,
 .light aside .text-slate-500,
