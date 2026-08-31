@@ -39,15 +39,15 @@ export default function Login() {
     onSuccess: (response) => {
       if (response && response.data) {
         dispatch(loginSuccess(response.data));
-        toast.success('Successfully logged in!');
+        toast.success('Successfully logged in!', { duration: 6000 });
         navigate('/dashboard');
       } else {
-        toast.error('Login failed: Invalid server response');
+        toast.error('Login failed: Invalid server response', { duration: 6000 });
       }
     },
     onError: (err) => {
       const errMsg = err.message || 'Invalid username or password';
-      toast.error(errMsg);
+      toast.error(errMsg, { duration: 6000 });
     },
   });
 
