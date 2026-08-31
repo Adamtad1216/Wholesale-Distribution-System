@@ -45,27 +45,17 @@ const ALL_PERMISSIONS = [
   { name: 'users:read', module: 'users', action: 'read', description: 'Read users' },
   { name: 'users:update', module: 'users', action: 'update', description: 'Update users' },
   { name: 'users:resetPassword', module: 'users', action: 'resetPassword', description: 'Reset user passwords' },
+  { name: 'users:delete', module: 'users', action: 'delete', description: 'Delete users' },
+  { name: 'roles:read', module: 'roles', action: 'read', description: 'Read roles' },
+  { name: 'roles:write', module: 'roles', action: 'write', description: 'Write roles' },
+  { name: 'roles:delete', module: 'roles', action: 'delete', description: 'Delete roles' },
+  { name: 'permissions:read', module: 'permissions', action: 'read', description: 'Read permissions' },
+  { name: 'permissions:write', module: 'permissions', action: 'write', description: 'Write permissions' },
+  { name: 'permissions:delete', module: 'permissions', action: 'delete', description: 'Delete permissions' },
 ];
 
 async function main() {
   console.log('Starting seed...');
-
-  const existingUser = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { username: ADMIN_USERNAME },
-        { person: { email: ADMIN_EMAIL } },
-      ],
-    },
-    include: { person: true },
-  });
-
-  if (existingUser) {
-    console.log(`Admin user already exists: ${existingUser.username} (${existingUser.id})`);
-    await ensureAdminPermissions(existingUser.id);
-    console.log('Seed completed (idempotent).');
-    return;
-  }
 
   const [adminRole] = await prisma.$transaction(async (tx) => {
     const role = await tx.role.upsert({
@@ -116,14 +106,47 @@ async function main() {
     return [role, createdPermissions];
   });
 
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { username: ADMIN_USERNAME },
+        { person: { email: ADMIN_EMAIL } },
+      ],
+    },
+    include: { person: true },
+  });
+
+  if (existingUser) {
+    console.log(`Admin user already exists: ${existingUser.username} (${existingUser.id})`);
+    await ensureAdminPermissions(existingUser.id);
+    console.log('Seed completed (idempotent).');
+    return;
+  }
+
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
   const [person, user] = await prisma.$transaction(async (tx) => {
+    const nameParts = ADMIN_FULL_NAME.trim().split(/\s+/);
+    let firstName = 'System';
+    let middleName = undefined;
+    let lastName = 'Administrator';
+
+    if (nameParts.length === 1) {
+      firstName = nameParts[0];
+    } else if (nameParts.length === 2) {
+      firstName = nameParts[0];
+      lastName = nameParts[1];
+    } else if (nameParts.length > 2) {
+      firstName = nameParts[0];
+      middleName = nameParts[1];
+      lastName = nameParts.slice(2).join(' ');
+    }
+
     const person = await tx.person.create({
       data: {
-        firstName: ADMIN_FULL_NAME.split(' ')[0] || 'System',
-        middleName: ADMIN_FULL_NAME.split(' ')[1] || undefined,
-        lastName: ADMIN_FULL_NAME.split(' ').slice(2).join(' ') || 'Administrator',
+        firstName,
+        middleName,
+        lastName,
         email: ADMIN_EMAIL,
         status: 'ACTIVE',
       },

@@ -4,6 +4,7 @@ import prisma from './config/prisma.js';
 import { env } from './utils/env.js';
 import { logger } from './utils/logger.js';
 
+// Server entry point - env reloaded with 15m access / 7d refresh tokens
 const PORT = env.PORT;
 
 const server = app.listen(PORT, () => {

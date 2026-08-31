@@ -1,0 +1,245 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+:root.light {
+  color-scheme: light;
+}
+
+/* ============================================================
+   PREMIUM LIGHT THEME - Professional Enterprise Design
+   Canvas: soft indigo-tinted slate
+   Sidebar: deep indigo (#312e81 → #1e1b4b)
+   Header: pure white frosted glass
+   Cards: white with soft shadow
+   ============================================================ */
+
+/* Page canvas — warm indigo-tinted background, not plain white */
+.light body,
+.light .bg-slate-950,
+.light .bg-slate-950\/60,
+.light .bg-slate-950\/5 {
+  background-color: #eef2ff !important;
+  color: #1e1b4b !important;
+}
+
+/* ── Sidebar: rich deep indigo ────────────────────────────── */
+.light aside {
+  background-color: #1e1b4b !important;
+  border-color: #312e81 !important;
+}
+
+/* Sidebar text & icons */
+.light aside .text-white {
+  color: #ffffff !important;
+}
+
+.light aside .text-slate-400,
+.light aside .text-slate-450,
+.light aside .text-slate-500,
+.light aside .text-slate-300,
+.light aside .text-slate-200 {
+  color: #a5b4fc !important;
+}
+
+/* Sidebar active link */
+.light aside .text-violet-400 {
+  color: #c7d2fe !important;
+}
+
+/* Sidebar logo brand title */
+.light aside h1 {
+  color: #ffffff !important;
+}
+
+/* Sidebar nav hover state */
+.light aside a:hover,
+.light aside .hover\:bg-slate-800\/40:hover {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+  color: #e0e7ff !important;
+}
+
+/* Sidebar active link highlight */
+.light aside .bg-gradient-to-r {
+  background: linear-gradient(to right, rgba(199, 210, 254, 0.15), rgba(165, 180, 252, 0.05)) !important;
+}
+
+/* Sidebar profile footer & ALL child elements — keep indigo, not white */
+.light aside .border-slate-800,
+.light aside .border-slate-800\/40,
+.light aside .border-t {
+  border-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Transparent backgrounds for every child so aside bg shows through */
+.light aside .bg-slate-900\/40,
+.light aside .bg-slate-900\/20,
+.light aside .bg-slate-900\/60,
+.light aside .bg-slate-800\/40,
+.light aside .bg-slate-800\/30,
+.light aside .bg-slate-900,
+.light aside .bg-slate-850 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.10) !important;
+  box-shadow: none !important;
+}
+
+.light aside .bg-slate-800\/20 {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+  box-shadow: none !important;
+}
+
+/* Sidebar mobile overlay */
+.light .bg-slate-950\/60 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+/* ── Header: clean white frosted glass ────────────────────── */
+.light header {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  border-color: #ddd6fe !important;
+}
+
+.light header .text-white,
+.light header .text-slate-100,
+.light header .text-slate-200,
+.light header .text-slate-250 {
+  color: #1e1b4b !important;
+}
+
+.light header .text-slate-400,
+.light header .text-slate-450 {
+  color: #6d28d9 !important;
+}
+
+.light header .bg-slate-800\/20 {
+  background-color: #f0effe !important;
+}
+
+.light header button.bg-slate-800\/20 {
+  background-color: #f0effe !important;
+  border-color: #ddd6fe !important;
+}
+
+.light header button.bg-slate-800\/20:hover {
+  background-color: #ede9fe !important;
+  color: #4c1d95 !important;
+}
+
+/* Header profile dropdown */
+.light .bg-slate-900\/95 {
+  background-color: #ffffff !important;
+  border-color: #ddd6fe !important;
+  box-shadow: 0 10px 40px rgba(79, 70, 229, 0.1) !important;
+}
+
+/* ── Card and Section panels (scoped away from aside) ──────── */
+.light :not(aside) > .bg-slate-900\/40,
+.light :not(aside) > .bg-slate-800\/40,
+.light :not(aside) > .bg-slate-800\/30,
+.light :not(aside) > .bg-slate-800\/20,
+.light :not(aside) > .bg-slate-850,
+.light :not(aside) > .bg-slate-900,
+.light :not(aside) > .bg-slate-900\/60,
+.light :not(aside) > .bg-slate-900\/20 {
+  background-color: #ffffff !important;
+  border-color: #dde1f4 !important;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ── Borders ────────────────────────────────────────────────── */
+.light .border-slate-800,
+.light .border-slate-800\/80,
+.light .border-slate-800\/65,
+.light .border-slate-800\/60,
+.light .border-slate-800\/40,
+.light .border-slate-700\/40,
+.light .border-slate-800\/30 {
+  border-color: #dde1f4 !important;
+}
+
+/* ── Typography ─────────────────────────────────────────────── */
+.light .text-white,
+.light .text-slate-100,
+.light .text-slate-200,
+.light .text-slate-250,
+.light .text-slate-300,
+.light .text-slate-350 {
+  color: #1e1b4b !important;
+}
+
+.light .text-slate-400,
+.light .text-slate-450,
+.light .text-slate-500 {
+  color: #6366f1 !important;
+}
+
+/* ── Inputs & Forms ─────────────────────────────────────────── */
+.light input,
+.light select,
+.light textarea {
+  background-color: #f5f3ff !important;
+  border-color: #c4b5fd !important;
+  color: #1e1b4b !important;
+}
+
+.light input:focus,
+.light select:focus,
+.light textarea:focus {
+  border-color: #7c3aed !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+}
+
+.light input::placeholder {
+  color: #a5b4fc !important;
+}
+
+/* ── Dashboard Welcome banner ───────────────────────────────── */
+.light .bg-gradient-to-tr {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(238, 242, 255, 0.7) 100%) !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+.light table thead tr {
+  background-color: #f5f3ff !important;
+}
+
+.light table tbody tr:hover {
+  background-color: #f5f3ff !important;
+}
+
+/* ── Sidebar active indicator ───────────────────────────────── */
+.light aside .border-violet-500,
+.light aside .border-l-\[3px\] {
+  border-color: #c7d2fe !important;
+}
+
+/* ── FINAL OVERRIDE: keep ALL slate-bg descendants of aside indigo ──
+   This must be LAST in the file so it wins the cascade regardless
+   of what generic card rules appear above.
+   Uses attribute substring selector for higher specificity.       ── */
+.light aside [class*="bg-slate"] {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Profile card pill — slightly visible tint */
+.light aside [class*="bg-slate-8"] {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Avatar circle — keep the violet tint */
+.light aside [class*="bg-violet"] {
+  background-color: rgba(167, 139, 250, 0.15) !important;
+  border-color: rgba(167, 139, 250, 0.30) !important;
+}
+
+/* Logo icon gradient — leave intact */
+.light aside [class*="from-violet"] {
+  background: linear-gradient(135deg, #7c3aed, #6366f1) !important;
+}
