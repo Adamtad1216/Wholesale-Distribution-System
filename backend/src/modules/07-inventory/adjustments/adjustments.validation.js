@@ -21,6 +21,26 @@ export const createAdjustmentSchema = z.object({
   })).min(1),
 });
 
+export const updateAdjustmentSchema = z.object({
+  reason: z.string().min(1).max(500).optional(),
+  items: z.array(z.object({
+    productId: z.string().uuid(),
+    actualQuantity: z.coerce.number().min(0),
+    reason: z.string().optional(),
+  })).min(1).optional(),
+});
+
 export const approveAdjustmentSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED']),
+});
+
+export const createAdjustmentItemSchema = z.object({
+  productId: z.string().uuid(),
+  actualQuantity: z.coerce.number().min(0),
+  reason: z.string().optional(),
+});
+
+export const updateAdjustmentItemSchema = z.object({
+  actualQuantity: z.coerce.number().min(0).optional(),
+  reason: z.string().optional(),
 });

@@ -266,3 +266,212 @@ export async function deleteAdjustment(id, deletedById, req) {
 
   return { id: adjustment.id, deleted: true };
 }
+
+export async function updateAdjustment(id, data, updatedById, req) {
+  const existing = await prisma.stockAdjustment.findFirst({
+    where: { id, isArchived: false },
+    include: { items: true, warehouse: true },
+  });
+  if (!existing) throw new AppError('Adjustment not found', 404);
+  if (existing.status !== 'PENDING') {
+    throw new AppError('Only PENDING adjustments can be updated', 400);
+  }
+
+  if (data.items) {
+    for (const item of data.items) {
+      const product = await prisma.product.findFirst({
+        where: { id: item.productId, isArchived: false },
+      });
+      if (!product) throw new AppError(`Product not found: ${item.productId}`, 404);
+    }
+  }
+
+  const adjustment = await prisma.$transaction(async (tx) => {
+    const updatedAdjustment = await tx.stockAdjustment.update({
+      where: { id },
+      data: {
+        reason: data.reason ?? existing.reason,
+        updatedById,
+        updatedAt: new Date(),
+      },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true } },
+          },
+        },
+        warehouse: { select: { id: true, name: true, code: true } },
+      },
+    });
+
+    if (data.items) {
+      await tx.stockAdjustmentItem.deleteMany({ where: { adjustmentId: id } });
+      await tx.stockAdjustmentItem.createMany({
+        data: data.items.map((item) => ({
+          adjustmentId: id,
+          productId: item.productId,
+          systemQuantity: 0,
+          actualQuantity: item.actualQuantity,
+          difference: item.actualQuantity,
+          reason: item.reason,
+          createdById: updatedById,
+        })),
+      });
+    }
+
+    return tx.stockAdjustment.findFirst({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true } },
+          },
+        },
+        warehouse: { select: { id: true, name: true, code: true } },
+      },
+    });
+  });
+
+  await logAudit({
+    createdById: updatedById,
+    action: 'ADJUSTMENT_UPDATED',
+    entityType: 'StockAdjustment',
+    entityId: id,
+    oldValues: { reason: existing.reason, itemCount: existing.items.length },
+    newValues: { reason: adjustment.reason, itemCount: adjustment.items.length },
+    req,
+  });
+
+  return adjustment;
+}
+
+export async function getAdjustmentItem(adjustmentId, itemId) {
+  const item = await prisma.stockAdjustmentItem.findFirst({
+    where: { id: itemId, adjustmentId, isArchived: false },
+    include: {
+      product: { select: { id: true, name: true, sku: true } },
+      adjustment: { select: { id: true, status: true, warehouseId: true } },
+    },
+  });
+  if (!item) throw new AppError('Adjustment item not found', 404);
+  return item;
+}
+
+export async function addAdjustmentItem(adjustmentId, data, createdById, req) {
+  const adjustment = await prisma.stockAdjustment.findFirst({
+    where: { id: adjustmentId, isArchived: false },
+  });
+  if (!adjustment) throw new AppError('Adjustment not found', 404);
+  if (adjustment.status !== 'PENDING') {
+    throw new AppError('Items can only be added to PENDING adjustments', 400);
+  }
+
+  const product = await prisma.product.findFirst({
+    where: { id: data.productId, isArchived: false },
+  });
+  if (!product) throw new AppError(`Product not found: ${data.productId}`, 404);
+
+  const existingItem = await prisma.stockAdjustmentItem.findFirst({
+    where: { adjustmentId, productId: data.productId, isArchived: false },
+  });
+  if (existingItem) {
+    throw new AppError('Product already exists in this adjustment', 400);
+  }
+
+  const item = await prisma.stockAdjustmentItem.create({
+    data: {
+      adjustmentId,
+      productId: data.productId,
+      systemQuantity: 0,
+      actualQuantity: data.actualQuantity,
+      difference: data.actualQuantity,
+      reason: data.reason,
+      createdById,
+    },
+    include: {
+      product: { select: { id: true, name: true, sku: true } },
+      adjustment: { select: { id: true, status: true, warehouseId: true } },
+    },
+  });
+
+  await logAudit({
+    createdById,
+    action: 'ADJUSTMENT_ITEM_ADDED',
+    entityType: 'StockAdjustmentItem',
+    entityId: item.id,
+    newValues: { adjustmentId, productId: data.productId, actualQuantity: data.actualQuantity },
+    req,
+  });
+
+  return item;
+}
+
+export async function updateAdjustmentItem(adjustmentId, itemId, data, updatedById, req) {
+  const existing = await prisma.stockAdjustmentItem.findFirst({
+    where: { id: itemId, adjustmentId, isArchived: false },
+    include: { adjustment: true },
+  });
+  if (!existing) throw new AppError('Adjustment item not found', 404);
+  if (existing.adjustment.status !== 'PENDING') {
+    throw new AppError('Items can only be updated in PENDING adjustments', 400);
+  }
+
+  const item = await prisma.stockAdjustmentItem.update({
+    where: { id: itemId },
+    data: {
+      actualQuantity: data.actualQuantity ?? existing.actualQuantity,
+      difference: data.actualQuantity !== undefined ? data.actualQuantity : existing.difference,
+      reason: data.reason ?? existing.reason,
+      updatedById,
+      updatedAt: new Date(),
+    },
+    include: {
+      product: { select: { id: true, name: true, sku: true } },
+      adjustment: { select: { id: true, status: true, warehouseId: true } },
+    },
+  });
+
+  await logAudit({
+    createdById: updatedById,
+    action: 'ADJUSTMENT_ITEM_UPDATED',
+    entityType: 'StockAdjustmentItem',
+    entityId: itemId,
+    oldValues: { actualQuantity: existing.actualQuantity },
+    newValues: { actualQuantity: item.actualQuantity },
+    req,
+  });
+
+  return item;
+}
+
+export async function removeAdjustmentItem(adjustmentId, itemId, deletedById, req) {
+  const existing = await prisma.stockAdjustmentItem.findFirst({
+    where: { id: itemId, adjustmentId, isArchived: false },
+    include: { adjustment: true, product: { select: { id: true, name: true } } },
+  });
+  if (!existing) throw new AppError('Adjustment item not found', 404);
+  if (existing.adjustment.status !== 'PENDING') {
+    throw new AppError('Items can only be removed from PENDING adjustments', 400);
+  }
+
+  await prisma.stockAdjustmentItem.update({
+    where: { id: itemId },
+    data: {
+      isArchived: true,
+      archivedAt: new Date(),
+      updatedById: deletedById,
+      updatedAt: new Date(),
+    },
+  });
+
+  await logAudit({
+    createdById: deletedById,
+    action: 'ADJUSTMENT_ITEM_REMOVED',
+    entityType: 'StockAdjustmentItem',
+    entityId: itemId,
+    oldValues: { productId: existing.productId, actualQuantity: existing.actualQuantity },
+    req,
+  });
+
+  return { id: itemId, deleted: true };
+}

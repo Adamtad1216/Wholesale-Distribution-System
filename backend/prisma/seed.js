@@ -54,6 +54,7 @@ const ALL_PERMISSIONS = [
   { name: 'inventory:movements:delete', module: 'inventory', action: 'movements:delete', description: 'Delete stock movements' },
   { name: 'inventory:adjustments:create', module: 'inventory', action: 'adjustments:create', description: 'Create stock adjustments' },
   { name: 'inventory:adjustments:read', module: 'inventory', action: 'adjustments:read', description: 'Read stock adjustments' },
+  { name: 'inventory:adjustments:update', module: 'inventory', action: 'adjustments:update', description: 'Update stock adjustments' },
   { name: 'inventory:adjustments:approve', module: 'inventory', action: 'adjustments:approve', description: 'Approve stock adjustments' },
   { name: 'inventory:adjustments:delete', module: 'inventory', action: 'adjustments:delete', description: 'Delete stock adjustments' },
   { name: 'inventory:reservations:create', module: 'inventory', action: 'reservations:create', description: 'Create stock reservations' },
@@ -74,7 +75,7 @@ const ROLE_DEFINITIONS = [
     permissions: [
       'inventory:stock:create', 'inventory:stock:read', 'inventory:stock:update', 'inventory:stock:delete',
       'inventory:movements:create', 'inventory:movements:read', 'inventory:movements:delete',
-      'inventory:adjustments:create', 'inventory:adjustments:read', 'inventory:adjustments:approve', 'inventory:adjustments:delete',
+      'inventory:adjustments:create', 'inventory:adjustments:read', 'inventory:adjustments:update', 'inventory:adjustments:approve', 'inventory:adjustments:delete',
       'inventory:reservations:create', 'inventory:reservations:read', 'inventory:reservations:release', 'inventory:reservations:delete',
       'inventory:fulfillment:create', 'inventory:fulfillment:read',
       'inventory:transfers:create', 'inventory:transfers:read',
@@ -86,7 +87,7 @@ const ROLE_DEFINITIONS = [
     permissions: [
       'inventory:stock:create', 'inventory:stock:read', 'inventory:stock:update',
       'inventory:movements:create', 'inventory:movements:read',
-      'inventory:adjustments:create', 'inventory:adjustments:read',
+      'inventory:adjustments:create', 'inventory:adjustments:read', 'inventory:adjustments:update',
       'inventory:reservations:create', 'inventory:reservations:read',
     ],
   },
