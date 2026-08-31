@@ -921,8 +921,6 @@ model StockMovement {
   productId     String            @map("product_id") @db.Uuid
   movementType  StockMovementType @map("movement_type")
   quantity      Decimal           @db.Decimal(15, 3)
-  referenceType String?           @map("reference_type")
-  referenceId   String?           @map("reference_id") @db.Uuid
   unitCost      Decimal?          @map("unit_cost") @db.Decimal(15, 2)
   notes         String?
 

@@ -24,11 +24,13 @@ export async function createMovement(data, createdById, req) {
         productId: data.productId,
         movementType: data.movementType,
         quantity: data.quantity,
-        referenceType: data.referenceType,
-        referenceId: data.referenceId,
         unitCost: data.unitCost,
         notes: data.notes,
         createdById,
+      },
+      include: {
+        warehouse: { select: { id: true, name: true, code: true } },
+        product: { select: { id: true, name: true, sku: true } },
       },
     });
 
@@ -70,6 +72,17 @@ export async function createMovement(data, createdById, req) {
       throw new AppError('No stock found for this product in warehouse', 404);
     }
 
+    // Create notification for stock movement
+    await tx.notification.create({
+      data: {
+        userId: createdById,
+        title: 'Stock Movement Created',
+        message: `${isIncrease ? 'Added' : 'Removed'} ${data.quantity} units of ${product.name} ${isIncrease ? 'to' : 'from'} ${warehouse.name}`,
+        type: 'INVENTORY_MOVEMENT',
+        createdById,
+      },
+    });
+
     return movement;
   });
 
@@ -78,7 +91,7 @@ export async function createMovement(data, createdById, req) {
     action: 'STOCK_MOVEMENT_CREATED',
     entityType: 'StockMovement',
     entityId: result.id,
-    newValues: { movementType: data.movementType, quantity: data.quantity },
+    newValues: { movementType: data.movementType, quantity: data.quantity, warehouseId: data.warehouseId, productId: data.productId },
     req,
   });
 
@@ -121,17 +134,36 @@ export async function getMovements(filters) {
 export async function deleteMovement(id, deletedById, req) {
   const existing = await prisma.stockMovement.findFirst({
     where: { id, isArchived: false },
+    include: {
+      warehouse: { select: { id: true, name: true, code: true } },
+      product: { select: { id: true, name: true, sku: true } },
+    },
   });
   if (!existing) throw new AppError('Stock movement not found', 404);
 
-  const movement = await prisma.stockMovement.update({
-    where: { id },
-    data: {
-      isArchived: true,
-      archivedAt: new Date(),
-      updatedById: deletedById,
-      updatedAt: new Date(),
-    },
+  const movement = await prisma.$transaction(async (tx) => {
+    const deletedMovement = await tx.stockMovement.update({
+      where: { id },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+        updatedById: deletedById,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: deletedById,
+        title: 'Stock Movement Deleted',
+        message: `Deleted stock movement for ${existing.product.name} in ${existing.warehouse.name}`,
+        type: 'INVENTORY_MOVEMENT_DELETED',
+        createdById: deletedById,
+      },
+    });
+
+    return deletedMovement;
   });
 
   await logAudit({

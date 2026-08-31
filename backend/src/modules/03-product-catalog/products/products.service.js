@@ -59,6 +59,20 @@ export async function createProduct(data, createdById, req) {
     throw new AppError('Product SKU already exists', 409);
   }
 
+  // Validate category exists and is a leaf category (no children)
+  const category = await prisma.category.findFirst({
+    where: { id: data.categoryId, isArchived: false },
+  });
+  if (!category) {
+    throw new AppError('Category not found', 404);
+  }
+  const childCategories = await prisma.category.count({
+    where: { parentId: data.categoryId, isArchived: false },
+  });
+  if (childCategories > 0) {
+    throw new AppError('Category must be a leaf category (the last child with no sub-categories)', 400);
+  }
+
   const product = await prisma.product.create({
     data: {
       sku,
@@ -294,6 +308,22 @@ export async function updateProduct(id, data, createdById, req) {
     });
     if (duplicateSku) {
       throw new AppError('Product SKU already exists', 409);
+    }
+  }
+
+  // Validate category is a leaf category if being updated
+  if (data.categoryId && data.categoryId !== existingProduct.categoryId) {
+    const category = await prisma.category.findFirst({
+      where: { id: data.categoryId, isArchived: false },
+    });
+    if (!category) {
+      throw new AppError('Category not found', 404);
+    }
+    const childCategories = await prisma.category.count({
+      where: { parentId: data.categoryId, isArchived: false },
+    });
+    if (childCategories > 0) {
+      throw new AppError('Category must be a leaf category (the last child with no sub-categories)', 400);
     }
   }
 

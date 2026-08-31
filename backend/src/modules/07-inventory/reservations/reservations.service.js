@@ -33,6 +33,11 @@ export async function createReservation(data, createdById, req) {
         status: 'RESERVED',
         createdById,
       },
+      include: {
+        warehouse: { select: { id: true, name: true, code: true } },
+        product: { select: { id: true, name: true, sku: true } },
+        salesOrder: { select: { id: true, orderNumber: true, status: true } },
+      },
     });
 
     await tx.warehouseStock.update({
@@ -45,6 +50,17 @@ export async function createReservation(data, createdById, req) {
       },
     });
 
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: createdById,
+        title: 'Stock Reserved',
+        message: `Reserved ${data.quantity} units of ${product.name} in ${warehouse.name}`,
+        type: 'INVENTORY_RESERVATION_CREATED',
+        createdById,
+      },
+    });
+
     return reservation;
   });
 
@@ -53,7 +69,7 @@ export async function createReservation(data, createdById, req) {
     action: 'RESERVATION_CREATED',
     entityType: 'StockReservation',
     entityId: result.id,
-    newValues: { quantity: data.quantity },
+    newValues: { quantity: data.quantity, warehouseId: data.warehouseId, productId: data.productId, salesOrderId: data.salesOrderId },
     req,
   });
 
@@ -93,6 +109,7 @@ export async function getReservations(filters) {
 export async function releaseReservation(id, quantity, createdById, req) {
   const existing = await prisma.stockReservation.findFirst({
     where: { id, isArchived: false },
+    include: { warehouse: true, product: true },
   });
   if (!existing) throw new AppError('Reservation not found', 404);
   if (existing.status === 'RELEASED' || existing.status === 'CANCELLED') {
@@ -110,6 +127,11 @@ export async function releaseReservation(id, quantity, createdById, req) {
         updatedById: createdById,
         updatedAt: new Date(),
       },
+      include: {
+        warehouse: { select: { id: true, name: true, code: true } },
+        product: { select: { id: true, name: true, sku: true } },
+        salesOrder: { select: { id: true, orderNumber: true, status: true } },
+      },
     });
 
     await tx.warehouseStock.updateMany({
@@ -122,6 +144,17 @@ export async function releaseReservation(id, quantity, createdById, req) {
       },
     });
 
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: createdById,
+        title: 'Stock Reservation Released',
+        message: `Released ${releaseQty} units of ${existing.product.name} in ${existing.warehouse.name}`,
+        type: 'INVENTORY_RESERVATION_RELEASED',
+        createdById,
+      },
+    });
+
     return reservation;
   });
 
@@ -130,7 +163,8 @@ export async function releaseReservation(id, quantity, createdById, req) {
     action: 'RESERVATION_RELEASED',
     entityType: 'StockReservation',
     entityId: id,
-    newValues: { releasedQuantity: releaseQty },
+    oldValues: { status: existing.status },
+    newValues: { status: 'RELEASED', releasedQuantity: releaseQty },
     req,
   });
 
@@ -140,6 +174,7 @@ export async function releaseReservation(id, quantity, createdById, req) {
 export async function deleteReservation(id, deletedById, req) {
   const existing = await prisma.stockReservation.findFirst({
     where: { id, isArchived: false },
+    include: { warehouse: true, product: true },
   });
   if (!existing) throw new AppError('Stock reservation not found', 404);
 
@@ -166,6 +201,17 @@ export async function deleteReservation(id, deletedById, req) {
         },
       });
     }
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: deletedById,
+        title: 'Stock Reservation Deleted',
+        message: `Deleted reservation for ${existing.product.name} in ${existing.warehouse.name}`,
+        type: 'INVENTORY_RESERVATION_DELETED',
+        createdById: deletedById,
+      },
+    });
 
     return reservation;
   });

@@ -35,8 +35,6 @@ export const createMovementSchema = z.object({
     'TRANSFER_OUT',
   ]),
   quantity: z.coerce.number().positive(),
-  referenceType: z.string().optional(),
-  referenceId: z.string().uuid().optional(),
   unitCost: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),
 });

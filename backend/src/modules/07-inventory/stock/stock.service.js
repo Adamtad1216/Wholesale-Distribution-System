@@ -31,21 +31,36 @@ export async function createStock(data, createdById, req) {
   });
   if (existing) throw new AppError('Stock already exists for this product in warehouse', 409);
 
-  const stock = await prisma.warehouseStock.create({
-    data: {
-      warehouseId: data.warehouseId,
-      productId: data.productId,
-      quantity: data.quantity,
-      reservedQuantity: 0,
-      availableQuantity: data.quantity,
-      minimumStock: data.minimumStock,
-      reorderLevel: data.reorderLevel,
-      createdById,
-    },
-    include: {
-      warehouse: { select: { id: true, name: true, code: true } },
-      product: { select: { id: true, name: true, sku: true } },
-    },
+  const stock = await prisma.$transaction(async (tx) => {
+    const newStock = await tx.warehouseStock.create({
+      data: {
+        warehouseId: data.warehouseId,
+        productId: data.productId,
+        quantity: data.quantity,
+        reservedQuantity: 0,
+        availableQuantity: data.quantity,
+        minimumStock: data.minimumStock,
+        reorderLevel: data.reorderLevel,
+        createdById,
+      },
+      include: {
+        warehouse: { select: { id: true, name: true, code: true } },
+        product: { select: { id: true, name: true, sku: true } },
+      },
+    });
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: createdById,
+        title: 'Stock Created',
+        message: `Added ${data.quantity} units of ${product.name} to ${warehouse.name}`,
+        type: 'INVENTORY_STOCK_CREATED',
+        createdById,
+      },
+    });
+
+    return newStock;
   });
 
   await logAudit({
@@ -128,13 +143,28 @@ export async function updateStock(id, data, createdById, req) {
   updateData.updatedById = createdById;
   updateData.updatedAt = new Date();
 
-  const stock = await prisma.warehouseStock.update({
-    where: { id },
-    data: updateData,
-    include: {
-      warehouse: { select: { id: true, name: true, code: true } },
-      product: { select: { id: true, name: true, sku: true } },
-    },
+  const stock = await prisma.$transaction(async (tx) => {
+    const updatedStock = await tx.warehouseStock.update({
+      where: { id },
+      data: updateData,
+      include: {
+        warehouse: { select: { id: true, name: true, code: true } },
+        product: { select: { id: true, name: true, sku: true } },
+      },
+    });
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: createdById,
+        title: 'Stock Updated',
+        message: `Updated stock for ${updatedStock.product.name} in ${updatedStock.warehouse.name}`,
+        type: 'INVENTORY_STOCK_UPDATED',
+        createdById,
+      },
+    });
+
+    return updatedStock;
   });
 
   await logAudit({
@@ -142,7 +172,7 @@ export async function updateStock(id, data, createdById, req) {
     action: 'STOCK_UPDATED',
     entityType: 'WarehouseStock',
     entityId: id,
-    oldValues: { quantity: existing.quantity },
+    oldValues: { quantity: existing.quantity, minimumStock: existing.minimumStock, reorderLevel: existing.reorderLevel },
     newValues: updateData,
     req,
   });
@@ -153,17 +183,36 @@ export async function updateStock(id, data, createdById, req) {
 export async function deleteStock(id, deletedById, req) {
   const existing = await prisma.warehouseStock.findFirst({
     where: { id, isArchived: false },
+    include: {
+      warehouse: { select: { id: true, name: true, code: true } },
+      product: { select: { id: true, name: true, sku: true } },
+    },
   });
   if (!existing) throw new AppError('Stock not found', 404);
 
-  const stock = await prisma.warehouseStock.update({
-    where: { id },
-    data: {
-      isArchived: true,
-      archivedAt: new Date(),
-      updatedById: deletedById,
-      updatedAt: new Date(),
-    },
+  const stock = await prisma.$transaction(async (tx) => {
+    const deletedStock = await tx.warehouseStock.update({
+      where: { id },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+        updatedById: deletedById,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: deletedById,
+        title: 'Stock Deleted',
+        message: `Deleted stock for ${existing.product.name} from ${existing.warehouse.name}`,
+        type: 'INVENTORY_STOCK_DELETED',
+        createdById: deletedById,
+      },
+    });
+
+    return deletedStock;
   });
 
   await logAudit({

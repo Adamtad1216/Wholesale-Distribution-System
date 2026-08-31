@@ -16,31 +16,46 @@ export async function createAdjustment(data, createdById, req) {
     if (!product) throw new AppError(`Product not found: ${item.productId}`, 404);
   }
 
-  const adjustment = await prisma.stockAdjustment.create({
-    data: {
-      warehouseId: data.warehouseId,
-      reason: data.reason,
-      status: 'PENDING',
-      createdById,
-      items: {
-        create: data.items.map((item) => ({
-          productId: item.productId,
-          systemQuantity: 0,
-          actualQuantity: item.actualQuantity,
-          difference: item.actualQuantity,
-          reason: item.reason,
-          createdById,
-        })),
-      },
-    },
-    include: {
-      items: {
-        include: {
-          product: { select: { id: true, name: true, sku: true } },
+  const adjustment = await prisma.$transaction(async (tx) => {
+    const newAdjustment = await tx.stockAdjustment.create({
+      data: {
+        warehouseId: data.warehouseId,
+        reason: data.reason,
+        status: 'PENDING',
+        createdById,
+        items: {
+          create: data.items.map((item) => ({
+            productId: item.productId,
+            systemQuantity: 0,
+            actualQuantity: item.actualQuantity,
+            difference: item.actualQuantity,
+            reason: item.reason,
+            createdById,
+          })),
         },
       },
-      warehouse: { select: { id: true, name: true, code: true } },
-    },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true } },
+          },
+        },
+        warehouse: { select: { id: true, name: true, code: true } },
+      },
+    });
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: createdById,
+        title: 'Stock Adjustment Created',
+        message: `Created stock adjustment for ${warehouse.name} with ${data.items.length} item(s)`,
+        type: 'INVENTORY_ADJUSTMENT_CREATED',
+        createdById,
+      },
+    });
+
+    return newAdjustment;
   });
 
   await logAudit({
@@ -48,7 +63,7 @@ export async function createAdjustment(data, createdById, req) {
     action: 'ADJUSTMENT_CREATED',
     entityType: 'StockAdjustment',
     entityId: adjustment.id,
-    newValues: { reason: data.reason, itemCount: data.items.length },
+    newValues: { reason: data.reason, itemCount: data.items.length, warehouseId: data.warehouseId },
     req,
   });
 
@@ -108,7 +123,7 @@ export async function getAdjustmentById(id) {
 export async function approveAdjustment(id, data, createdById, req) {
   const existing = await prisma.stockAdjustment.findFirst({
     where: { id, isArchived: false },
-    include: { items: true },
+    include: { items: true, warehouse: true },
   });
   if (!existing) throw new AppError('Adjustment not found', 404);
   if (existing.status !== 'PENDING') throw new AppError('Adjustment already processed', 400);
@@ -173,14 +188,23 @@ export async function approveAdjustment(id, data, createdById, req) {
             productId: item.productId,
             movementType: difference >= 0 ? 'ADJUSTMENT_IN' : 'ADJUSTMENT_OUT',
             quantity: Math.abs(difference),
-            referenceType: 'STOCK_ADJUSTMENT',
-            referenceId: adjustment.id,
             notes: `Adjustment ${adjustment.id}`,
             createdById,
           },
         });
       }
     }
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: createdById,
+        title: 'Stock Adjustment Processed',
+        message: `Adjustment for ${existing.warehouse.name} has been ${data.status.toLowerCase()}`,
+        type: 'INVENTORY_ADJUSTMENT_PROCESSED',
+        createdById,
+      },
+    });
 
     return adjustment;
   });
@@ -190,7 +214,8 @@ export async function approveAdjustment(id, data, createdById, req) {
     action: 'ADJUSTMENT_APPROVED',
     entityType: 'StockAdjustment',
     entityId: id,
-    newValues: { status: data.status },
+    oldValues: { status: 'PENDING' },
+    newValues: { status: data.status, approvedBy: createdById },
     req,
   });
 
@@ -200,17 +225,33 @@ export async function approveAdjustment(id, data, createdById, req) {
 export async function deleteAdjustment(id, deletedById, req) {
   const existing = await prisma.stockAdjustment.findFirst({
     where: { id, isArchived: false },
+    include: { warehouse: true },
   });
   if (!existing) throw new AppError('Stock adjustment not found', 404);
 
-  const adjustment = await prisma.stockAdjustment.update({
-    where: { id },
-    data: {
-      isArchived: true,
-      archivedAt: new Date(),
-      updatedById: deletedById,
-      updatedAt: new Date(),
-    },
+  const adjustment = await prisma.$transaction(async (tx) => {
+    const deletedAdjustment = await tx.stockAdjustment.update({
+      where: { id },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+        updatedById: deletedById,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        userId: deletedById,
+        title: 'Stock Adjustment Deleted',
+        message: `Deleted stock adjustment for ${existing.warehouse.name}`,
+        type: 'INVENTORY_ADJUSTMENT_DELETED',
+        createdById: deletedById,
+      },
+    });
+
+    return deletedAdjustment;
   });
 
   await logAudit({

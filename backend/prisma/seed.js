@@ -139,6 +139,7 @@ async function main() {
     await ensureAdminPermissions(existingUser.id);
     await seedRolesAndUsers(existingUser.id);
     await seedCompanyBranchWarehouse(existingUser.id);
+    await seedProductCatalog(existingUser.id);
     await seedInventoryData(existingUser.id);
     console.log('Seed completed (idempotent).');
     return;
@@ -229,8 +230,137 @@ async function main() {
   console.log(`Admin person created: ${person.firstName} ${person.lastName} (${person.id})`);
   await seedRolesAndUsers(user.id);
   await seedCompanyBranchWarehouse(user.id);
+  await seedProductCatalog(user.id);
   await seedInventoryData(user.id);
   console.log('Seed completed successfully.');
+}
+
+async function seedProductCatalog(adminId) {
+  console.log('Seeding product catalog...');
+
+  const existingProduct = await prisma.product.findFirst();
+  if (existingProduct) {
+    console.log('Products already exist. Skipping product catalog seed.');
+    return;
+  }
+
+  // Create units
+  const units = [
+    { name: 'Piece', abbreviation: 'pc' },
+    { name: 'Kilogram', abbreviation: 'kg' },
+    { name: 'Liter', abbreviation: 'L' },
+    { name: 'Box', abbreviation: 'box' },
+    { name: 'Carton', abbreviation: 'ctn' },
+  ];
+
+  const createdUnits = [];
+  for (const unit of units) {
+    let created = await prisma.unit.findFirst({ where: { name: unit.name } });
+    if (!created) {
+      created = await prisma.unit.create({ data: unit });
+      console.log(`  Created unit: ${created.name}`);
+    }
+    createdUnits.push(created);
+  }
+
+  // Create brands
+  const brands = [
+    { name: 'Nestle', description: 'Nestle Ethiopia' },
+    { name: 'Coca-Cola', description: 'Coca-Cola Ethiopia' },
+    { name: 'Unilever', description: 'Unilever East Africa' },
+    { name: 'Diageo', description: 'Diageo Ethiopia' },
+    { name: 'Local Brand', description: 'Local Ethiopian brand' },
+  ];
+
+  const createdBrands = [];
+  for (const brand of brands) {
+    let created = await prisma.brand.findFirst({ where: { name: brand.name } });
+    if (!created) {
+      created = await prisma.brand.create({ data: brand });
+      console.log(`  Created brand: ${created.name}`);
+    }
+    createdBrands.push(created);
+  }
+
+  // Create categories (parent)
+  const parentCategories = [
+    { name: 'Beverages', description: 'Drinks and beverages' },
+    { name: 'Food', description: 'Food products' },
+    { name: 'Household', description: 'Household items' },
+    { name: 'Personal Care', description: 'Personal care products' },
+  ];
+
+  const createdParents = [];
+  for (const cat of parentCategories) {
+    let created = await prisma.category.findFirst({ where: { name: cat.name, parentId: null } });
+    if (!created) {
+      created = await prisma.category.create({
+        data: {
+          name: cat.name,
+          description: cat.description,
+          parentId: null,
+          createdById: adminId,
+        },
+      });
+      console.log(`  Created category: ${cat.name}`);
+    }
+    createdParents.push(created);
+  }
+
+  // Create sub-categories
+  const subCategories = [
+    { name: 'Soft Drinks', description: 'Soft drinks', parentId: createdParents[0].id },
+    { name: 'Water', description: 'Bottled water', parentId: createdParents[0].id },
+    { name: 'Grains', description: 'Grains and cereals', parentId: createdParents[1].id },
+    { name: 'Cooking Oil', description: 'Cooking oils', parentId: createdParents[1].id },
+    { name: 'Cleaning', description: 'Cleaning products', parentId: createdParents[2].id },
+    { name: 'Soap', description: 'Soap products', parentId: createdParents[3].id },
+  ];
+
+  const createdSubCategories = [];
+  for (const cat of subCategories) {
+    let created = await prisma.category.findFirst({ where: { name: cat.name, parentId: cat.parentId } });
+    if (!created) {
+      created = await prisma.category.create({
+        data: {
+          name: cat.name,
+          description: cat.description,
+          parentId: cat.parentId,
+          createdById: adminId,
+        },
+      });
+      console.log(`  Created sub-category: ${cat.name}`);
+    }
+    createdSubCategories.push(created);
+  }
+
+  // Create products
+  const products = [
+    { name: 'Coca-Cola 500ml', sku: 'CC-500', categoryId: createdSubCategories[0].id, brandId: createdBrands[1].id, unitId: createdUnits[0].id, sellingPrice: 25 },
+    { name: 'Fanta Orange 500ml', sku: 'FN-500', categoryId: createdSubCategories[0].id, brandId: createdBrands[1].id, unitId: createdUnits[0].id, sellingPrice: 25 },
+    { name: 'Dasani Water 500ml', sku: 'DAS-500', categoryId: createdSubCategories[1].id, brandId: createdBrands[1].id, unitId: createdUnits[0].id, sellingPrice: 15 },
+    { name: 'Teff Flour 1kg', sku: 'TEF-1K', categoryId: createdSubCategories[2].id, brandId: createdBrands[4].id, unitId: createdUnits[1].id, sellingPrice: 80 },
+    { name: 'Sunflower Oil 1L', sku: 'SUN-1L', categoryId: createdSubCategories[3].id, brandId: createdBrands[2].id, unitId: createdUnits[2].id, sellingPrice: 150 },
+    { name: 'OMO Detergent 1kg', sku: 'OMO-1K', categoryId: createdSubCategories[4].id, brandId: createdBrands[2].id, unitId: createdUnits[1].id, sellingPrice: 120 },
+    { name: 'Lux Soap 100g', sku: 'LUX-100', categoryId: createdSubCategories[5].id, brandId: createdBrands[2].id, unitId: createdUnits[0].id, sellingPrice: 35 },
+  ];
+
+  for (const prod of products) {
+    await prisma.product.create({
+      data: {
+        name: prod.name,
+        sku: prod.sku,
+        categoryId: prod.categoryId,
+        brandId: prod.brandId,
+        unitId: prod.unitId,
+        sellingPrice: prod.sellingPrice,
+        createdById: adminId,
+      },
+    });
+    console.log(`  Created product: ${prod.name}`);
+  }
+
+  console.log('Product catalog seeded.');
 }
 
 async function seedInventoryData(adminId) {
@@ -282,7 +412,6 @@ async function seedInventoryData(adminId) {
           productId: stock.productId,
           movementType: 'PURCHASE_RECEIPT',
           quantity: stock.quantity,
-          referenceType: 'PURCHASE_ORDER',
           unitCost: 100,
           notes: 'Initial stock receipt',
           createdById: adminId,
