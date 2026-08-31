@@ -10,6 +10,16 @@ import { env } from "../../../utils/env.js";
 import { AppError } from "../../../utils/errors.js";
 import crypto from 'crypto';
 import { sendResetPasswordEmail } from "../../../utils/email.js";
+
+// Fast SHA-256 hash for refresh tokens.
+// Refresh tokens are already high-entropy random JWTs — they don't need
+// bcrypt's brute-force resistance. SHA-256 is synchronous and takes <1ms.
+function hashRefreshToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+function compareRefreshToken(token, hash) {
+  return hashRefreshToken(token) === hash;
+}
 import { ensureUniqueCode } from '../../09-customers/customers/customers.service.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -222,7 +232,7 @@ export async function register(data, req) {
     userId: result.user.id,
     username: result.user.username,
   });
-  const refreshTokenHash = await hashPassword(refreshToken);
+  const refreshTokenHash = hashRefreshToken(refreshToken);
 
   await prisma.user.update({
     where: { id: result.user.id },
@@ -354,15 +364,7 @@ export async function login(data, req) {
     throw new AppError('Invalid username or password', 401);
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      lastLoginAt: new Date(),
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-    },
-  });
-
+  // Merge both updates into a single DB write to save a round-trip
   const accessToken = signAccessToken({
     userId: user.id,
     username: user.username,
@@ -371,23 +373,27 @@ export async function login(data, req) {
     userId: user.id,
     username: user.username,
   });
-  const refreshTokenHash = await hashPassword(refreshToken);
+  const refreshTokenHash = hashRefreshToken(refreshToken);
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
+      lastLoginAt: new Date(),
+      failedLoginAttempts: 0,
+      lockedUntil: null,
       refreshTokenHash,
       refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
 
-  await logAudit({
+  // Fire audit log without awaiting it — don't block the login response
+  logAudit({
     userId: user.id,
     action: 'LOGIN_SUCCESS',
     entityType: 'User',
     entityId: user.id,
     req,
-  });
+  }).catch(() => {}); // fire-and-forget; audit failures never block login
 
   return { user, accessToken, refreshToken };
 }
@@ -416,7 +422,7 @@ export async function refreshTokens(refreshToken, req) {
     throw new AppError('Refresh token expired', 401);
   }
 
-  const isTokenValid = await comparePassword(refreshToken, user.refreshTokenHash);
+  const isTokenValid = compareRefreshToken(refreshToken, user.refreshTokenHash);
   if (!isTokenValid) {
     throw new AppError('Invalid refresh token', 401);
   }
@@ -429,7 +435,7 @@ export async function refreshTokens(refreshToken, req) {
     userId: user.id,
     username: user.username,
   });
-  const newRefreshTokenHash = await hashPassword(newRefreshToken);
+  const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
 
   await prisma.user.update({
     where: { id: user.id },
