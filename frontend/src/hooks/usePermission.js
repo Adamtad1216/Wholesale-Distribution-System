@@ -3,7 +3,15 @@ import { useSelector } from 'react-redux';
 export function usePermission(required, mode = 'any') {
   const { permissions = [], role } = useSelector((state) => state.auth);
 
-  if (!required) return { can: true, role, permissions };
+  if (!required) return { can: true, permissions };
+
+  // Super Admin or Admin override, or wildcard permission token
+  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const hasWildcard = permissions.includes('*') || permissions.includes('all') || permissions.includes('system:all');
+
+  if (isSuperAdmin || hasWildcard) {
+    return { can: true, permissions };
+  }
 
   const keys = Array.isArray(required) ? required : [required];
 
@@ -12,11 +20,5 @@ export function usePermission(required, mode = 'any') {
       ? keys.every((k) => permissions.includes(k))
       : keys.some((k) => permissions.includes(k));
 
-  return { can, role, permissions };
-}
-
-export function useHasRole(roles) {
-  const { role } = useSelector((state) => state.auth);
-  const list = Array.isArray(roles) ? roles : [roles];
-  return list.includes(role);
+  return { can, permissions };
 }

@@ -2,6 +2,9 @@ import { createSlice } from '@reduxjs/toolkit';
 import { tokenService } from '../../services/tokenService';
 
 const SESSION_EXPIRY_KEY = 'sessionExpiresAt';
+const PERMISSIONS_KEY = 'auth_permissions';
+const ROLE_KEY = 'auth_role';
+const USER_KEY = 'auth_user';
 
 function decodeJwt(token) {
   try {
@@ -14,14 +17,31 @@ function decodeJwt(token) {
 
 const token = tokenService.getToken() || null;
 const storedSessionExpiry = localStorage.getItem(SESSION_EXPIRY_KEY);
+const storedPermissions = localStorage.getItem(PERMISSIONS_KEY);
+const storedRole = localStorage.getItem(ROLE_KEY);
+const storedUser = localStorage.getItem(USER_KEY);
+
+let parsedPermissions = [];
+try {
+  parsedPermissions = storedPermissions ? JSON.parse(storedPermissions) : [];
+} catch {
+  parsedPermissions = [];
+}
+
+let parsedUser = null;
+try {
+  parsedUser = storedUser ? JSON.parse(storedUser) : null;
+} catch {
+  parsedUser = null;
+}
 
 const initialState = {
-  user: null,
+  user: parsedUser,
   token: token,
   refreshToken: tokenService.getRefreshToken() || null,
   isAuthenticated: !!token,
-  role: null,
-  permissions: [],
+  role: storedRole || null,
+  permissions: parsedPermissions,
   loading: false,
   error: null,
   sessionExpiresAt: storedSessionExpiry ? Number(storedSessionExpiry) : null,
@@ -36,25 +56,29 @@ const authSlice = createSlice({
       state.error = null;
     },
     loginSuccess(state, action) {
+      const payload = action.payload?.data || action.payload;
       state.loading = false;
-      state.token = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
-      state.user = action.payload.user;
-      state.role = action.payload.role;
-      state.permissions = action.payload.permissions || [];
+      state.token = payload.accessToken;
+      state.refreshToken = payload.refreshToken;
+      state.user = payload.user;
+      state.role = payload.role;
+      state.permissions = payload.permissions || [];
       state.isAuthenticated = true;
 
-      const refreshPayload = decodeJwt(action.payload.refreshToken);
+      const refreshPayload = decodeJwt(payload.refreshToken);
       const sessionExpiresAt = refreshPayload?.exp
         ? refreshPayload.exp * 1000
         : Date.now() + 7 * 24 * 60 * 60 * 1000;
 
       state.sessionExpiresAt = sessionExpiresAt;
       localStorage.setItem(SESSION_EXPIRY_KEY, String(sessionExpiresAt));
+      localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(payload.permissions || []));
+      if (payload.role) localStorage.setItem(ROLE_KEY, payload.role);
+      if (payload.user) localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
 
-      tokenService.setToken(action.payload.accessToken);
-      if (action.payload.refreshToken) {
-        tokenService.setRefreshToken(action.payload.refreshToken);
+      tokenService.setToken(payload.accessToken);
+      if (payload.refreshToken) {
+        tokenService.setRefreshToken(payload.refreshToken);
       }
     },
     loginFailure(state, action) {
@@ -62,10 +86,11 @@ const authSlice = createSlice({
       state.error = action.payload;
     },
     tokenRefreshed(state, action) {
-      state.token = action.payload.accessToken;
-      state.refreshToken = action.payload.refreshToken;
-      tokenService.setToken(action.payload.accessToken);
-      tokenService.setRefreshToken(action.payload.refreshToken);
+      const payload = action.payload?.data || action.payload;
+      state.token = payload.accessToken;
+      state.refreshToken = payload.refreshToken;
+      tokenService.setToken(payload.accessToken);
+      tokenService.setRefreshToken(payload.refreshToken);
     },
     logout(state) {
       state.user = null;
@@ -77,11 +102,24 @@ const authSlice = createSlice({
       state.sessionExpiresAt = null;
       tokenService.clearAll();
       localStorage.removeItem(SESSION_EXPIRY_KEY);
+      localStorage.removeItem(PERMISSIONS_KEY);
+      localStorage.removeItem(ROLE_KEY);
+      localStorage.removeItem(USER_KEY);
     },
     setProfile(state, action) {
-      state.user = action.payload.user;
-      state.role = action.payload.role;
-      state.permissions = action.payload.permissions || [];
+      const payload = action.payload?.data || action.payload;
+      state.user = payload.user || payload;
+      state.role = payload.role || state.role;
+      state.permissions = payload.permissions || state.permissions || [];
+      if (payload.permissions) {
+        localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(payload.permissions));
+      }
+      if (payload.role) {
+        localStorage.setItem(ROLE_KEY, payload.role);
+      }
+      if (payload.user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
+      }
     },
   },
 });

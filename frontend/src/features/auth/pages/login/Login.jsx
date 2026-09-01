@@ -6,8 +6,10 @@ import { useMutation } from '@tanstack/react-query';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { authApi } from '../authApi';
-import { loginSuccess } from '../authSlice';
+import { authApi } from '../../authApi';
+import { loginSuccess } from '../../authSlice';
+import Card from '../../../../components/ui/Card';
+import Button from '../../../../components/ui/Button';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -37,6 +39,7 @@ export default function Login() {
   const mutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (response) => {
+      console.log('🔑 [LOGIN RESPONSE FROM SERVER]:', response?.data || response);
       if (response && response.data) {
         dispatch(loginSuccess(response.data));
         toast.success('Successfully logged in!', { duration: 6000 });
@@ -45,9 +48,6 @@ export default function Login() {
         toast.error('Login failed: Invalid server response', { duration: 6000 });
       }
     },
-    onError: (err) => {
-      // Error is displayed inline in the form, no toast needed.
-    },
   });
 
   const onSubmit = (data) => {
@@ -55,17 +55,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 font-sans relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       {/* Glow Effects */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
-      <div className="w-full max-w-md p-8 rounded-2xl backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 shadow-2xl relative z-10">
-        <div className="text-center mb-8">
+      <Card className="w-full max-w-md p-8 relative z-10 space-y-6">
+        <div className="text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/20 mb-4 text-white text-2xl font-bold">
             W
           </div>
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100 light:text-slate-900">
             Welcome Back
           </h1>
           <p className="text-sm text-slate-400 mt-1">
@@ -88,7 +88,7 @@ export default function Login() {
               type="text"
               {...register('username')}
               placeholder="Enter your username"
-              className="w-full px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-855 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 text-sm outline-none transition duration-200"
+              className="w-full px-4 py-3 rounded-xl border text-sm outline-none"
             />
             {errors.username && (
               <p className="text-xs text-rose-500 mt-1.5">{errors.username.message}</p>
@@ -104,12 +104,12 @@ export default function Login() {
                 type={showPassword ? 'text' : 'password'}
                 {...register('password')}
                 placeholder="••••••••"
-                className="w-full pl-4 pr-11 py-3 rounded-xl bg-slate-900/60 border border-slate-855 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 text-sm outline-none transition duration-200"
+                className="w-full pl-4 pr-11 py-3 rounded-xl border text-sm outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-450 hover:text-slate-200 transition focus:outline-none"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 focus:outline-none"
               >
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -128,32 +128,24 @@ export default function Login() {
             )}
           </div>
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            fullWidth
+            size="lg"
             disabled={mutation.isPending}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-semibold text-sm transition duration-200 shadow-lg shadow-violet-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {mutation.isPending ? (
-              <>
-                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Logging in...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </button>
+            {mutation.isPending ? 'Logging in...' : 'Sign In'}
+          </Button>
         </form>
 
-        <div className="mt-8 text-center text-xs text-slate-400 border-t border-slate-900 pt-6">
+        <div className="text-center text-xs text-slate-400 border-t border-slate-800/80 light:border-slate-200 pt-6">
           Don't have an account?{' '}
           <Link to="/register" className="text-violet-400 hover:text-violet-300 font-semibold transition duration-150">
             Create an account
           </Link>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -7,15 +7,21 @@ export default function SidebarNavItem({ item, onClick }) {
       to={item.href}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition duration-200 ${
+        `sidebar-nav-link flex items-center gap-3.5 px-4 py-2.5 text-sm font-semibold transition-all duration-200 rounded-lg ${
           isActive
-            ? 'bg-gradient-to-r from-violet-600/15 to-indigo-600/5 text-violet-400 border-l-[3px] border-violet-500 pl-[13px]'
-            : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200 pl-4'
+            ? 'is-active sidebar-active-link'
+            : 'sidebar-inactive-link'
         }`
       }
     >
-      {item.icon}
-      {item.name}
+      {({ isActive }) => (
+        <>
+          <span className={isActive ? 'sidebar-active-icon' : 'sidebar-inactive-icon'}>
+            {item.icon}
+          </span>
+          <span>{item.name}</span>
+        </>
+      )}
     </NavLink>
   );
 }

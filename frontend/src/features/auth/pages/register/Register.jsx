@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { authApi } from '../authApi';
+import { authApi } from '../../authApi';
 
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
