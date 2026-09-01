@@ -1,7 +1,10 @@
 import prisma from "../../../config/prisma.js";
 import { logAudit } from "../../../middleware/audit.middleware.js";
 import { AppError } from "../../../utils/errors.js";
-import { getPaginationParams, buildPaginationMeta } from "../../../utils/pagination.js";
+import {
+  getPaginationParams,
+  buildPaginationMeta,
+} from "../../../utils/pagination.js";
 import { hashPassword } from "../../../utils/password.js";
 
 export const generateCustomerCode = () => {
@@ -26,7 +29,7 @@ export const ensureUniqueCode = async (tx, code) => {
 
 const toNumber = (value) => {
   if (value === null || value === undefined) return 0;
-  if (typeof value === 'number') return value;
+  if (typeof value === "number") return value;
   return Number(value);
 };
 
@@ -50,20 +53,26 @@ const sanitizeCustomer = (customer) => {
   };
 };
 
-const createUserAccountForCustomer = async (tx, personId, username, password, createdById) => {
+const createUserAccountForCustomer = async (
+  tx,
+  personId,
+  username,
+  password,
+  createdById,
+) => {
   const existingUsername = await tx.user.findUnique({
     where: { username },
   });
   if (existingUsername) {
-    throw new AppError('Username already taken', 409);
+    throw new AppError("Username already taken", 409);
   }
 
   const customerRole = await tx.role.findUnique({
-    where: { name: 'CUSTOMER' },
+    where: { name: "CUSTOMER" },
   });
 
   if (!customerRole) {
-    throw new AppError('CUSTOMER role not configured', 500);
+    throw new AppError("CUSTOMER role not configured", 500);
   }
 
   const passwordHash = await hashPassword(password);
@@ -97,9 +106,10 @@ const getDefaultPaymentTermsId = async (tx) => {
   if (!defaultTerms) {
     defaultTerms = await tx.paymentTerms.create({
       data: {
-        name: 'Cash on Delivery (COD)',
+        name: "Cash on Delivery (COD)",
         days: 0,
-        description: 'Default payment term: Immediate payment required upon receipt (0 Days)',
+        description:
+          "Default payment term: Immediate payment required upon receipt (0 Days)",
       },
     });
   }
@@ -112,13 +122,13 @@ export async function createCustomer(data, createdById, req) {
     ? await ensureUniqueCode(prisma, data.customerCode)
     : generateCustomerCode();
 
-  if (data.customerType === 'PERSON') {
+  if (data.customerType === "PERSON") {
     if (data.person.email) {
       const existingPerson = await prisma.person.findUnique({
         where: { email: data.person.email },
       });
       if (existingPerson) {
-        throw new AppError('Person with this email already exists', 409);
+        throw new AppError("Person with this email already exists", 409);
       }
     }
 
@@ -131,27 +141,34 @@ export async function createCustomer(data, createdById, req) {
           phone: data.person.phone,
           email: data.person.email,
           address: data.person.address,
-          status: data.status || 'ACTIVE',
+          status: data.status || "ACTIVE",
           createdById: createdById,
           updatedById: createdById,
         },
       });
 
       if (data.username && data.password) {
-        await createUserAccountForCustomer(tx, person.id, data.username, data.password, createdById);
+        await createUserAccountForCustomer(
+          tx,
+          person.id,
+          data.username,
+          data.password,
+          createdById,
+        );
       }
 
-      const paymentTermsId = data.paymentTermsId || (await getDefaultPaymentTermsId(tx));
+      const paymentTermsId =
+        data.paymentTermsId || (await getDefaultPaymentTermsId(tx));
 
       return tx.customer.create({
         data: {
           customerCode,
-          customerType: 'PERSON',
+          customerType: "PERSON",
           personId: person.id,
-          creditLimit: data.creditLimit || 0,
-          paymentTermsId,
+          creditLimit: data.creditLimit ?? 0,
+          paymentTermsId: data.paymentTermsId,
           assignedSalesRepId: data.assignedSalesRepId,
-          status: data.status || 'ACTIVE',
+          status: data.status || "ACTIVE",
           createdById: createdById,
           updatedById: createdById,
         },
@@ -186,25 +203,29 @@ export async function createCustomer(data, createdById, req) {
 
     await logAudit({
       createdById,
-      action: 'CUSTOMER_CREATED',
-      entityType: 'Customer',
+      action: "CUSTOMER_CREATED",
+      entityType: "Customer",
       entityId: customer.id,
-      newValues: { customerCode: customer.customerCode, customerType: 'PERSON', hasUserAccount: !!data.username },
+      newValues: {
+        customerCode: customer.customerCode,
+        customerType: "PERSON",
+        hasUserAccount: !!data.username,
+      },
       req,
     });
 
     return sanitizeCustomer(customer);
   }
 
-  if (data.customerType === 'ORGANIZATION') {
+  if (data.customerType === "ORGANIZATION") {
     if (data.organization.registrationNumber) {
       const existingOrg = await prisma.organization.findFirst({
         where: { registrationNumber: data.organization.registrationNumber },
       });
       if (existingOrg) {
         throw new AppError(
-          'Organization with this registration number already exists',
-          409
+          "Organization with this registration number already exists",
+          409,
         );
       }
     }
@@ -215,8 +236,8 @@ export async function createCustomer(data, createdById, req) {
       });
       if (existingOrg) {
         throw new AppError(
-          'Organization with this tax number already exists',
-          409
+          "Organization with this tax number already exists",
+          409,
         );
       }
     }
@@ -230,7 +251,7 @@ export async function createCustomer(data, createdById, req) {
           phone: data.organization.phone,
           email: data.organization.email,
           address: data.organization.address,
-          status: data.status || 'ACTIVE',
+          status: data.status || "ACTIVE",
           createdById: createdById,
           updatedById: createdById,
         },
@@ -245,7 +266,7 @@ export async function createCustomer(data, createdById, req) {
               where: { email: contact.email },
             });
             if (existingEmail) {
-              throw new AppError('Contact email already registered', 409);
+              throw new AppError("Contact email already registered", 409);
             }
           }
 
@@ -257,7 +278,7 @@ export async function createCustomer(data, createdById, req) {
               phone: contact.phone,
               email: contact.email,
               address: contact.address || data.organization.address,
-              status: 'ACTIVE',
+              status: "ACTIVE",
               createdById: createdById,
               updatedById: createdById,
             },
@@ -280,50 +301,69 @@ export async function createCustomer(data, createdById, req) {
         if (data.username && data.password) {
           const personForAccount = primaryPerson;
           if (personForAccount) {
-            await createUserAccountForCustomer(tx, personForAccount.id, data.username, data.password, createdById);
+            await createUserAccountForCustomer(
+              tx,
+              personForAccount.id,
+              data.username,
+              data.password,
+              createdById,
+            );
           } else {
             const orgPerson = await tx.person.create({
               data: {
                 firstName: data.organization.name,
-                lastName: '',
+                lastName: "",
                 phone: data.organization.phone,
                 email: data.organization.email,
                 address: data.organization.address,
-                status: 'ACTIVE',
+                status: "ACTIVE",
                 createdById: createdById,
                 updatedById: createdById,
               },
             });
-            await createUserAccountForCustomer(tx, orgPerson.id, data.username, data.password, createdById);
+            await createUserAccountForCustomer(
+              tx,
+              orgPerson.id,
+              data.username,
+              data.password,
+              createdById,
+            );
           }
         }
       } else if (data.username && data.password) {
         const orgPerson = await tx.person.create({
           data: {
             firstName: data.organization.name,
-            lastName: '',
+            lastName: "",
             phone: data.organization.phone,
             email: data.organization.email,
             address: data.organization.address,
-            status: 'ACTIVE',
+            status: "ACTIVE",
             createdById: createdById,
             updatedById: createdById,
           },
         });
-        await createUserAccountForCustomer(tx, orgPerson.id, data.username, data.password, createdById);
+        await createUserAccountForCustomer(
+          tx,
+          orgPerson.id,
+          data.username,
+          data.password,
+          createdById,
+        );
       }
 
-      const paymentTermsId = data.paymentTermsId || (await getDefaultPaymentTermsId(tx));
+      const paymentTermsId =
+        data.paymentTermsId || (await getDefaultPaymentTermsId(tx));
 
       return tx.customer.create({
         data: {
           customerCode,
-          customerType: 'ORGANIZATION',
+          customerType: "ORGANIZATION",
           organizationId: organization.id,
-          creditLimit: data.creditLimit || 0,
-          paymentTermsId,
+          creditLimit: data.creditLimit ?? 0,
+          paymentTermsId: data.paymentTermsId,
           assignedSalesRepId: data.assignedSalesRepId,
-          status: data.status || 'ACTIVE',
+          status: data.status || "ACTIVE",
           createdById: createdById,
           updatedById: createdById,
         },
@@ -375,17 +415,21 @@ export async function createCustomer(data, createdById, req) {
 
     await logAudit({
       createdById,
-      action: 'CUSTOMER_CREATED',
-      entityType: 'Customer',
+      action: "CUSTOMER_CREATED",
+      entityType: "Customer",
       entityId: customer.id,
-      newValues: { customerCode: customer.customerCode, customerType: 'ORGANIZATION', hasUserAccount: !!data.username },
+      newValues: {
+        customerCode: customer.customerCode,
+        customerType: "ORGANIZATION",
+        hasUserAccount: !!data.username,
+      },
       req,
     });
 
     return sanitizeCustomer(customer);
   }
 
-  throw new AppError('Invalid customer type', 400);
+  throw new AppError("Invalid customer type", 400);
 }
 
 export async function getCustomers(filters) {
@@ -444,7 +488,7 @@ export async function getCustomers(filters) {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip,
       take: limit,
     }),
@@ -509,7 +553,7 @@ export async function getCustomerById(id) {
   });
 
   if (!customer) {
-    throw new AppError('Customer not found', 404);
+    throw new AppError("Customer not found", 404);
   }
 
   return sanitizeCustomer(customer);
@@ -525,24 +569,30 @@ export async function updateCustomer(id, data, createdById, req) {
   });
 
   if (!existingCustomer) {
-    throw new AppError('Customer not found', 404);
+    throw new AppError("Customer not found", 404);
   }
 
-  if (data.customerType && data.customerType !== existingCustomer.customerType) {
-    throw new AppError('Cannot change customer type', 400);
+  if (
+    data.customerType &&
+    data.customerType !== existingCustomer.customerType
+  ) {
+    throw new AppError("Cannot change customer type", 400);
   }
 
-  if (data.customerCode && data.customerCode !== existingCustomer.customerCode) {
+  if (
+    data.customerCode &&
+    data.customerCode !== existingCustomer.customerCode
+  ) {
     const duplicateCode = await prisma.customer.findFirst({
       where: { customerCode: data.customerCode, id: { not: id } },
     });
     if (duplicateCode) {
-      throw new AppError('Customer code already exists', 409);
+      throw new AppError("Customer code already exists", 409);
     }
   }
 
   const updatedCustomer = await prisma.$transaction(async (tx) => {
-    if (existingCustomer.customerType === 'PERSON' && data.person) {
+    if (existingCustomer.customerType === "PERSON" && data.person) {
       await tx.person.update({
         where: { id: existingCustomer.personId },
         data: {
@@ -556,22 +606,41 @@ export async function updateCustomer(id, data, createdById, req) {
       });
     }
 
-    if (existingCustomer.customerType === 'ORGANIZATION' && data.organization) {
-      if (data.organization.registrationNumber && data.organization.registrationNumber !== existingCustomer.organization?.registrationNumber) {
+    if (existingCustomer.customerType === "ORGANIZATION" && data.organization) {
+      if (
+        data.organization.registrationNumber &&
+        data.organization.registrationNumber !==
+          existingCustomer.organization?.registrationNumber
+      ) {
         const duplicateReg = await tx.organization.findFirst({
-          where: { registrationNumber: data.organization.registrationNumber, id: { not: existingCustomer.organizationId } },
+          where: {
+            registrationNumber: data.organization.registrationNumber,
+            id: { not: existingCustomer.organizationId },
+          },
         });
         if (duplicateReg) {
-          throw new AppError('Organization with this registration number already exists', 409);
+          throw new AppError(
+            "Organization with this registration number already exists",
+            409,
+          );
         }
       }
 
-      if (data.organization.taxNumber && data.organization.taxNumber !== existingCustomer.organization?.taxNumber) {
+      if (
+        data.organization.taxNumber &&
+        data.organization.taxNumber !== existingCustomer.organization?.taxNumber
+      ) {
         const duplicateTax = await tx.organization.findFirst({
-          where: { taxNumber: data.organization.taxNumber, id: { not: existingCustomer.organizationId } },
+          where: {
+            taxNumber: data.organization.taxNumber,
+            id: { not: existingCustomer.organizationId },
+          },
         });
         if (duplicateTax) {
-          throw new AppError('Organization with this tax number already exists', 409);
+          throw new AppError(
+            "Organization with this tax number already exists",
+            409,
+          );
         }
       }
 
@@ -598,7 +667,7 @@ export async function updateCustomer(id, data, createdById, req) {
               where: { email: contact.email },
             });
             if (existingEmail) {
-              throw new AppError('Contact email already registered', 409);
+              throw new AppError("Contact email already registered", 409);
             }
           }
 
@@ -609,8 +678,8 @@ export async function updateCustomer(id, data, createdById, req) {
               lastName: contact.lastName,
               phone: contact.phone,
               email: contact.email,
-              address: existingCustomer.organization?.address || '',
-              status: 'ACTIVE',
+              address: existingCustomer.organization?.address || "",
+              status: "ACTIVE",
               createdById: createdById,
               updatedById: createdById,
             },
@@ -634,7 +703,6 @@ export async function updateCustomer(id, data, createdById, req) {
         customerCode: data.customerCode,
         creditLimit: data.creditLimit,
         paymentTermsId: data.paymentTermsId,
-        assignedSalesRepId: data.assignedSalesRepId,
         status: data.status,
         updatedById: createdById,
       },
@@ -689,8 +757,8 @@ export async function updateCustomer(id, data, createdById, req) {
 
   await logAudit({
     createdById,
-    action: 'CUSTOMER_UPDATED',
-    entityType: 'Customer',
+    action: "CUSTOMER_UPDATED",
+    entityType: "Customer",
     entityId: id,
     oldValues: { customerType: existingCustomer.customerType },
     newValues: { customerType: existingCustomer.customerType },
@@ -711,30 +779,27 @@ function buildCustomerWhere(filters) {
     where.status = filters.status;
   }
 
-  if (filters.salesRepId) {
-    where.assignedSalesRepId = filters.salesRepId;
-  }
-
   if (filters.paymentTermsId) {
     where.paymentTermsId = filters.paymentTermsId;
   }
 
   if (filters.search) {
     where.OR = [
-      { customerCode: { contains: filters.search, mode: 'insensitive' } },
+      { customerCode: { contains: filters.search, mode: "insensitive" } },
       {
-        customerType: 'PERSON',
+        customerType: "PERSON",
         person: {
           OR: [
-            { firstName: { contains: filters.search, mode: 'insensitive' } },
-            { lastName: { contains: filters.search, mode: 'insensitive' } },
+            { firstName: { contains: filters.search, mode: "insensitive" } },
+            { lastName: { contains: filters.search, mode: "insensitive" } },
           ],
         },
       },
       {
-        customerType: 'ORGANIZATION',
+        customerType: "ORGANIZATION",
         organization: {
-          name: { contains: filters.search, mode: 'insensitive' } },
+          name: { contains: filters.search, mode: "insensitive" },
+        },
       },
     ];
   }
@@ -752,7 +817,7 @@ export async function deleteCustomer(id, createdById, req) {
   });
 
   if (!existingCustomer) {
-    throw new AppError('Customer not found', 404);
+    throw new AppError("Customer not found", 404);
   }
 
   await prisma.customer.update({
@@ -766,13 +831,15 @@ export async function deleteCustomer(id, createdById, req) {
 
   await logAudit({
     createdById,
-    action: 'CUSTOMER_DELETED',
-    entityType: 'Customer',
+    action: "CUSTOMER_DELETED",
+    entityType: "Customer",
     entityId: id,
-    oldValues: { customerCode: existingCustomer.customerCode, customerType: existingCustomer.customerType },
+    oldValues: {
+      customerCode: existingCustomer.customerCode,
+      customerType: existingCustomer.customerType,
+    },
     req,
   });
 
-  return { message: 'Customer deleted successfully' };
+  return { message: "Customer deleted successfully" };
 }
-

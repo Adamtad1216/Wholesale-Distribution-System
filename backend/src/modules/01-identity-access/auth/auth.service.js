@@ -166,6 +166,13 @@ export async function register(data, req) {
 
       if (!primaryPerson && createdPersons.length > 0) {
         primaryPerson = createdPersons[0];
+        await tx.organizationContact.updateMany({
+          where: {
+            organizationId: organization.id,
+            personId: primaryPerson.id,
+          },
+          data: { isPrimary: true },
+        });
       }
 
       if (primaryPerson) {

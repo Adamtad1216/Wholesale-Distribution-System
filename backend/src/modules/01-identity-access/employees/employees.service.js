@@ -4,7 +4,7 @@ import { AppError } from "../../../utils/errors.js";
 import { getPaginationParams, buildPaginationMeta } from "../../../utils/pagination.js";
 import { hashPassword } from "../../../utils/password.js";
 import crypto from 'crypto';
-import { sendInvitationEmail } from "../../../utils/email.js";
+import { sendInvitationEmail, sendResetPasswordEmail } from "../../../utils/email.js";
 
 export const generateEmployeeCode = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -28,7 +28,7 @@ export const ensureUniqueEmployeeCode = async (tx, code) => {
 
 const sanitizeEmployee = (employee) => {
   if (!employee) return employee;
-  const { person, jobSpecification, branch, createdBy, updatedBy, ...rest } = employee;
+  const { person, jobSpecifications, branch, createdBy, updatedBy, ...rest } = employee;
   return {
     ...rest,
     person: person
@@ -43,15 +43,15 @@ const sanitizeEmployee = (employee) => {
           status: person.status,
         }
       : null,
-    jobSpecification: jobSpecification
-      ? {
-          id: jobSpecification.id,
-          code: jobSpecification.code,
-          title: jobSpecification.title,
-          department: jobSpecification.department,
-          status: jobSpecification.status,
-        }
-      : null,
+    jobSpecifications: jobSpecifications
+      ? jobSpecifications.map((js) => ({
+          id: js.jobSpecification.id,
+          code: js.jobSpecification.code,
+          title: js.jobSpecification.title,
+          department: js.jobSpecification.department,
+          status: js.jobSpecification.status,
+        }))
+      : [],
     branch: branch
       ? {
           id: branch.id,
@@ -75,21 +75,22 @@ const sanitizeEmployee = (employee) => {
 };
 
 export async function createEmployee(data, createdById, req) {
-  const jobSpec = await prisma.jobSpecification.findFirst({
-    where: { id: data.jobSpecificationId, isArchived: false },
+  const jobSpecs = await prisma.jobSpecification.findMany({
+    where: {
+      id: { in: data.jobSpecificationIds },
+      isArchived: false,
+    },
   });
 
-  if (!jobSpec) {
-    throw new AppError('Job specification not found', 404);
+  if (jobSpecs.length !== data.jobSpecificationIds.length) {
+    throw new AppError('One or more job specifications not found', 404);
   }
 
-  if (data.branchId) {
-    const branch = await prisma.branch.findFirst({
-      where: { id: data.branchId, isArchived: false },
-    });
-    if (!branch) {
-      throw new AppError('Branch not found', 404);
-    }
+  const branch = await prisma.branch.findFirst({
+    where: { id: data.branchId, isArchived: false },
+  });
+  if (!branch) {
+    throw new AppError('Branch not found', 404);
   }
 
   if (data.email) {
@@ -126,7 +127,6 @@ export async function createEmployee(data, createdById, req) {
         employeeCode,
         hireDate: new Date(data.hireDate),
         department: data.department,
-        jobSpecificationId: data.jobSpecificationId,
         status: data.status || 'ACTIVE',
         commissionRate: data.commissionRate,
         salesTerritory: data.salesTerritory,
@@ -139,7 +139,11 @@ export async function createEmployee(data, createdById, req) {
       },
       include: {
         person: true,
-        jobSpecification: true,
+        jobSpecifications: {
+          include: {
+            jobSpecification: true,
+          },
+        },
         branch: {
           select: {
             id: true,
@@ -172,37 +176,102 @@ export async function createEmployee(data, createdById, req) {
       },
     });
 
-    let user = null;
-    if (data.needsUserAccount) {
-      const invitationToken = crypto.randomBytes(32).toString('hex');
-      const invitationTokenHash = crypto
-        .createHash('sha256')
-        .update(invitationToken)
-        .digest('hex');
-      const invitationTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-      user = await tx.user.create({
+    for (const jobSpecId of data.jobSpecificationIds) {
+      await tx.employeeJobSpecification.create({
         data: {
-          personId: person.id,
-          accountStatus: 'INVITED',
-          invitationTokenHash,
-          invitationTokenExpiresAt,
-          isActive: false,
-          createdById,
-          updatedById: createdById,
-        },
-        include: {
-          person: true,
+          employeeId: employee.id,
+          jobSpecificationId: jobSpecId,
         },
       });
+    }
 
-      if (data.email) {
-        await sendInvitationEmail(data.email, invitationToken, `${data.firstName} ${data.lastName}`);
+    let user = null;
+    let resetToken = null;
+    let resetTokenExpires = null;
+
+    if (data.needsUserAccount) {
+      if (data.username) {
+        const passwordHash = data.password ? await hashPassword(data.password) : null;
+
+        user = await tx.user.create({
+          data: {
+            personId: person.id,
+            username: data.username,
+            passwordHash,
+            accountStatus: 'ACTIVE',
+            isActive: true,
+            createdById,
+            updatedById: createdById,
+          },
+          include: {
+            person: true,
+          },
+        });
+
+        for (const roleId of data.roleIds) {
+          await tx.userRole.create({
+            data: {
+              userId: user.id,
+              roleId,
+            },
+          });
+        }
+
+        if (!data.password && data.email) {
+          resetToken = crypto.randomBytes(32).toString('hex');
+          const resetTokenHash = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+          resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              resetTokenHash,
+              resetTokenExpires,
+            },
+          });
+        }
+      } else {
+        const invitationToken = crypto.randomBytes(32).toString('hex');
+        const invitationTokenHash = crypto
+          .createHash('sha256')
+          .update(invitationToken)
+          .digest('hex');
+        const invitationTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        user = await tx.user.create({
+          data: {
+            personId: person.id,
+            accountStatus: 'INVITED',
+            invitationTokenHash,
+            invitationTokenExpiresAt,
+            isActive: false,
+            createdById,
+            updatedById: createdById,
+          },
+          include: {
+            person: true,
+          },
+        });
+
+        if (data.email) {
+          await sendInvitationEmail(data.email, invitationToken, `${data.firstName} ${data.lastName}`);
+        }
       }
     }
 
-    return { employee, user };
+    return { employee, user, resetToken, resetTokenExpires };
   });
+
+  if (result.resetToken && data.email) {
+    await sendResetPasswordEmail(
+      data.email,
+      result.resetToken,
+      `${data.firstName} ${data.lastName}`
+    );
+  }
 
   await logAudit({
     createdById,
@@ -225,7 +294,11 @@ export async function getEmployees(filters) {
       where,
       include: {
         person: true,
-        jobSpecification: true,
+        jobSpecifications: {
+          include: {
+            jobSpecification: true,
+          },
+        },
         createdBy: {
           include: {
             person: {
@@ -269,7 +342,11 @@ export async function getEmployeeById(id) {
     where: { id, isArchived: false },
     include: {
       person: true,
-      jobSpecification: true,
+      jobSpecifications: {
+        include: {
+          jobSpecification: true,
+        },
+      },
       branch: {
         select: {
           id: true,
@@ -314,7 +391,11 @@ export async function updateEmployee(id, data, createdById, req) {
     where: { id, isArchived: false },
     include: {
       person: true,
-      jobSpecification: true,
+      jobSpecifications: {
+        include: {
+          jobSpecification: true,
+        },
+      },
       branch: true,
     },
   });
@@ -323,12 +404,16 @@ export async function updateEmployee(id, data, createdById, req) {
     throw new AppError('Employee not found', 404);
   }
 
-  if (data.jobSpecificationId && data.jobSpecificationId !== existingEmployee.jobSpecificationId) {
-    const jobSpec = await prisma.jobSpecification.findFirst({
-      where: { id: data.jobSpecificationId, isArchived: false },
+  if (data.jobSpecificationIds) {
+    const jobSpecs = await prisma.jobSpecification.findMany({
+      where: {
+        id: { in: data.jobSpecificationIds },
+        isArchived: false,
+      },
     });
-    if (!jobSpec) {
-      throw new AppError('Job specification not found', 404);
+
+    if (jobSpecs.length !== data.jobSpecificationIds.length) {
+      throw new AppError('One or more job specifications not found', 404);
     }
   }
 
@@ -384,7 +469,6 @@ export async function updateEmployee(id, data, createdById, req) {
     if (data.employeeCode !== undefined) employeeUpdates.employeeCode = data.employeeCode;
     if (data.hireDate !== undefined) employeeUpdates.hireDate = new Date(data.hireDate);
     if (data.department !== undefined) employeeUpdates.department = data.department;
-    if (data.jobSpecificationId !== undefined) employeeUpdates.jobSpecificationId = data.jobSpecificationId;
     if (data.status !== undefined) employeeUpdates.status = data.status;
     if (data.commissionRate !== undefined) employeeUpdates.commissionRate = data.commissionRate;
     if (data.salesTerritory !== undefined) employeeUpdates.salesTerritory = data.salesTerritory;
@@ -398,7 +482,11 @@ export async function updateEmployee(id, data, createdById, req) {
       data: employeeUpdates,
       include: {
         person: true,
-        jobSpecification: true,
+        jobSpecifications: {
+          include: {
+            jobSpecification: true,
+          },
+        },
         branch: {
           select: {
             id: true,
@@ -430,6 +518,21 @@ export async function updateEmployee(id, data, createdById, req) {
         },
       },
     });
+
+    if (data.jobSpecificationIds !== undefined) {
+      await tx.employeeJobSpecification.deleteMany({
+        where: { employeeId: id },
+      });
+
+      for (const jobSpecId of data.jobSpecificationIds) {
+        await tx.employeeJobSpecification.create({
+          data: {
+            employeeId: id,
+            jobSpecificationId: jobSpecId,
+          },
+        });
+      }
+    }
 
     let user = null;
     const existingUser = await tx.user.findUnique({
@@ -586,7 +689,11 @@ function buildEmployeeWhere(filters) {
   const where = { isArchived: false };
 
   if (filters.jobSpecificationId) {
-    where.jobSpecificationId = filters.jobSpecificationId;
+    where.jobSpecifications = {
+      some: {
+        jobSpecificationId: filters.jobSpecificationId,
+      },
+    };
   }
 
   if (filters.status) {

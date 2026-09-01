@@ -96,8 +96,10 @@ router.get(
  *     tags: ["01 - Employees"]
  *     summary: Create an employee
  *     description: |
- *       Create a new employee. Set `needsUserAccount` to `true` if the employee should receive an invitation email to set up their username and password.
- *       If `needsUserAccount` is `true` and an email is provided, an invitation link will be sent to that email.
+ *       Create a new employee. Set `needsUserAccount` to `true` to create a user account for this employee.
+ *       If `username` is provided along with `needsUserAccount: true`, the user will be created as ACTIVE and assigned the specified roles.
+ *       If `password` is not provided, a password reset link will be sent to the employee's email.
+ *       If `username` is not provided, an invitation email will be sent instead and the user must accept it.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -106,21 +108,44 @@ router.get(
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/CreateEmployeeRequest'
- *           example:
- *             firstName: "Abebe"
- *             middleName: "K."
- *             lastName: "Kebede"
- *             phone: "+251911111111"
- *             email: "abebe@example.com"
- *             address: "Addis Ababa, Ethiopia"
- *             employeeCode: "EMP-001"
- *             hireDate: "2024-01-15"
- *             department: "Sales"
- *             jobSpecificationId: "123e4567-e89b-12d3-a456-426614174000"
- *             status: "ACTIVE"
- *             needsUserAccount: true
- *             commissionRate: 5
- *             salesTerritory: "Addis Ababa"
+ *           examples:
+ *             employeeWithoutUser:
+ *               summary: Employee without user account
+ *               value:
+ *                 firstName: "Abebe"
+ *                 lastName: "Kebede"
+ *                 hireDate: "2024-01-15"
+ *                 branchId: "123e4567-e89b-12d3-a456-426614174000"
+ *                 jobSpecificationIds: ["123e4567-e89b-12d3-a456-426614174000"]
+ *                 status: "ACTIVE"
+ *                 needsUserAccount: false
+ *             employeeWithUserAndPassword:
+ *               summary: Employee with user account and password
+ *               value:
+ *                 firstName: "Abebe"
+ *                 lastName: "Kebede"
+ *                 email: "abebe@example.com"
+ *                 hireDate: "2024-01-15"
+ *                 branchId: "123e4567-e89b-12d3-a456-426614174000"
+ *                 status: "ACTIVE"
+ *                 needsUserAccount: true
+ *                 username: "abebe.kebede"
+ *                 password: "SecurePass123!"
+ *                 roleIds: ["9afa885b-a72f-4012-9092-8e26cb864bfd"]
+ *                 jobSpecificationIds: ["123e4567-e89b-12d3-a456-426614174000"]
+ *             employeeWithUserAndResetLink:
+ *               summary: Employee with user account (reset link sent)
+ *               value:
+ *                 firstName: "Abebe"
+ *                 lastName: "Kebede"
+ *                 email: "abebe@example.com"
+ *                 hireDate: "2024-01-15"
+ *                 branchId: "123e4567-e89b-12d3-a456-426614174000"
+ *                 status: "ACTIVE"
+ *                 needsUserAccount: true
+ *                 username: "abebe.kebede"
+ *                 roleIds: ["9afa885b-a72f-4012-9092-8e26cb864bfd"]
+ *                 jobSpecificationIds: ["123e4567-e89b-12d3-a456-426614174000"]
  *     responses:
  *       201:
  *         description: Employee created successfully

@@ -7,10 +7,21 @@ import {
   removeCustomer,
 } from "./customers.controller.js";
 import {
+  listCustomerAddresses,
+  getCustomerAddress,
+  addCustomerAddress,
+  modifyCustomerAddress,
+  removeCustomerAddress,
+} from "./addresses/addresses.controller.js";
+import {
   customerQuerySchema,
   createCustomerSchema,
   updateCustomerSchema,
 } from "./customers.validation.js";
+import {
+  createCustomerAddressSchema,
+  updateCustomerAddressSchema,
+} from "./addresses/addresses.validation.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 import { authenticate } from "../../../middleware/auth.middleware.js";
 import { requirePermission } from "../../../middleware/permission.middleware.js";
@@ -52,19 +63,13 @@ router.use(authenticate);
  *           type: string
  *           enum: [PERSON, ORGANIZATION]
  *         description: Filter by customer type
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *         description: Filter by status
- *       - in: query
- *         name: salesRepId
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Filter by sales representative ID
- *       - in: query
- *         name: paymentTermsId
+  *       - in: query
+  *         name: status
+  *         schema:
+  *           type: string
+  *         description: Filter by status
+  *       - in: query
+  *         name: paymentTermsId
  *         schema:
  *           type: string
  *           format: uuid
@@ -268,16 +273,13 @@ router.get("/:id", requirePermission("customers:read"), getCustomer);
  *           schema:
  *             type: object
  *             properties:
- *               creditLimit:
- *                 type: number
- *                 example: 7500
- *               paymentTermsId:
- *                 type: string
- *                 format: uuid
- *               assignedSalesRepId:
- *                 type: string
- *                 format: uuid
- *               status:
+  *               creditLimit:
+  *                 type: number
+  *                 example: 7500
+  *               paymentTermsId:
+  *                 type: string
+  *                 format: uuid
+  *               status:
  *                 type: string
  *                 example: ACTIVE
  *               person:
@@ -433,6 +435,252 @@ router.delete(
   "/:id",
   requirePermission("customers:delete"),
   removeCustomer,
+);
+
+/**
+ * @swagger
+ * /api/v1/customers/{customerId}/addresses:
+ *   get:
+ *     tags: [09-customers]
+ *     summary: List customer addresses
+ *     description: Retrieve all active addresses for a customer.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Customer ID
+ *     responses:
+ *       200:
+ *         description: List of addresses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Customer not found
+ */
+router.get(
+  "/:customerId/addresses",
+  requirePermission("customers:read"),
+  listCustomerAddresses,
+);
+
+/**
+ * @swagger
+ * /api/v1/customers/{customerId}/addresses:
+ *   post:
+ *     tags: [09-customers]
+ *     summary: Create customer address
+ *     description: Add a new address to a customer.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Customer ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateCustomerAddressRequest'
+ *     responses:
+ *       201:
+ *         description: Address created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Customer not found
+ */
+router.post(
+  "/:customerId/addresses",
+  validate(createCustomerAddressSchema),
+  requirePermission("customers:create"),
+  addCustomerAddress,
+);
+
+/**
+ * @swagger
+ * /api/v1/customers/{customerId}/addresses/{addressId}:
+ *   get:
+ *     tags: [09-customers]
+ *     summary: Get customer address by ID
+ *     description: Retrieve a specific address for a customer.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Customer ID
+ *       - in: path
+ *         name: addressId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Address ID
+ *     responses:
+ *       200:
+ *         description: Address details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Address not found
+ */
+router.get(
+  "/:customerId/addresses/:addressId",
+  requirePermission("customers:read"),
+  getCustomerAddress,
+);
+
+/**
+ * @swagger
+ * /api/v1/customers/{customerId}/addresses/{addressId}:
+ *   patch:
+ *     tags: [09-customers]
+ *     summary: Update customer address
+ *     description: Update an existing address for a customer.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Customer ID
+ *       - in: path
+ *         name: addressId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Address ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateCustomerAddressRequest'
+ *     responses:
+ *       200:
+ *         description: Address updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Address not found
+ */
+router.patch(
+  "/:customerId/addresses/:addressId",
+  validate(updateCustomerAddressSchema),
+  requirePermission("customers:update"),
+  modifyCustomerAddress,
+);
+
+/**
+ * @swagger
+ * /api/v1/customers/{customerId}/addresses/{addressId}:
+ *   delete:
+ *     tags: [09-customers]
+ *     summary: Delete customer address
+ *     description: Soft-delete an address by marking it inactive.
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Customer ID
+ *       - in: path
+ *         name: addressId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Address ID
+ *     responses:
+ *       204:
+ *         description: Address deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Address not found
+ */
+router.delete(
+  "/:customerId/addresses/:addressId",
+  requirePermission("customers:delete"),
+  removeCustomerAddress,
 );
 
 export default router;

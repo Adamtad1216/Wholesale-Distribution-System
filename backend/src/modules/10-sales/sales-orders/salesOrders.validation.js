@@ -13,22 +13,35 @@ export const salesOrderIdSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const previewSalesOrderSchema = z.object({
+  customerId: z.string().uuid().optional(),
+  warehouseId: z.string().uuid().optional(),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        quantity: z.coerce.number().positive().finite().max(999999999999),
+      })
+    )
+    .min(1),
+});
+
 export const createSalesOrderSchema = z.object({
-  customerId: z.string().uuid(),
-  salesRepId: z.string().uuid(),
   warehouseId: z.string().uuid(),
-  quotationId: z.string().uuid().optional(),
-  orderDate: z.string().datetime().or(z.coerce.date()),
   requiredDate: z.string().datetime().or(z.coerce.date()).optional(),
-  discount: z.coerce.number().min(0).default(0),
-  tax: z.coerce.number().min(0).default(0),
-  items: z.array(
-    z.object({
-      productId: z.string().uuid(),
-      quantity: z.coerce.number().positive(),
-      unitPrice: z.coerce.number().nonnegative(),
-      discount: z.coerce.number().min(0).default(0),
-      tax: z.coerce.number().min(0).default(0),
+  deliveryLocation: z
+    .object({
+      latitude: z.coerce.number().min(-90).max(90),
+      longitude: z.coerce.number().min(-180).max(180),
+      addressText: z.string().optional(),
     })
-  ).min(1),
+    .optional(),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().uuid(),
+        quantity: z.coerce.number().positive().finite().max(999999999999),
+      })
+    )
+    .min(1),
 });
