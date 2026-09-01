@@ -232,18 +232,18 @@ const ALL_PERMISSIONS = [
 
 async function ensureDefaultPriceTiers() {
   const tiers = [
-    { name: "Retail", minQuantity: 1, maxQuantity: 9, discountPercent: 0 },
-    { name: "Wholesale", minQuantity: 10, maxQuantity: 99, discountPercent: 5 },
-    { name: "Bulk", minQuantity: 100, maxQuantity: null, discountPercent: 10 },
+    { name: "Retail", description: "Standard retail pricing", isDefault: true, priority: 0 },
+    { name: "Wholesale", description: "Wholesale tier pricing", isDefault: false, priority: 10 },
+    { name: "Bulk", description: "Bulk purchase tier pricing", isDefault: false, priority: 20 },
   ];
 
   for (const tier of tiers) {
     await prisma.priceTier.upsert({
       where: { name: tier.name },
       update: {
-        minQuantity: tier.minQuantity,
-        maxQuantity: tier.maxQuantity,
-        discountPercent: tier.discountPercent,
+        description: tier.description,
+        isDefault: tier.isDefault,
+        priority: tier.priority,
       },
       create: tier,
     });
@@ -418,6 +418,10 @@ async function createOrUpdateSuperUser({
 }) {
   const passwordHash = await bcrypt.hash(password, 12);
 
+  const nameParts = (fullName || username || "").trim().split(/\s+/);
+  const firstName = nameParts[0] || username;
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "User";
+
   const existingUser = await prisma.user.findFirst({
     where: {
       OR: [{ username }, { person: { email } }],
@@ -439,21 +443,44 @@ async function createOrUpdateSuperUser({
       },
     });
 
-    // Ensure user has role assigned
     const userRoleExists = await prisma.userRole.findFirst({
       where: { userId: existingUser.id, roleId },
     });
 
     if (!userRoleExists) {
       await prisma.userRole.create({
-        data: {
-          userId: existingUser.id,
-          roleId,
-        },
+        data: { userId: existingUser.id, roleId },
       });
       console.log(`Assigned role to existing user: ${existingUser.username}`);
     }
+    return;
   }
+
+  const person = await prisma.person.create({
+    data: {
+      firstName,
+      lastName,
+      email,
+      status: "ACTIVE",
+    },
+  });
+
+  const user = await prisma.user.create({
+    data: {
+      personId: person.id,
+      username,
+      passwordHash,
+      isActive: true,
+      accountStatus: "ACTIVE",
+      invitationAcceptedAt: new Date(),
+    },
+  });
+
+  await prisma.userRole.create({
+    data: { userId: user.id, roleId },
+  });
+
+  console.log(`Created super user: ${username} (${user.id})`);
 }
 
 main()
