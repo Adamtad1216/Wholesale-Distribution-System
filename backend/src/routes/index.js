@@ -7,6 +7,7 @@ import deliveryRoutes from '../modules/12-delivery-logistics/delivery/delivery.r
 import notificationsRoutes from '../modules/14-notifications/notifications/notifications.routes.js';
 import reportingRoutes from '../modules/16-reporting-dashboards/reporting/reporting.routes.js';
 import aiRoutes from '../modules/17-ai/ai/ai.routes.js';
+import pricingRoutes from '../modules/11-pricing-discounts/pricing.routes.js';
 
 import companiesRoutes from '../modules/06-branches-warehouses/companies/companies.routes.js';
 import branchesRoutes from '../modules/06-branches-warehouses/branches/branches.routes.js';
@@ -29,8 +30,9 @@ router.use('/v1/users', usersRoutes);
 router.use('/v1/sales', salesRoutes);
 router.use('/v1/delivery', deliveryRoutes);
 router.use('/v1/notifications', notificationsRoutes);
-router.use('/v1/reporting', reportingRoutes);
+router.use('/v1/reports', reportingRoutes);
 router.use('/v1/ai', aiRoutes);
+router.use('/v1/pricing', pricingRoutes);
 
 export const registerRoutes = (app) => {
   app.use('/api', router);

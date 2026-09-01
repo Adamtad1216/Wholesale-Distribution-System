@@ -143,7 +143,12 @@ async function getAuthToken() {
 async function cleanupCustomers() {
   await prisma.customer.deleteMany({});
   await prisma.person.deleteMany({
-    where: { user: null, customers: { none: {} }, suppliers: { none: {} } },
+    where: {
+      user: null,
+      customers: { none: {} },
+      suppliers: { none: {} },
+      employee: null,
+    },
   });
   await prisma.organization.deleteMany({
     where: { customers: { none: {} }, suppliers: { none: {} } },
@@ -931,6 +936,152 @@ describe('Customer Management', () => {
       expect(responseStr).not.toContain('passwordHash');
       expect(responseStr).not.toContain('refreshTokenHash');
       expect(responseStr).not.toContain('resetTokenHash');
+    });
+  });
+
+  describe('Customer Addresses', () => {
+    it('creates an address for a customer', async () => {
+      const token = await getAuthToken();
+      const createResponse = await request(app)
+        .post('/api/v1/customers')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          customerType: 'PERSON',
+          person: { firstName: 'Address', lastName: 'Owner' },
+        });
+
+      const customerId = createResponse.body.data.id;
+      const response = await request(app)
+        .post(`/api/v1/customers/${customerId}/addresses`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          address: '123 Main St',
+          city: 'Addis Ababa',
+          isDefault: true,
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.status).toBe('success');
+      expect(response.body.data.address).toBe('123 Main St');
+      expect(response.body.data.customerId).toBe(customerId);
+    });
+
+    it('returns 404 when adding address to non-existent customer', async () => {
+      const token = await getAuthToken();
+      const response = await request(app)
+        .post('/api/v1/customers/00000000-0000-0000-0000-000000000000/addresses')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ address: '123 Main St' });
+
+      expect(response.status).toBe(404);
+    });
+
+    it('lists addresses for a customer', async () => {
+      const token = await getAuthToken();
+      const createResponse = await request(app)
+        .post('/api/v1/customers')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          customerType: 'PERSON',
+          person: { firstName: 'List', lastName: 'Addresses' },
+        });
+
+      const customerId = createResponse.body.data.id;
+      await request(app)
+        .post(`/api/v1/customers/${customerId}/addresses`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ address: 'Addr 1', isDefault: true });
+
+      await request(app)
+        .post(`/api/v1/customers/${customerId}/addresses`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ address: 'Addr 2', isDefault: false });
+
+      const response = await request(app)
+        .get(`/api/v1/customers/${customerId}/addresses`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(2);
+    });
+
+    it('returns 404 for address belonging to another customer', async () => {
+      const token = await getAuthToken();
+      const cust1 = await request(app)
+        .post('/api/v1/customers')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ customerType: 'PERSON', person: { firstName: 'C1', lastName: 'Test' } });
+
+      const cust2 = await request(app)
+        .post('/api/v1/customers')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ customerType: 'PERSON', person: { firstName: 'C2', lastName: 'Test' } });
+
+      const address = await request(app)
+        .post(`/api/v1/customers/${cust1.body.data.id}/addresses`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ address: 'Secret Addr' });
+
+      const response = await request(app)
+        .get(`/api/v1/customers/${cust2.body.data.id}/addresses/${address.body.data.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it('updates a customer address', async () => {
+      const token = await getAuthToken();
+      const createResponse = await request(app)
+        .post('/api/v1/customers')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          customerType: 'PERSON',
+          person: { firstName: 'Update', lastName: 'Address' },
+        });
+
+      const customerId = createResponse.body.data.id;
+      const address = await request(app)
+        .post(`/api/v1/customers/${customerId}/addresses`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ address: 'Old Address' });
+
+      const response = await request(app)
+        .patch(`/api/v1/customers/${customerId}/addresses/${address.body.data.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ address: 'New Address', city: 'Adama' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.address).toBe('New Address');
+      expect(response.body.data.city).toBe('Adama');
+    });
+
+    it('deletes a customer address', async () => {
+      const token = await getAuthToken();
+      const createResponse = await request(app)
+        .post('/api/v1/customers')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          customerType: 'PERSON',
+          person: { firstName: 'Delete', lastName: 'Address' },
+        });
+
+      const customerId = createResponse.body.data.id;
+      const address = await request(app)
+        .post(`/api/v1/customers/${customerId}/addresses`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ address: 'To Delete' });
+
+      const response = await request(app)
+        .delete(`/api/v1/customers/${customerId}/addresses/${address.body.data.id}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(response.status).toBe(204);
+
+      const listResponse = await request(app)
+        .get(`/api/v1/customers/${customerId}/addresses`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(listResponse.body.data.find((a) => a.id === address.body.data.id)).toBeUndefined();
     });
   });
 

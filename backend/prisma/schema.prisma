@@ -34,11 +34,6 @@ model Region {
 // OTHER ENUMS
 // ============================================================
 
-enum RequestSource {
-  CUSTOMER_PORTAL
-  SALES_OFFICER
-}
-
 enum UserAccountStatus {
   INVITED
   ACTIVE
@@ -88,6 +83,11 @@ enum SalesOrderStatus {
   DELIVERED
   COMPLETED
   CANCELLED
+  SALES_REP_APPROVED
+  WAREHOUSE_PREPARATION_SCHEDULED
+  PREPARING
+  DELIVERY_SCHEDULED
+  OUT_FOR_DELIVERY
 }
 
 enum SalesOrderSource {
@@ -108,6 +108,10 @@ enum SalesOrderHistoryAction {
   DELIVERED
   COMPLETED
   CANCELLED
+  WAREHOUSE_PREPARATION_SCHEDULED
+  PREPARING
+  DELIVERY_SCHEDULED
+  OUT_FOR_DELIVERY
 }
 
 enum StockReservationStatus {
@@ -123,6 +127,13 @@ enum PricingRuleStatus {
   ACTIVE
   INACTIVE
   EXPIRED
+}
+
+enum QuotaPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
 }
 
 enum DiscountType {
@@ -290,14 +301,6 @@ model User {
   updatedPurchaseReturns          PurchaseReturn[]          @relation("PurchaseReturnUpdater")
   createdPurchaseReturnItems      PurchaseReturnItem[]      @relation("PurchaseReturnItemCreator")
   updatedPurchaseReturnItems      PurchaseReturnItem[]      @relation("PurchaseReturnItemUpdater")
-  createdSalesRequestItems        SalesRequestItem[]        @relation("SalesRequestItemCreator")
-  updatedSalesRequestItems        SalesRequestItem[]        @relation("SalesRequestItemUpdater")
-  createdSalesRequests            SalesRequest[]            @relation("SalesRequestCreator")
-  updatedSalesRequests            SalesRequest[]            @relation("SalesRequestUpdater")
-  createdQuotations               Quotation[]               @relation("QuotationCreator")
-  updatedQuotations               Quotation[]               @relation("QuotationUpdater")
-  createdSalesOrderQuotationItems SalesOrderQuotationItem[] @relation("SalesOrderQuotationItemCreator")
-  updatedSalesOrderQuotationItems SalesOrderQuotationItem[] @relation("SalesOrderQuotationItemUpdater")
   createdSalesOrders              SalesOrder[]              @relation("SalesOrderCreator")
   updatedSalesOrders              SalesOrder[]              @relation("SalesOrderUpdater")
   createdSalesOrderItems          SalesOrderItem[]          @relation("SalesOrderItemCreator")
@@ -347,8 +350,11 @@ model User {
   approvedSalesOrders             SalesOrder[]              @relation("SalesOrderApprover")
   salesOrderStatusChanges         SalesOrderStatusHistory[] @relation("SalesOrderStatusChanger")
   scheduledDeliveries             Delivery[]                @relation("DeliveryScheduler")
+  scheduledPreparationTasks       PreparationTask[]         @relation("PreparationTaskScheduler")
   createdPriceTiers               PriceTier[]               @relation("PriceTierCreator")
   updatedPriceTiers               PriceTier[]               @relation("PriceTierUpdater")
+  createdProductPrices            ProductPrice[]            @relation("ProductPriceCreator")
+  updatedProductPrices            ProductPrice[]            @relation("ProductPriceUpdater")
   createdDiscountRules            DiscountRule[]            @relation("DiscountRuleCreator")
   updatedDiscountRules            DiscountRule[]            @relation("DiscountRuleUpdater")
   createdSalesQuotas              SalesQuota[]              @relation("SalesQuotaCreator")
@@ -437,19 +443,19 @@ model RolePermission {
 }
 
 model JobSpecification {
-  id          String     @id @default(uuid()) @db.Uuid
-  createdById String?    @map("created_by_id") @db.Uuid
-  updatedById String?    @map("updated_by_id") @db.Uuid
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  isArchived  Boolean    @default(false) @map("is_archived")
-  archivedAt  DateTime?  @map("archived_at")
-  code        String     @unique
-  title       String     @unique
-  description String?
-  department  String?
-  status      String     @default("ACTIVE")
-  employees   Employee[]
+  id                  String     @id @default(uuid()) @db.Uuid
+  createdById         String?    @map("created_by_id") @db.Uuid
+  updatedById         String?    @map("updated_by_id") @db.Uuid
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+  isArchived          Boolean    @default(false) @map("is_archived")
+  archivedAt          DateTime?  @map("archived_at")
+  code                String     @unique
+  title               String     @unique
+  description         String?
+  department          String?
+  status              String     @default("ACTIVE")
+  employeeJobSpecifications EmployeeJobSpecification[]
 
   createdBy User? @relation("JobSpecificationCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("JobSpecificationUpdater", fields: [updatedById], references: [id])
@@ -469,10 +475,8 @@ model Employee {
   employeeCode       String    @unique @map("employee_code")
   hireDate           DateTime  @map("hire_date")
   department         String?
-  jobSpecificationId String    @map("job_specification_id") @db.Uuid
   status             String    @default("ACTIVE")
 
-  // Job-specific operational data lives on Employee.
   commissionRate      Decimal?  @map("commission_rate") @db.Decimal(5, 2)
   salesTerritory      String?   @map("sales_territory")
   driverLicenseNumber String?   @map("driver_license_number")
@@ -480,11 +484,9 @@ model Employee {
 
   managedWarehouses   Warehouse[]    @relation("ManagedWarehouses")
   managedBranches     Branch[]       @relation("ManagedBranches")
-  quotations          Quotation[]
   salesOrders         SalesOrder[]
-  assignedCustomers   Customer[]     @relation("AssignedSalesRep")
-  salesRequests       SalesRequest[]
   deliveries          Delivery[]
+  preparationTasks    PreparationTask[]
   branchId            String?        @map("branch_id") @db.Uuid
   isAvailableForSales Boolean        @default(true) @map("is_available_for_sales")
   branch              Branch?        @relation("EmployeeBranch", fields: [branchId], references: [id])
@@ -492,9 +494,20 @@ model Employee {
   createdBy        User?            @relation("EmployeeCreator", fields: [createdById], references: [id])
   updatedBy        User?            @relation("EmployeeUpdater", fields: [updatedById], references: [id])
   person           Person           @relation(fields: [personId], references: [id])
-  jobSpecification JobSpecification @relation(fields: [jobSpecificationId], references: [id])
+  jobSpecifications EmployeeJobSpecification[]
 
   @@map("employees")
+}
+
+model EmployeeJobSpecification {
+  employeeId        String    @map("employee_id") @db.Uuid
+  jobSpecificationId String   @map("job_specification_id") @db.Uuid
+
+  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  jobSpecification JobSpecification @relation(fields: [jobSpecificationId], references: [id], onDelete: Cascade)
+
+  @@id([employeeId, jobSpecificationId])
+  @@map("employee_job_specifications")
 }
 
 // ============================================================
@@ -606,6 +619,10 @@ model Warehouse {
   salesReturns    SalesReturn[]
   deliveries      Delivery[]
   purchaseReturns PurchaseReturn[]
+  preparationTasks PreparationTask[]
+  productPrices   ProductPrice[]
+  discountRules   DiscountRule[]
+  salesQuotas     SalesQuota[]
 
   branch    Branch    @relation(fields: [branchId], references: [id])
   createdBy User?     @relation("WarehouseCreator", fields: [createdById], references: [id])
@@ -677,11 +694,10 @@ model Customer {
   personId           String?           @map("person_id") @db.Uuid
   organizationId     String?           @map("organization_id") @db.Uuid
   customerType       CustomerType      @map("customer_type")
+  priceTierId        String?           @map("price_tier_id") @db.Uuid
   creditLimit        Decimal           @default(0) @map("credit_limit") @db.Decimal(15, 2)
   paymentTermsId     String?           @map("payment_terms_id") @db.Uuid
   status             String            @default("ACTIVE")
-  assignedSalesRepId String?           @map("assigned_sales_rep_id") @db.Uuid
-  quotations         Quotation[]
   salesOrders        SalesOrder[]
   salesReturns       SalesReturn[]
   credits            Credit[]
@@ -691,14 +707,14 @@ model Customer {
   refunds            Refund[]
   addresses          CustomerAddress[]
   salesQuotaUsages   SalesQuotaUsage[]
-  salesRequests      SalesRequest[]
+  salesQuotas        SalesQuota[]
 
   createdBy    User?         @relation("CustomerCreator", fields: [createdById], references: [id])
   updatedBy    User?         @relation("CustomerUpdater", fields: [updatedById], references: [id])
   person       Person?       @relation("PersonCustomer", fields: [personId], references: [id])
   organization Organization? @relation("OrganizationCustomer", fields: [organizationId], references: [id])
   paymentTerms PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
-  salesRep     Employee?     @relation("AssignedSalesRep", fields: [assignedSalesRepId], references: [id])
+  priceTier    PriceTier?    @relation(fields: [priceTierId], references: [id])
 
   @@map("customers")
 }
@@ -840,13 +856,12 @@ model Product {
   purchaseOrderItems  PurchaseOrderItem[]
   goodsReceiptItems   GoodsReceiptItem[]
   purchaseReturnItems PurchaseReturnItem[]
-  salesRequestItems   SalesRequestItem[]
-  items               SalesOrderQuotationItem[]
   salesOrderItems     SalesOrderItem[]
   salesReturnItems    SalesReturnItem[]
   deliveryItems       DeliveryItem[]
+  preparationTaskItems PreparationTaskItem[]
   invoiceItems        InvoiceItem[]
-  priceTiers          PriceTier[]
+  productPrices       ProductPrice[]
   discountRules       DiscountRule[]
   salesQuotas         SalesQuota[]
 
@@ -1206,22 +1221,50 @@ model PriceTier {
   updatedById String?           @map("updated_by_id") @db.Uuid
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
+  isArchived  Boolean           @default(false) @map("is_archived")
+  archivedAt  DateTime?         @map("archived_at")
+  name        String            @unique
+  description String?
+  isDefault   Boolean           @default(false) @map("is_default")
+  status      PricingRuleStatus @default(ACTIVE)
+  priority    Int               @default(0)
+
+  productPrices     ProductPrice[]
+  customers         Customer[]
+  discountRules     DiscountRule[]
+  salesQuotas       SalesQuota[]
+  salesOrders       SalesOrder[]
+  salesOrderItems   SalesOrderItem[]
+  createdBy         User?           @relation("PriceTierCreator", fields: [createdById], references: [id])
+  updatedBy         User?           @relation("PriceTierUpdater", fields: [updatedById], references: [id])
+
+  @@map("price_tiers")
+}
+
+model ProductPrice {
+  id          String            @id @default(uuid()) @db.Uuid
+  createdById String?           @map("created_by_id") @db.Uuid
+  updatedById String?           @map("updated_by_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
   productId   String            @map("product_id") @db.Uuid
-  minQuantity Decimal           @map("min_quantity") @db.Decimal(15, 3)
-  maxQuantity Decimal?          @map("max_quantity") @db.Decimal(15, 3)
+  priceTierId String            @map("price_tier_id") @db.Uuid
+  warehouseId String            @map("warehouse_id") @db.Uuid
   unitPrice   Decimal           @map("unit_price") @db.Decimal(15, 2)
   status      PricingRuleStatus @default(ACTIVE)
   startsAt    DateTime?         @map("starts_at")
   endsAt      DateTime?         @map("ends_at")
 
-  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
-  salesOrders     SalesOrder[]
-  salesOrderItems SalesOrderItem[]
-  createdBy       User?            @relation("PriceTierCreator", fields: [createdById], references: [id])
-  updatedBy       User?            @relation("PriceTierUpdater", fields: [updatedById], references: [id])
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  priceTier PriceTier @relation(fields: [priceTierId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("ProductPriceCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("ProductPriceUpdater", fields: [updatedById], references: [id])
 
-  @@index([productId, minQuantity, maxQuantity])
-  @@map("price_tiers")
+  @@unique([productId, priceTierId, warehouseId, status])
+  @@index([productId, warehouseId])
+  @@index([priceTierId])
+  @@map("product_prices")
 }
 
 model DiscountRule {
@@ -1232,48 +1275,59 @@ model DiscountRule {
   updatedAt     DateTime          @updatedAt @map("updated_at")
   name          String
   productId     String?           @map("product_id") @db.Uuid
-  customerType  CustomerType?     @map("customer_type")
+  priceTierId   String?           @map("price_tier_id") @db.Uuid
+  warehouseId   String?           @map("warehouse_id") @db.Uuid
   minQuantity   Decimal?          @map("min_quantity") @db.Decimal(15, 3)
-  maxQuantity   Decimal?          @map("max_quantity") @db.Decimal(15, 3)
   discountType  DiscountType      @map("discount_type")
   discountValue Decimal           @map("discount_value") @db.Decimal(15, 2)
+  priority      Int               @default(0)
   status        PricingRuleStatus @default(ACTIVE)
   startsAt      DateTime?         @map("starts_at")
   endsAt        DateTime?         @map("ends_at")
 
   product         Product?         @relation(fields: [productId], references: [id])
+  priceTier       PriceTier?       @relation(fields: [priceTierId], references: [id])
+  warehouse       Warehouse?       @relation(fields: [warehouseId], references: [id])
   salesOrders     SalesOrder[]
   salesOrderItems SalesOrderItem[]
   createdBy       User?            @relation("DiscountRuleCreator", fields: [createdById], references: [id])
   updatedBy       User?            @relation("DiscountRuleUpdater", fields: [updatedById], references: [id])
 
-  @@index([productId, status])
+  @@index([productId, status, priority])
+  @@index([warehouseId, status])
   @@map("discount_rules")
 }
 
 model SalesQuota {
-  id           String            @id @default(uuid()) @db.Uuid
-  createdById  String?           @map("created_by_id") @db.Uuid
-  updatedById  String?           @map("updated_by_id") @db.Uuid
-  createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
-  name         String
-  productId    String?           @map("product_id") @db.Uuid
-  customerType CustomerType?     @map("customer_type")
-  branchId     String?           @map("branch_id") @db.Uuid
-  maxQuantity  Decimal           @map("max_quantity") @db.Decimal(15, 3)
-  startsAt     DateTime          @map("starts_at")
-  endsAt       DateTime          @map("ends_at")
-  status       PricingRuleStatus @default(ACTIVE)
+  id          String            @id @default(uuid()) @db.Uuid
+  createdById String?           @map("created_by_id") @db.Uuid
+  updatedById String?           @map("updated_by_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  name        String
+  customerId  String?           @map("customer_id") @db.Uuid
+  productId   String?           @map("product_id") @db.Uuid
+  priceTierId String?           @map("price_tier_id") @db.Uuid
+  warehouseId String?           @map("warehouse_id") @db.Uuid
+  branchId    String?           @map("branch_id") @db.Uuid
+  maxQuantity Decimal           @map("max_quantity") @db.Decimal(15, 3)
+  period      QuotaPeriod       @default(MONTHLY)
+  startsAt    DateTime          @map("starts_at")
+  endsAt      DateTime          @map("ends_at")
+  status      PricingRuleStatus @default(ACTIVE)
 
-  product     Product?          @relation(fields: [productId], references: [id])
-  branch      Branch?           @relation(fields: [branchId], references: [id])
+  customer    Customer?        @relation(fields: [customerId], references: [id])
+  product     Product?         @relation(fields: [productId], references: [id])
+  priceTier   PriceTier?       @relation(fields: [priceTierId], references: [id])
+  warehouse   Warehouse?       @relation(fields: [warehouseId], references: [id])
+  branch      Branch?          @relation(fields: [branchId], references: [id])
   salesOrders SalesOrder[]
   usages      SalesQuotaUsage[]
-  createdBy   User?             @relation("SalesQuotaCreator", fields: [createdById], references: [id])
-  updatedBy   User?             @relation("SalesQuotaUpdater", fields: [updatedById], references: [id])
+  createdBy   User?            @relation("SalesQuotaCreator", fields: [createdById], references: [id])
+  updatedBy   User?            @relation("SalesQuotaUpdater", fields: [updatedById], references: [id])
 
-  @@index([productId, branchId, status])
+  @@index([customerId, productId, warehouseId, status])
+  @@index([productId, warehouseId, status])
   @@map("sales_quotas")
 }
 
@@ -1325,108 +1379,6 @@ model CustomerAddress {
 // SALES
 // ============================================================
 
-model SalesRequest {
-  id            String             @id @default(uuid()) @db.Uuid
-  createdById   String?            @map("created_by_id") @db.Uuid
-  updatedById   String?            @map("updated_by_id") @db.Uuid
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
-  isArchived    Boolean            @default(false) @map("is_archived")
-  archivedAt    DateTime?          @map("archived_at")
-  requestNumber String             @unique @map("request_number")
-  customerId    String             @map("customer_id") @db.Uuid
-  salesRepId    String?            @map("sales_rep_id") @db.Uuid
-  source        RequestSource
-  subject       String
-  message       String?
-  status        String             @default("SUBMITTED")
-  items         SalesRequestItem[]
-  quotation     Quotation?
-
-  createdBy User?     @relation("SalesRequestCreator", fields: [createdById], references: [id])
-  updatedBy User?     @relation("SalesRequestUpdater", fields: [updatedById], references: [id])
-  customer  Customer  @relation(fields: [customerId], references: [id])
-  salesRep  Employee? @relation(fields: [salesRepId], references: [id])
-
-  @@map("sales_requests")
-}
-
-model SalesRequestItem {
-  id             String    @id @default(uuid()) @db.Uuid
-  createdById    String?   @map("created_by_id") @db.Uuid
-  updatedById    String?   @map("updated_by_id") @db.Uuid
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-  isArchived     Boolean   @default(false) @map("is_archived")
-  archivedAt     DateTime? @map("archived_at")
-  salesRequestId String    @map("sales_request_id") @db.Uuid
-  productId      String    @map("product_id") @db.Uuid
-  quantity       Decimal   @db.Decimal(15, 3)
-  notes          String?
-
-  createdBy    User?        @relation("SalesRequestItemCreator", fields: [createdById], references: [id])
-  updatedBy    User?        @relation("SalesRequestItemUpdater", fields: [updatedById], references: [id])
-  salesRequest SalesRequest @relation(fields: [salesRequestId], references: [id], onDelete: Cascade)
-  product      Product      @relation(fields: [productId], references: [id])
-
-  @@map("sales_request_items")
-}
-
-model Quotation {
-  id              String                    @id @default(uuid()) @db.Uuid
-  createdById     String?                   @map("created_by_id") @db.Uuid
-  updatedById     String?                   @map("updated_by_id") @db.Uuid
-  createdAt       DateTime                  @default(now()) @map("created_at")
-  updatedAt       DateTime                  @updatedAt @map("updated_at")
-  isArchived      Boolean                   @default(false) @map("is_archived")
-  archivedAt      DateTime?                 @map("archived_at")
-  quotationNumber String                    @unique @map("quotation_number")
-  customerId      String                    @map("customer_id") @db.Uuid
-  salesRepId      String                    @map("sales_rep_id") @db.Uuid
-  salesRequestId  String?                   @unique @map("sales_request_id") @db.Uuid
-  quotationDate   DateTime                  @map("quotation_date")
-  validUntil      DateTime                  @map("valid_until")
-  status          String                    @default("DRAFT")
-  subtotal        Decimal                   @default(0) @db.Decimal(15, 2)
-  discount        Decimal                   @default(0) @db.Decimal(15, 2)
-  tax             Decimal                   @default(0) @db.Decimal(15, 2)
-  total           Decimal                   @default(0) @db.Decimal(15, 2)
-  items           SalesOrderQuotationItem[]
-  salesOrder      SalesOrder?
-
-  createdBy    User?         @relation("QuotationCreator", fields: [createdById], references: [id])
-  updatedBy    User?         @relation("QuotationUpdater", fields: [updatedById], references: [id])
-  customer     Customer      @relation(fields: [customerId], references: [id])
-  salesRep     Employee      @relation(fields: [salesRepId], references: [id])
-  salesRequest SalesRequest? @relation(fields: [salesRequestId], references: [id])
-
-  @@map("quotations")
-}
-
-model SalesOrderQuotationItem {
-  id          String    @id @default(uuid()) @db.Uuid
-  createdById String?   @map("created_by_id") @db.Uuid
-  updatedById String?   @map("updated_by_id") @db.Uuid
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  isArchived  Boolean   @default(false) @map("is_archived")
-  archivedAt  DateTime? @map("archived_at")
-  quotationId String    @map("quotation_id") @db.Uuid
-  productId   String    @map("product_id") @db.Uuid
-  quantity    Decimal   @db.Decimal(15, 3)
-  unitPrice   Decimal   @map("unit_price") @db.Decimal(15, 2)
-  discount    Decimal   @default(0) @db.Decimal(15, 2)
-  tax         Decimal   @default(0) @db.Decimal(15, 2)
-  total       Decimal   @db.Decimal(15, 2)
-
-  createdBy User?     @relation("SalesOrderQuotationItemCreator", fields: [createdById], references: [id])
-  updatedBy User?     @relation("SalesOrderQuotationItemUpdater", fields: [updatedById], references: [id])
-  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  product   Product   @relation(fields: [productId], references: [id])
-
-  @@map("sales_order_quotation_items")
-}
-
 model SalesOrder {
   id                String                    @id @default(uuid()) @db.Uuid
   createdById       String?                   @map("created_by_id") @db.Uuid
@@ -1439,8 +1391,10 @@ model SalesOrder {
   customerId        String                    @map("customer_id") @db.Uuid
   salesRepId        String?                   @map("sales_rep_id") @db.Uuid
   warehouseId       String                    @map("warehouse_id") @db.Uuid
-  quotationId       String?                   @unique @map("quotation_id") @db.Uuid
   deliveryAddressId String?                   @map("delivery_address_id") @db.Uuid
+  deliveryLatitude  Decimal?                  @map("delivery_latitude") @db.Decimal(10, 7)
+  deliveryLongitude Decimal?                  @map("delivery_longitude") @db.Decimal(10, 7)
+  deliveryAddressText String?                 @map("delivery_address_text")
   priceTierId       String?                   @map("price_tier_id") @db.Uuid
   discountRuleId    String?                   @map("discount_rule_id") @db.Uuid
   salesQuotaId      String?                   @map("sales_quota_id") @db.Uuid
@@ -1463,13 +1417,13 @@ model SalesOrder {
   salesReturns      SalesReturn[]
   statusHistory     SalesOrderStatusHistory[]
   quotaUsages       SalesQuotaUsage[]
+  preparationTasks  PreparationTask[]
 
   createdBy       User?            @relation("SalesOrderCreator", fields: [createdById], references: [id])
   updatedBy       User?            @relation("SalesOrderUpdater", fields: [updatedById], references: [id])
   customer        Customer         @relation(fields: [customerId], references: [id])
   salesRep        Employee?        @relation(fields: [salesRepId], references: [id])
   warehouse       Warehouse        @relation(fields: [warehouseId], references: [id])
-  quotation       Quotation?       @relation(fields: [quotationId], references: [id])
   approver        User?            @relation("SalesOrderApprover", fields: [approvedBy], references: [id])
   deliveryAddress CustomerAddress? @relation(fields: [deliveryAddressId], references: [id])
   priceTier       PriceTier?       @relation(fields: [priceTierId], references: [id])
@@ -1502,6 +1456,7 @@ model SalesOrderItem {
   reservedQuantity  Decimal        @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
   fulfilledQuantity Decimal        @default(0) @map("fulfilled_quantity") @db.Decimal(15, 3)
   deliveryItems     DeliveryItem[]
+  preparationTaskItems PreparationTaskItem[]
 
   createdBy    User?         @relation("SalesOrderItemCreator", fields: [createdById], references: [id])
   updatedBy    User?         @relation("SalesOrderItemUpdater", fields: [updatedById], references: [id])
@@ -1579,6 +1534,54 @@ model SalesOrderStatusHistory {
   @@map("sales_order_status_histories")
 }
 
+model PreparationTask {
+  id            String    @id @default(uuid()) @db.Uuid
+  createdById   String?   @map("created_by_id") @db.Uuid
+  updatedById   String?   @map("updated_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  isArchived    Boolean   @default(false) @map("is_archived")
+  archivedAt    DateTime? @map("archived_at")
+  salesOrderId  String    @map("sales_order_id") @db.Uuid
+  warehouseId   String    @map("warehouse_id") @db.Uuid
+  storeKeeperId String    @map("store_keeper_id") @db.Uuid
+  scheduledBy   String    @map("scheduled_by") @db.Uuid
+  scheduledDate DateTime  @map("scheduled_date")
+  status        String    @default("PENDING") @map("status")
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  notes         String?
+
+  items PreparationTaskItem[]
+
+  salesOrder  SalesOrder @relation(fields: [salesOrderId], references: [id])
+  warehouse   Warehouse  @relation(fields: [warehouseId], references: [id])
+  storeKeeper Employee  @relation(fields: [storeKeeperId], references: [id])
+  scheduledByUser User   @relation("PreparationTaskScheduler", fields: [scheduledBy], references: [id])
+
+  @@index([salesOrderId])
+  @@index([warehouseId])
+  @@index([storeKeeperId])
+  @@map("preparation_tasks")
+}
+
+model PreparationTaskItem {
+  id                 String    @id @default(uuid()) @db.Uuid
+  preparationTaskId  String    @map("preparation_task_id") @db.Uuid
+  salesOrderItemId   String    @map("sales_order_item_id") @db.Uuid
+  productId          String    @map("product_id") @db.Uuid
+  quantity           Decimal   @db.Decimal(15, 3)
+  preparedQuantity   Decimal   @default(0) @map("prepared_quantity") @db.Decimal(15, 3)
+  status             String    @default("PENDING") @map("status")
+
+  preparationTask PreparationTask @relation(fields: [preparationTaskId], references: [id], onDelete: Cascade)
+  salesOrderItem  SalesOrderItem  @relation(fields: [salesOrderItemId], references: [id])
+  product         Product         @relation(fields: [productId], references: [id])
+
+  @@index([preparationTaskId])
+  @@map("preparation_task_items")
+}
+
 // ============================================================
 // LOGISTICS
 // ============================================================
@@ -1616,7 +1619,7 @@ model Delivery {
   customerId        String          @map("customer_id") @db.Uuid
   warehouseId       String          @map("warehouse_id") @db.Uuid
   driverId          String          @map("driver_id") @db.Uuid
-  vehicleId         String          @map("vehicle_id") @db.Uuid
+  vehicleId         String?         @map("vehicle_id") @db.Uuid
   scheduledDate     DateTime        @map("scheduled_date")
   deliveryDate      DateTime?       @map("delivery_date")
   status            DeliveryStatus  @default(SCHEDULED)
@@ -1635,7 +1638,7 @@ model Delivery {
   customer   Customer   @relation(fields: [customerId], references: [id])
   warehouse  Warehouse  @relation(fields: [warehouseId], references: [id])
   driver     Employee   @relation(fields: [driverId], references: [id])
-  vehicle    Vehicle    @relation(fields: [vehicleId], references: [id])
+  vehicle    Vehicle?    @relation(fields: [vehicleId], references: [id])
 
   @@map("deliveries")
 }

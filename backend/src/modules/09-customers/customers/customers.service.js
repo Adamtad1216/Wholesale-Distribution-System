@@ -130,7 +130,6 @@ export async function createCustomer(data, createdById, req) {
           personId: person.id,
           creditLimit: data.creditLimit,
           paymentTermsId: data.paymentTermsId,
-          assignedSalesRepId: data.assignedSalesRepId,
           status: data.status || 'ACTIVE',
           createdById: createdById,
           updatedById: createdById,
@@ -300,7 +299,6 @@ export async function createCustomer(data, createdById, req) {
           organizationId: organization.id,
           creditLimit: data.creditLimit,
           paymentTermsId: data.paymentTermsId,
-          assignedSalesRepId: data.assignedSalesRepId,
           status: data.status || 'ACTIVE',
           createdById: createdById,
           updatedById: createdById,
@@ -612,7 +610,6 @@ export async function updateCustomer(id, data, createdById, req) {
         customerCode: data.customerCode,
         creditLimit: data.creditLimit,
         paymentTermsId: data.paymentTermsId,
-        assignedSalesRepId: data.assignedSalesRepId,
         status: data.status,
         updatedById: createdById,
       },
@@ -687,10 +684,6 @@ function buildCustomerWhere(filters) {
 
   if (filters.status) {
     where.status = filters.status;
-  }
-
-  if (filters.salesRepId) {
-    where.assignedSalesRepId = filters.salesRepId;
   }
 
   if (filters.paymentTermsId) {
