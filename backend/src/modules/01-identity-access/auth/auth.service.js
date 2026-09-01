@@ -274,6 +274,10 @@ export async function login(data, req) {
     where: { username: data.username },
     include: {
       person: true,
+      auditLogs: {
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+      },
       userRoles: {
         include: {
           role: {
@@ -364,6 +368,24 @@ export async function login(data, req) {
     throw new AppError('Invalid username or password', 401);
   }
 
+  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const permissionsSet = new Set();
+
+  user.userRoles?.forEach((ur) => {
+    ur.role?.rolePermissions?.forEach((rp) => {
+      if (rp.permission?.name) {
+        permissionsSet.add(rp.permission.name);
+      }
+    });
+  });
+
+  if (roles.includes('SUPER_ADMIN') || roles.includes('ADMIN')) {
+    permissionsSet.add('*');
+  }
+
+  const permissions = Array.from(permissionsSet);
+  const primaryRole = roles[0] || 'USER';
+
   // Merge both updates into a single DB write to save a round-trip
   const accessToken = signAccessToken({
     userId: user.id,
@@ -395,7 +417,24 @@ export async function login(data, req) {
     req,
   }).catch(() => {}); // fire-and-forget; audit failures never block login
 
-  return { user, accessToken, refreshToken };
+  return {
+    user: {
+      id: user.id,
+      username: user.username,
+      person: user.person,
+      isActive: user.isActive,
+      accountStatus: user.accountStatus,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      lastLoginAt: user.lastLoginAt,
+      auditLogs: user.auditLogs || [],
+    },
+    role: primaryRole,
+    roles,
+    permissions,
+    accessToken,
+    refreshToken,
+  };
 }
 
 export async function refreshTokens(refreshToken, req) {
@@ -445,14 +484,6 @@ export async function refreshTokens(refreshToken, req) {
     },
   });
 
-  await logAudit({
-    userId: user.id,
-    action: 'TOKEN_REFRESHED',
-    entityType: 'User',
-    entityId: user.id,
-    req,
-  });
-
   return { accessToken, refreshToken: newRefreshToken };
 }
 
@@ -479,6 +510,10 @@ export async function getMe(userId) {
     where: { id: userId },
     include: {
       person: true,
+      auditLogs: {
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+      },
       userRoles: {
         include: {
           role: {
@@ -499,7 +534,115 @@ export async function getMe(userId) {
     throw new AppError('User not found', 404);
   }
 
-  return user;
+  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const permissionsSet = new Set();
+
+  user.userRoles?.forEach((ur) => {
+    ur.role?.rolePermissions?.forEach((rp) => {
+      if (rp.permission?.name) {
+        permissionsSet.add(rp.permission.name);
+      }
+    });
+  });
+
+  if (roles.includes('SUPER_ADMIN') || roles.includes('ADMIN')) {
+    permissionsSet.add('*');
+  }
+
+  const permissions = Array.from(permissionsSet);
+  const primaryRole = roles[0] || 'USER';
+
+  return {
+    user: {
+      id: user.id,
+      username: user.username,
+      person: user.person,
+      isActive: user.isActive,
+      accountStatus: user.accountStatus,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      lastLoginAt: user.lastLoginAt,
+      auditLogs: user.auditLogs || [],
+    },
+    role: primaryRole,
+    roles,
+    permissions,
+  };
+}
+
+export async function updateProfile(userId, data) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { personId: true },
+  });
+
+  if (!user || !user.personId) {
+    throw new AppError('User person record not found', 404);
+  }
+
+  const { firstName, lastName, email, phone, address, bio, avatarUrl } = data;
+
+  await prisma.person.update({
+    where: { id: user.personId },
+    data: {
+      ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+      ...(email !== undefined && { email }),
+      ...(phone !== undefined && { phone }),
+      ...(address !== undefined && { address }),
+      ...(bio !== undefined && { bio }),
+      ...(avatarUrl !== undefined && { avatarUrl }),
+    },
+  });
+
+  await logAudit({
+    createdById: userId,
+    action: 'PROFILE_UPDATED',
+    entityType: 'User',
+    entityId: userId,
+    newValues: { firstName, lastName, email, phone },
+  }).catch(() => {});
+
+  return getMe(userId);
+}
+
+export async function changePassword(userId, { currentPassword, newPassword }, req) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true },
+  });
+
+  if (!user) throw new AppError('User not found', 404);
+
+  const isValid = await comparePassword(currentPassword, user.passwordHash);
+  if (!isValid) {
+    await logAudit({
+      createdById: userId,
+      userId,
+      action: 'PASSWORD_CHANGE_FAILED',
+      entityType: 'User',
+      entityId: userId,
+      newValues: { reason: 'Current password is incorrect' },
+      req,
+    });
+    throw new AppError('Current password is incorrect', 401);
+  }
+
+  const newHash = await hashPassword(newPassword);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: newHash },
+  });
+
+  await logAudit({
+    createdById: userId,
+    userId,
+    action: 'PASSWORD_CHANGED',
+    entityType: 'User',
+    entityId: userId,
+    req,
+  });
 }
 
 export async function cleanupExpiredRefreshTokens() {

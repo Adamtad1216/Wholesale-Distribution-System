@@ -8,6 +8,8 @@ import {
   forgotPassword,
   resetPasswordController,
   acceptInvitationController,
+  updateProfileController,
+  changePasswordController,
 } from "./auth.controller.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 import { authenticate } from "../../../middleware/auth.middleware.js";
@@ -243,6 +245,7 @@ router.post("/logout", authenticate, logoutUser);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/me", authenticate, getCurrentUser);
+router.get("/profile", authenticate, getCurrentUser);
 
 /**
  * @swagger
@@ -401,6 +404,9 @@ router.post(
   validate(acceptInvitationSchema),
   acceptInvitationController,
 );
+
+router.put("/me", authenticate, updateProfileController);
+router.put("/me/password", authenticate, changePasswordController);
 
 export default router;
 

@@ -180,6 +180,8 @@ model Person {
   phone                String?
   email                String?               @unique
   address              String?
+  avatarUrl            String?               @map("avatar_url")
+  bio                  String?
   status               String                @default("ACTIVE")
   user                 User?
   employee             Employee?
