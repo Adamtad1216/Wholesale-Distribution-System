@@ -1,245 +1,804 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
+
+/* ============================================================
+   GLOBAL RESET & FONT
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-:root.light {
-  color-scheme: light;
+html {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body,
+#root {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  color: var(--color-foreground);
+  background-color: var(--color-background);
 }
 
 /* ============================================================
-   PREMIUM LIGHT THEME - Professional Enterprise Design
-   Canvas: soft indigo-tinted slate
-   Sidebar: deep indigo (#312e81 → #1e1b4b)
-   Header: pure white frosted glass
-   Cards: white with soft shadow
+   THEME TOKENS — DARK MODE (default)
    ============================================================ */
 
-/* Page canvas — warm indigo-tinted background, not plain white */
-.light body,
-.light .bg-slate-950,
-.light .bg-slate-950\/60,
-.light .bg-slate-950\/5 {
-  background-color: #eef2ff !important;
-  color: #1e1b4b !important;
+:root {
+  color-scheme: dark;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* Backgrounds */
+  --color-background:            #0b1120;
+  --color-card:                  #131c31;
+  --color-popover:               #131c31;
+  --color-border:                rgba(255, 255, 255, 0.08);
+  --color-input:                 #1e2d47;
+
+  /* Custom Profile Card Theme Variables */
+  --profile-card-bg:             #0b0f19;
+  --profile-card-border:         #1e293b;
+
+  /* Foregrounds / Text */
+  --color-foreground:            #e2e8f0;
+  --color-card-foreground:       #e2e8f0;
+  --color-popover-foreground:    #e2e8f0;
+  --color-muted-foreground:      #94a3b8;
+
+  /* Primary (actions, links) */
+  --color-primary:               #6366f1;
+  --color-primary-foreground:    #0f172a;
+
+  /* Secondary */
+  --color-secondary:             #1e293b;
+  --color-secondary-foreground:  #e2e8f0;
+
+  /* Accent */
+  --color-accent:                #1e293b;
+  --color-accent-foreground:     #60a5fa;
+
+  /* States */
+  --color-destructive:           #ef4444;
+  --color-destructive-foreground:#0f172a;
+  --color-success:               #22c55e;
+  --color-success-foreground:    #0f172a;
+  --color-warning:               #f59e0b;
+  --color-warning-foreground:    #0f172a;
+
+  /* Muted */
+  --color-muted:                 #1e293b;
+
+  /* Ring */
+  --color-ring:                  #6366f1;
+
+  /* Sidebar */
+  --sidebar-background:          #0f172a;
+  --sidebar-foreground:          #e2e8f0;
+  --sidebar-border:              #1e293b;
+  --sidebar-primary:             rgba(139, 92, 246, 0.12);
+  --sidebar-primary-foreground:  #a78bfa;
+  --sidebar-accent:              rgba(148, 163, 184, 0.1);
+  --sidebar-accent-foreground:   #e2e8f0;
+  --sidebar-muted:               #94a3b8;
+  --sidebar-active-border:       #7c3aed;
+
+  /* Navbar */
+  --navbar-background:           rgba(15, 23, 42, 0.6);
+  --navbar-foreground:           #e2e8f0;
+  --navbar-border:               rgba(255, 255, 255, 0.08);
 }
 
-/* ── Sidebar: rich deep indigo ────────────────────────────── */
-.light aside {
-  background-color: #1e1b4b !important;
-  border-color: #312e81 !important;
+/* ============================================================
+   THEME TOKENS — LIGHT MODE
+   ============================================================ */
+
+:root.light {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --color-background:            #f6f7f9;
+  --color-card:                  #ffffff;
+  --color-popover:               #ffffff;
+  --color-border:                #e2e8f0;
+  --color-input:                 #ffffff;
+
+  /* Custom Profile Card Theme Variables */
+  --profile-card-bg:             #ffffff;
+  --profile-card-border:         #e2e8f0;
+
+  /* Foregrounds / Text */
+  --color-foreground:            #0f172a;
+  --color-card-foreground:       #0f172a;
+  --color-popover-foreground:    #0f172a;
+  --color-muted-foreground:      #475569;
+
+  /* Primary */
+  --color-primary:               #2563eb;
+  --color-primary-foreground:    #ffffff;
+
+  /* Secondary */
+  --color-secondary:             #f1f5f9;
+  --color-secondary-foreground:  #24262d;
+
+  /* Accent */
+  --color-accent:                #eff6ff;
+  --color-accent-foreground:     #3b82f6;
+
+  /* States */
+  --color-destructive:           #ef4444;
+  --color-destructive-foreground:#ffffff;
+  --color-success:               #22c55e;
+  --color-success-foreground:    #ffffff;
+  --color-warning:               #f59e0b;
+  --color-warning-foreground:    #ffffff;
+
+  /* Muted */
+  --color-muted:                 #f1f5f9;
+
+  /* Ring */
+  --color-ring:                  #2563eb;
+
+  /* Sidebar */
+  --sidebar-background:          #1e3a8a;
+  --sidebar-foreground:          #ffffff;
+  --sidebar-border:              rgba(255, 255, 255, 0.10);
+  --sidebar-primary:             #ffffff;
+  --sidebar-primary-foreground:  #000000;
+  --sidebar-accent:              rgba(255, 255, 255, 0.12);
+  --sidebar-accent-foreground:   #ffffff;
+  --sidebar-muted:               rgba(255, 255, 255, 0.45);
+  --sidebar-active-border:       transparent;
+
+  /* Navbar */
+  --navbar-background:           rgba(255, 255, 255, 0.85);
+  --navbar-foreground:           #24262d;
+  --navbar-border:               #e2e8f0;
 }
 
-/* Sidebar text & icons */
-.light aside .text-white {
-  color: #ffffff !important;
+/* ============================================================
+   ULTRA-THIN CUSTOM SCROLLBAR
+   ============================================================ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted-foreground) transparent;
 }
 
-.light aside .text-slate-400,
-.light aside .text-slate-450,
-.light aside .text-slate-500,
-.light aside .text-slate-300,
-.light aside .text-slate-200 {
-  color: #a5b4fc !important;
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--color-background); border-left: 1px solid var(--color-border); }
+::-webkit-scrollbar-thumb { background-color: var(--color-muted-foreground); border-radius: 20px; border: 1px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--color-primary); }
+
+.scrollbar-thin { scrollbar-width: thin; scrollbar-color: var(--color-muted-foreground) transparent; }
+.scrollbar-thin::-webkit-scrollbar       { width: 4px; height: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: var(--color-background); border-left: 1px solid var(--color-border); }
+.scrollbar-thin::-webkit-scrollbar-thumb { background-color: var(--color-muted-foreground); border-radius: 20px; border: 1px solid transparent; background-clip: content-box; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background-color: var(--color-primary); }
+
+/* ============================================================
+   MAIN LAYOUT SHELL
+   ============================================================ */
+
+.main-shell   { background-color: var(--color-background); color: var(--color-foreground); }
+.main-panel   { background-color: var(--color-background); }
+.main-content { background-color: var(--color-background); }
+
+/* ============================================================
+   SIDEBAR — uses CSS variables, works for both themes
+   ============================================================ */
+
+.sidebar-panel {
+  background-color: var(--sidebar-background);
+  border-right: 1px solid var(--sidebar-border);
+  color: var(--sidebar-foreground);
 }
 
-/* Sidebar active link */
-.light aside .text-violet-400 {
-  color: #c7d2fe !important;
+.sidebar-section-label { color: var(--sidebar-muted); }
+
+.sidebar-nav-link  { display: flex; align-items: center; }
+
+.sidebar-inactive-link {
+  color: var(--sidebar-foreground);
+  opacity: 0.85;
+}
+.sidebar-inactive-link:hover {
+  background-color: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  opacity: 1;
 }
 
-/* Sidebar logo brand title */
-.light aside h1 {
-  color: #ffffff !important;
+.sidebar-inactive-icon { color: var(--sidebar-foreground); opacity: 0.75; }
+
+.sidebar-active-link {
+  background-color: var(--sidebar-primary);
+  color: var(--sidebar-primary-foreground);
+  border-left: 3px solid var(--sidebar-active-border);
+  padding-left: 13px;
+  opacity: 1;
 }
 
-/* Sidebar nav hover state */
-.light aside a:hover,
-.light aside .hover\:bg-slate-800\/40:hover {
-  background-color: rgba(255, 255, 255, 0.07) !important;
-  color: #e0e7ff !important;
-}
+.sidebar-active-icon { color: var(--sidebar-primary-foreground); opacity: 1; }
 
-/* Sidebar active link highlight */
-.light aside .bg-gradient-to-r {
-  background: linear-gradient(to right, rgba(199, 210, 254, 0.15), rgba(165, 180, 252, 0.05)) !important;
-}
-
-/* Sidebar profile footer & ALL child elements — keep indigo, not white */
-.light aside .border-slate-800,
-.light aside .border-slate-800\/40,
-.light aside .border-t {
-  border-color: rgba(255, 255, 255, 0.10) !important;
-}
-
-/* Transparent backgrounds for every child so aside bg shows through */
-.light aside .bg-slate-900\/40,
-.light aside .bg-slate-900\/20,
-.light aside .bg-slate-900\/60,
-.light aside .bg-slate-800\/40,
-.light aside .bg-slate-800\/30,
-.light aside .bg-slate-900,
-.light aside .bg-slate-850 {
-  background-color: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(255, 255, 255, 0.10) !important;
+/* Keep sidebar internals from leaking Tailwind bg-slate overrides */
+.sidebar-panel [class*="bg-slate"],
+.sidebar-panel [class*="bg-violet"],
+.sidebar-panel [class*="bg-indigo"] {
+  background-color: transparent !important;
   box-shadow: none !important;
 }
 
-.light aside .bg-slate-800\/20 {
-  background-color: rgba(255, 255, 255, 0.07) !important;
-  box-shadow: none !important;
+.sidebar-panel [class*="border-slate"],
+.sidebar-panel [class*="border-violet"] {
+  border-color: var(--sidebar-border) !important;
 }
 
-/* Sidebar mobile overlay */
-.light .bg-slate-950\/60 {
-  background-color: rgba(15, 23, 42, 0.5) !important;
+.sidebar-panel h1, .sidebar-panel p {
+  color: var(--sidebar-foreground) !important;
 }
 
-/* ── Header: clean white frosted glass ────────────────────── */
+/* Logo badge */
+.sidebar-logo-badge { background-color: #ffffff; }
+.sidebar-logo-icon  { color: var(--sidebar-primary-foreground, #1e3a8a); }
+
+/* ============================================================
+   HEADER — uses CSS variables
+   ============================================================ */
+
+header {
+  background-color: var(--navbar-background);
+  border-color: var(--navbar-border);
+  color: var(--navbar-foreground);
+}
+
+/* Light mode: frosted glass header */
 .light header {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(20px) !important;
-  border-color: #ddd6fe !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Header Icon Buttons (Theme toggle, Notification toggle) — Theme-Aware Hover */
+.header-theme-btn,
+.header-notify-btn {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--navbar-foreground) !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.header-theme-btn svg,
+.header-notify-btn svg {
+  color: var(--navbar-foreground) !important;
+  transition: color 0.2s ease-in-out !important;
+}
+
+/* Dark Mode Hover: Slate background (#1e293b), border (#334155), white icon (#ffffff) */
+.header-theme-btn:hover,
+.header-notify-btn:hover {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+}
+
+.header-theme-btn:hover svg,
+.header-notify-btn:hover svg {
+  color: #ffffff !important;
+}
+
+/* Light Mode Hover: Light slate background (#e2e8f0), border (#cbd5e1), dark charcoal icon (#0f172a) */
+.light .header-theme-btn:hover,
+.light .header-notify-btn:hover {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
+.light .header-theme-btn:hover svg,
+.light .header-notify-btn:hover svg {
+  color: #0f172a !important;
 }
 
 .light header .text-white,
 .light header .text-slate-100,
 .light header .text-slate-200,
 .light header .text-slate-250 {
-  color: #1e1b4b !important;
+  color: var(--navbar-foreground) !important;
 }
 
-.light header .text-slate-400,
-.light header .text-slate-450 {
-  color: #6d28d9 !important;
-}
-
-.light header .bg-slate-800\/20 {
-  background-color: #f0effe !important;
-}
-
-.light header button.bg-slate-800\/20 {
-  background-color: #f0effe !important;
-  border-color: #ddd6fe !important;
-}
-
-.light header button.bg-slate-800\/20:hover {
-  background-color: #ede9fe !important;
-  color: #4c1d95 !important;
-}
-
-/* Header profile dropdown */
+/* Profile dropdown */
 .light .bg-slate-900\/95 {
   background-color: #ffffff !important;
-  border-color: #ddd6fe !important;
+  border-color: #dde1f4 !important;
   box-shadow: 0 10px 40px rgba(79, 70, 229, 0.1) !important;
 }
 
-/* ── Card and Section panels (scoped away from aside) ──────── */
-.light :not(aside) > .bg-slate-900\/40,
-.light :not(aside) > .bg-slate-800\/40,
-.light :not(aside) > .bg-slate-800\/30,
-.light :not(aside) > .bg-slate-800\/20,
-.light :not(aside) > .bg-slate-850,
-.light :not(aside) > .bg-slate-900,
-.light :not(aside) > .bg-slate-900\/60,
-.light :not(aside) > .bg-slate-900\/20 {
-  background-color: #ffffff !important;
-  border-color: #dde1f4 !important;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+/* ============================================================
+   CARDS & PANELS — light mode overrides
+   ============================================================ */
+
+.profile-card-bg {
+  background-color: var(--profile-card-bg) !important;
+  border-color: var(--profile-card-border) !important;
 }
 
-/* ── Borders ────────────────────────────────────────────────── */
+.ui-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* Card hover shadow & smooth lift motion (Enabled via hoverEffect prop) */
+.ui-card-hover:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+.light .ui-card,
+.light .main-panel,
+.light :not(aside) > .bg-slate-900\/60,
+.light :not(aside) > .bg-slate-800\/60,
+.light :not(aside) > .bg-slate-800\/50,
+.light :not(aside) > .bg-slate-800\/40 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.light .ui-card-hover:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* User Dropdown Menu Component (Native Theme Variable Cascade) */
+.user-dropdown-trigger {
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.user-dropdown-trigger:hover {
+  background-color: var(--color-secondary);
+  border-color: var(--color-border);
+}
+
+.user-dropdown-menu {
+  background-color: var(--color-popover);
+  border-color: var(--color-border);
+  color: var(--color-popover-foreground);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+.user-dropdown-header {
+  border-bottom-color: var(--color-border);
+}
+
+.user-dropdown-title {
+  color: var(--color-popover-foreground);
+}
+
+.user-dropdown-subtitle {
+  color: var(--color-muted-foreground);
+}
+
+.user-dropdown-item {
+  color: var(--color-popover-foreground);
+  background-color: transparent;
+}
+
+.user-dropdown-item:hover {
+  background-color: var(--color-accent);
+}
+
+.user-dropdown-divider {
+  border-top-color: var(--color-border);
+}
+
+/* Profile Page Tab Buttons — uses CSS variables, auto-adapts to theme */
+.profile-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background-color: transparent;
+  color: var(--color-foreground);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.profile-tab:hover {
+  background-color: var(--color-secondary);
+  color: var(--color-foreground);
+}
+.profile-tab.active {
+  background-color: var(--color-accent);
+  border-color: var(--color-primary);
+  color: var(--color-accent-foreground);
+  font-weight: 700;
+}
+
+/* Global theme-aware text utilities */
+.text-muted {
+  color: var(--color-muted-foreground);
+}
+.text-theme {
+  color: var(--color-foreground);
+}
+
+/* Global Pointer Cursor for all Interactive Elements */
+button,
+button *,
+[role="button"],
+.ui-card,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-ghost,
+.btn-outline,
+.btn-success,
+.header-theme-btn,
+.header-notify-btn {
+  cursor: pointer !important;
+}
+button:disabled,
+button[disabled] {
+  cursor: not-allowed !important;
+}
+
+/* ============================================================
+   BUTTONS — ALL THEMES (100% FONT & ICON VISIBILITY)
+   ============================================================ */
+
+/* Primary Button (Add User, Save, etc.) */
+.btn-primary,
+button.btn-primary {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+.light .btn-primary,
+.light button.btn-primary {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+.light .btn-primary:hover,
+.light button.btn-primary:hover {
+  background-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+/* Secondary Button (Edit, Cancel, etc.) */
+.btn-secondary,
+button.btn-secondary {
+  color: #f1f5f9 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+.light .btn-secondary,
+.light button.btn-secondary {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+.light .btn-secondary:hover,
+.light button.btn-secondary:hover {
+  background-color: #cbd5e1 !important;
+  color: #000000 !important;
+}
+
+/* Danger Soft Button (Delete) — Dark Mode */
+.btn-danger,
+button.btn-danger {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+.btn-danger:hover,
+button.btn-danger:hover {
+  background-color: rgba(239, 68, 68, 0.35) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+/* Danger Soft Button (Delete) — Light Mode */
+.light .btn-danger,
+.light button.btn-danger {
+  background-color: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+.light .btn-danger:hover,
+.light button.btn-danger:hover {
+  background-color: #fca5a5 !important;
+  color: #7f1d1d !important;
+  border-color: #f87171 !important;
+}
+
+/* Danger Solid Button */
+.btn-danger-solid,
+button.btn-danger-solid {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+.light .btn-danger-solid,
+.light button.btn-danger-solid {
+  background-color: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+/* Ghost Button */
+.btn-ghost,
+button.btn-ghost {
+  color: #cbd5e1 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.light .btn-ghost,
+.light button.btn-ghost {
+  background-color: transparent !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.light .btn-ghost:hover,
+.light button.btn-ghost:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Outline Button */
+.btn-outline,
+button.btn-outline {
+  color: #818cf8 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.light .btn-outline,
+.light button.btn-outline {
+  background-color: transparent !important;
+  color: #1d4ed8 !important;
+  border-color: #60a5fa !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+.light .btn-outline:hover,
+.light button.btn-outline:hover {
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+}
+
+/* Success Soft Button */
+.btn-success,
+button.btn-success {
+  color: #34d399 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+.light .btn-success,
+.light button.btn-success {
+  background-color: #dcfce7 !important;
+  color: #15803d !important;
+  border-color: #86efac !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+/* ============================================================
+   WHITE BACKGROUND BUTTONS & ACTIVE PILLS — 100% PURE BLACK FONT
+   ============================================================ */
+
+/* Enforce 100% pure black text for any button or active pill with white background */
+button.bg-white,
+button[class*="bg-white"],
+.bg-white button,
+.light .sidebar-active-link,
+.light .sidebar-active-link span,
+.light .sidebar-active-link svg,
+.light .sidebar-active-icon,
+.light button.bg-white,
+.light button[class*="bg-white"] {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}
+
+/* Ensure text inside ALL buttons is 100% visible and unclipped */
+button,
+button *,
+.btn-primary,
+.btn-secondary,
+.btn-danger,
+.btn-ghost,
+.btn-outline,
+.btn-success {
+  opacity: 1 !important;
+}
+
+/* ============================================================
+   BORDERS — light mode
+   ============================================================ */
+
 .light .border-slate-800,
 .light .border-slate-800\/80,
 .light .border-slate-800\/65,
 .light .border-slate-800\/60,
 .light .border-slate-800\/40,
 .light .border-slate-700\/40,
-.light .border-slate-800\/30 {
-  border-color: #dde1f4 !important;
+.light .border-slate-800\/30,
+.light .border-slate-700 {
+  border-color: var(--color-border) !important;
 }
 
-/* ── Typography ─────────────────────────────────────────────── */
-.light .text-white,
+/* ============================================================
+   TYPOGRAPHY — light mode
+   ============================================================ */
+
+/* Text color overrides for light mode — scoped away from colored buttons */
+.light .text-white:not(button):not(a):not([class*="bg-violet"]):not([class*="bg-blue"]):not([class*="bg-indigo"]):not([class*="bg-rose"]):not([class*="bg-red"]):not([class*="bg-emerald"]):not([class*="bg-green"]),
 .light .text-slate-100,
 .light .text-slate-200,
 .light .text-slate-250,
 .light .text-slate-300,
 .light .text-slate-350 {
-  color: #1e1b4b !important;
+  color: var(--color-foreground) !important;
+}
+
+/* Preserve white text on colored buttons / links in light mode */
+.light button[class*="bg-violet"],
+.light button[class*="bg-blue"],
+.light button[class*="bg-indigo"],
+.light button[class*="bg-rose"],
+.light button[class*="bg-red"],
+.light button[class*="bg-emerald"],
+.light button[class*="bg-green"],
+.light button[class*="bg-slate-8"],
+.light a[class*="bg-violet"],
+.light a[class*="bg-blue"],
+.light a[class*="bg-indigo"] {
+  color: #ffffff !important;
 }
 
 .light .text-slate-400,
 .light .text-slate-450,
 .light .text-slate-500 {
-  color: #6366f1 !important;
+  color: var(--color-muted-foreground) !important;
 }
 
-/* ── Inputs & Forms ─────────────────────────────────────────── */
+/* ============================================================
+   INPUTS & SEARCH BARS — light mode
+   ============================================================ */
+
 .light input,
 .light select,
-.light textarea {
-  background-color: #f5f3ff !important;
-  border-color: #c4b5fd !important;
-  color: #1e1b4b !important;
+.light textarea,
+.light .bg-slate-800\/50,
+.light .bg-slate-800\/40,
+.light .bg-slate-800\/30 {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+select option,
+option {
+  background-color: var(--color-popover);
+  color: var(--color-popover-foreground);
 }
 
 .light input:focus,
 .light select:focus,
 .light textarea:focus {
-  border-color: #7c3aed !important;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
 }
 
-.light input::placeholder {
-  color: #a5b4fc !important;
+.light input::placeholder { color: #64748b !important; opacity: 0.8; }
+
+/* ============================================================
+   TABLES — ALL THEMES & LIGHT MODE OVERRIDES
+   ============================================================ */
+
+.ui-table-container {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  border-color: #1e293b !important;
 }
 
-/* ── Dashboard Welcome banner ───────────────────────────────── */
-.light .bg-gradient-to-tr {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(238, 242, 255, 0.7) 100%) !important;
-  border-color: rgba(99, 102, 241, 0.15) !important;
+.light .ui-table-container,
+.light table,
+.light div.overflow-hidden:has(table) {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* ── Tables ─────────────────────────────────────────────────── */
-.light table thead tr {
-  background-color: #f5f3ff !important;
+.ui-table-header {
+  background-color: rgba(30, 41, 59, 0.5) !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+
+.light .ui-table-header,
+.light table thead {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.light table thead tr,
+.light table thead th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
 }
 
 .light table tbody tr:hover {
-  background-color: #f5f3ff !important;
+  background-color: #f1f5f9 !important;
 }
 
-/* ── Sidebar active indicator ───────────────────────────────── */
-.light aside .border-violet-500,
-.light aside .border-l-\[3px\] {
-  border-color: #c7d2fe !important;
+.light table td {
+  color: #1e293b !important;
 }
 
-/* ── FINAL OVERRIDE: keep ALL slate-bg descendants of aside indigo ──
-   This must be LAST in the file so it wins the cascade regardless
-   of what generic card rules appear above.
-   Uses attribute substring selector for higher specificity.       ── */
-.light aside [class*="bg-slate"] {
-  background-color: transparent !important;
-  box-shadow: none !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
+/* ============================================================
+   MOBILE OVERLAY
+   ============================================================ */
+
+.light .bg-slate-950\/60 { background-color: rgba(15, 23, 42, 0.5) !important; }
+
+/* ============================================================
+   BADGES & PILLS — THEME-AWARE VISIBILITY
+   ============================================================ */
+
+.badge-module,
+.badge-slate {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #334155 !important;
 }
 
-/* Profile card pill — slightly visible tint */
-.light aside [class*="bg-slate-8"] {
-  background-color: rgba(255, 255, 255, 0.07) !important;
+.light .badge-module,
+.light .badge-slate {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
 }
 
-/* Avatar circle — keep the violet tint */
-.light aside [class*="bg-violet"] {
-  background-color: rgba(167, 139, 250, 0.15) !important;
-  border-color: rgba(167, 139, 250, 0.30) !important;
+.badge-indigo {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+  color: #818cf8 !important;
+  border: 1px solid rgba(99, 102, 241, 0.3) !important;
 }
 
-/* Logo icon gradient — leave intact */
-.light aside [class*="from-violet"] {
-  background: linear-gradient(135deg, #7c3aed, #6366f1) !important;
+.light .badge-indigo {
+  background-color: #e0e7ff !important;
+  color: #3730a3 !important;
+  border: 1px solid #c7d2fe !important;
+}
+
+.badge-violet {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: #a78bfa !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+}
+
+.light .badge-violet {
+  background-color: #ede9fe !important;
+  color: #5b21b6 !important;
+  border: 1px solid #ddd6fe !important;
 }

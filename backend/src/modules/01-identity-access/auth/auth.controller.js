@@ -8,6 +8,8 @@ import {
   createPasswordResetToken,
   resetPassword,
   acceptInvitation,
+  updateProfile,
+  changePassword,
 } from './auth.service.js';
 
 export async function registerUser(req, res, next) {
@@ -86,6 +88,24 @@ export async function acceptInvitationController(req, res, next) {
   try {
     const user = await acceptInvitation(req.body.token, req.body.username, req.body.password);
     sendSuccess(res, { message: 'Invitation accepted successfully', user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateProfileController(req, res, next) {
+  try {
+    const updated = await updateProfile(req.user.id, req.body);
+    sendSuccess(res, updated);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function changePasswordController(req, res, next) {
+  try {
+    await changePassword(req.user.id, req.body, req);
+    sendSuccess(res, { message: 'Password updated successfully' });
   } catch (err) {
     next(err);
   }
