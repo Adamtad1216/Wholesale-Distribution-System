@@ -106,8 +106,8 @@ router.get(
  * /api/v1/catalog/warehouse-selling-prices:
  *   post:
  *     tags: [03-product-catalog]
- *     summary: Create or set a warehouse selling price
- *     description: Define selling and wholesale price for a product in a specific warehouse (status defaults to ACTIVE).
+ *     summary: Create a warehouse selling price
+ *     description: Define selling and wholesale price for a product in a specific warehouse. Rejects with 409 if an active (non-archived) selling price already exists for this product in this warehouse.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -149,6 +149,12 @@ router.get(
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Product or Warehouse not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Warehouse selling price already exists for this product in this warehouse
  *         content:
  *           application/json:
  *             schema:

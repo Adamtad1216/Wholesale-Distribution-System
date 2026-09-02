@@ -50,9 +50,16 @@ export async function createWarehouseSellingPrice(data, createdById, req) {
     },
   });
 
+  if (existingPrice && !existingPrice.isArchived) {
+    throw new AppError(
+      'Warehouse selling price already exists for this product in this warehouse. Use the update endpoint to modify the price.',
+      409
+    );
+  }
+
   let price;
-  if (existingPrice) {
-    // Restore or update
+  if (existingPrice && existingPrice.isArchived) {
+    // Restore previously archived price
     price = await prisma.warehouseSellingPrice.update({
       where: { id: existingPrice.id },
       data: {
@@ -61,9 +68,9 @@ export async function createWarehouseSellingPrice(data, createdById, req) {
         status: data.status || 'ACTIVE',
         isArchived: false,
         archivedAt: null,
-        createdById: existingPrice.isArchived ? createdById : existingPrice.createdById,
-        updatedById: existingPrice.isArchived ? null : createdById,
-        updatedAt: existingPrice.isArchived ? null : new Date(),
+        createdById,
+        updatedById: null,
+        updatedAt: new Date(),
       },
       include: {
         product: { select: { id: true, name: true, sku: true } },
