@@ -49,9 +49,6 @@ const ALL_PERMISSIONS = [
   { name: 'inventory:stock:read', module: 'inventory', action: 'stock:read', description: 'Read warehouse stock' },
   { name: 'inventory:stock:update', module: 'inventory', action: 'stock:update', description: 'Update warehouse stock' },
   { name: 'inventory:stock:delete', module: 'inventory', action: 'stock:delete', description: 'Delete warehouse stock' },
-  { name: 'inventory:movements:read', module: 'inventory', action: 'movements:read', description: 'Read stock movements' },
-  { name: 'inventory:movements:create', module: 'inventory', action: 'movements:create', description: 'Create stock movements' },
-  { name: 'inventory:movements:delete', module: 'inventory', action: 'movements:delete', description: 'Delete stock movements' },
   { name: 'inventory:adjustments:create', module: 'inventory', action: 'adjustments:create', description: 'Create stock adjustments' },
   { name: 'inventory:adjustments:read', module: 'inventory', action: 'adjustments:read', description: 'Read stock adjustments' },
   { name: 'inventory:adjustments:update', module: 'inventory', action: 'adjustments:update', description: 'Update stock adjustments' },
@@ -65,6 +62,8 @@ const ALL_PERMISSIONS = [
   { name: 'inventory:fulfillment:read', module: 'inventory', action: 'fulfillment:read', description: 'Read fulfillment' },
   { name: 'inventory:transfers:create', module: 'inventory', action: 'transfers:create', description: 'Create transfers' },
   { name: 'inventory:transfers:read', module: 'inventory', action: 'transfers:read', description: 'Read transfers' },
+  { name: 'inventory:transfers:update', module: 'inventory', action: 'transfers:update', description: 'Update transfers' },
+  { name: 'inventory:transfers:delete', module: 'inventory', action: 'transfers:delete', description: 'Delete transfers' },
   { name: 'categories:create', module: 'categories', action: 'create', description: 'Create categories' },
   { name: 'categories:read', module: 'categories', action: 'read', description: 'Read categories' },
   { name: 'categories:update', module: 'categories', action: 'update', description: 'Update categories' },
@@ -93,22 +92,23 @@ const ROLE_DEFINITIONS = [
     name: 'INVENTORY_MANAGER',
     description: 'Full inventory management access',
     permissions: [
+      'products:read',
+      'warehouse-selling-prices:read',
       'inventory:stock:create', 'inventory:stock:read', 'inventory:stock:update', 'inventory:stock:delete',
-      'inventory:movements:create', 'inventory:movements:read', 'inventory:movements:delete',
       'inventory:adjustments:create', 'inventory:adjustments:read', 'inventory:adjustments:update', 'inventory:adjustments:approve', 'inventory:adjustments:delete',
       'inventory:reservations:create', 'inventory:reservations:read', 'inventory:reservations:release', 'inventory:reservations:delete',
       'inventory:fulfillment:create', 'inventory:fulfillment:read',
-      'inventory:transfers:create', 'inventory:transfers:read',
+      'inventory:transfers:create', 'inventory:transfers:read', 'inventory:transfers:update', 'inventory:transfers:delete',
     ],
   },
   {
     name: 'WAREHOUSE_OPERATOR',
-    description: 'Can create and update stock and movements',
+    description: 'Can create and update stock',
     permissions: [
       'inventory:stock:create', 'inventory:stock:read', 'inventory:stock:update',
-      'inventory:movements:create', 'inventory:movements:read',
       'inventory:adjustments:create', 'inventory:adjustments:read', 'inventory:adjustments:update',
       'inventory:reservations:create', 'inventory:reservations:read',
+      'inventory:transfers:create', 'inventory:transfers:read',
     ],
   },
   {
@@ -116,7 +116,6 @@ const ROLE_DEFINITIONS = [
     description: 'Read-only access to all inventory data',
     permissions: [
       'inventory:stock:read',
-      'inventory:movements:read',
       'inventory:adjustments:read',
       'inventory:reservations:read',
       'inventory:fulfillment:read',
@@ -160,6 +159,7 @@ async function main() {
     await ensureAdminPermissions(existingUser.id);
     await seedRolesAndUsers(existingUser.id);
     await seedCompanyBranchWarehouse(existingUser.id);
+    await assignWarehouseManagers(existingUser.id);
     await seedProductCatalog(existingUser.id);
     await seedInventoryData(existingUser.id);
     console.log('Seed completed (idempotent).');
@@ -419,28 +419,6 @@ async function seedInventoryData(adminId) {
     }
   }
 
-  const stockMovements = await prisma.stockMovement.count();
-  if (stockMovements === 0) {
-    const stocks = await prisma.warehouseStock.findMany({
-      where: { warehouseId: warehouse.id },
-      take: 3,
-    });
-
-    for (const stock of stocks) {
-      await prisma.stockMovement.create({
-        data: {
-          warehouseId: warehouse.id,
-          productId: stock.productId,
-          movementType: 'PURCHASE_RECEIPT',
-          quantity: stock.quantity,
-          unitCost: 100,
-          notes: 'Initial stock receipt',
-          createdById: adminId,
-        },
-      });
-    }
-  }
-
   const adjustments = await prisma.stockAdjustment.count();
   if (adjustments === 0) {
     const stock = await prisma.warehouseStock.findFirst({
@@ -586,6 +564,68 @@ async function seedCompanyBranchWarehouse(adminId) {
   console.log(`Created warehouse: ${warehouse2.name} (${warehouse2.id})`);
 
   console.log('Company, branch, warehouse data seeded.');
+}
+
+async function assignWarehouseManagers(adminId) {
+  console.log('Assigning warehouse managers...');
+
+  let jobSpec = await prisma.jobSpecification.findFirst({ where: { code: 'JOB-WM' } });
+  if (!jobSpec) {
+    jobSpec = await prisma.jobSpecification.create({
+      data: {
+        code: 'JOB-WM',
+        title: 'Warehouse Manager',
+        description: 'Manages warehouse operations and stock inventory',
+        department: 'Operations',
+        createdById: adminId,
+      },
+    });
+  }
+
+  const boleUser = await prisma.user.findUnique({ where: { username: 'stockmanager_bole' } });
+  const megenagnaUser = await prisma.user.findUnique({ where: { username: 'stockmanager_megenagna' } });
+
+  if (boleUser) {
+    let empBole = await prisma.employee.findFirst({ where: { personId: boleUser.personId } });
+    if (!empBole) {
+      empBole = await prisma.employee.create({
+        data: {
+          personId: boleUser.personId,
+          employeeCode: 'EMP-WM-001',
+          hireDate: new Date(),
+          jobSpecificationId: jobSpec.id,
+          status: 'ACTIVE',
+          createdById: adminId,
+        },
+      });
+    }
+    await prisma.warehouse.updateMany({
+      where: { code: 'WH-001' },
+      data: { managerId: empBole.id },
+    });
+    console.log('Assigned stockmanager_bole as manager for WH-001 (Bole Central Warehouse)');
+  }
+
+  if (megenagnaUser) {
+    let empMegenagna = await prisma.employee.findFirst({ where: { personId: megenagnaUser.personId } });
+    if (!empMegenagna) {
+      empMegenagna = await prisma.employee.create({
+        data: {
+          personId: megenagnaUser.personId,
+          employeeCode: 'EMP-WM-002',
+          hireDate: new Date(),
+          jobSpecificationId: jobSpec.id,
+          status: 'ACTIVE',
+          createdById: adminId,
+        },
+      });
+    }
+    await prisma.warehouse.updateMany({
+      where: { code: 'WH-002' },
+      data: { managerId: empMegenagna.id },
+    });
+    console.log('Assigned stockmanager_megenagna as manager for WH-002 (Megenagna Warehouse)');
+  }
 }
 
 async function seedRolesAndUsers(adminId) {

@@ -188,10 +188,10 @@ model User {
   approvedStockAdjustments                                               StockAdjustment[]          @relation("AdjustmentApprover")
   createdStockAdjustments                                                StockAdjustment[]          @relation("StockAdjustmentCreator")
   updatedStockAdjustments                                                StockAdjustment[]          @relation("StockAdjustmentUpdater")
-  createdStockMovements                                                  StockMovement[]            @relation("StockMovementCreator")
-  updatedStockMovements                                                  StockMovement[]            @relation("StockMovementUpdater")
   createdStockReservations                                               StockReservation[]         @relation("StockReservationCreator")
   updatedStockReservations                                               StockReservation[]         @relation("StockReservationUpdater")
+  createdStockTransfers                                                  WarehouseStockTransfer[]   @relation("WarehouseStockTransferCreator")
+  updatedStockTransfers                                                  WarehouseStockTransfer[]   @relation("WarehouseStockTransferUpdater")
   createdSupplierInvoices                                                SupplierInvoice[]          @relation("SupplierInvoiceCreator")
   updatedSupplierInvoices                                                SupplierInvoice[]          @relation("SupplierInvoiceUpdater")
   createdSuppliers                                                       Supplier[]                 @relation("SupplierCreator")
@@ -445,10 +445,11 @@ model Warehouse {
   salesOrders              SalesOrder[]
   salesReturns             SalesReturn[]
   adjustments              StockAdjustment[]
-  stockMovements           StockMovement[]
   reservations             StockReservation[]
   warehouseSellingPrices   WarehouseSellingPrice[]
   stocks                   WarehouseStock[]
+  transfersFrom            WarehouseStockTransfer[]   @relation("StockTransferFrom")
+  transfersTo              WarehouseStockTransfer[]   @relation("StockTransferTo")
   branch                   Branch                     @relation(fields: [branchId], references: [id])
   createdBy                User?                      @relation("WarehouseCreator", fields: [createdById], references: [id])
   manager                  Employee?                  @relation("ManagedWarehouses", fields: [managerId], references: [id])
@@ -673,10 +674,10 @@ model Product {
   salesRequestItems        SalesRequestItem[]
   salesReturnItems         SalesReturnItem[]
   adjustmentItems          StockAdjustmentItem[]
-  stockMovements           StockMovement[]
   reservations             StockReservation[]
   warehouseSellingPrices   WarehouseSellingPrice[]
   warehouseStocks          WarehouseStock[]
+  stockTransfers           WarehouseStockTransfer[]
 
   @@map("products")
 }
@@ -723,28 +724,6 @@ model WarehouseStock {
   @@index([warehouseId])
   @@index([productId])
   @@map("warehouse_stocks")
-}
-
-model StockMovement {
-  id           String            @id @default(uuid()) @db.Uuid
-  createdById  String?           @map("created_by_id") @db.Uuid
-  updatedById  String?           @map("updated_by_id") @db.Uuid
-  createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
-  isArchived   Boolean           @default(false) @map("is_archived")
-  archivedAt   DateTime?         @map("archived_at")
-  warehouseId  String            @map("warehouse_id") @db.Uuid
-  productId    String            @map("product_id") @db.Uuid
-  movementType StockMovementType @map("movement_type")
-  quantity     Decimal           @db.Decimal(15, 3)
-  unitCost     Decimal?          @map("unit_cost") @db.Decimal(15, 2)
-  notes        String?
-  createdBy    User?             @relation("StockMovementCreator", fields: [createdById], references: [id])
-  product      Product           @relation(fields: [productId], references: [id])
-  updatedBy    User?             @relation("StockMovementUpdater", fields: [updatedById], references: [id])
-  warehouse    Warehouse         @relation(fields: [warehouseId], references: [id])
-
-  @@map("stock_movements")
 }
 
 model StockReservation {
@@ -812,6 +791,32 @@ model StockAdjustmentItem {
   updatedBy      User?           @relation("StockAdjustmentItemUpdater", fields: [updatedById], references: [id])
 
   @@map("stock_adjustment_items")
+}
+
+model WarehouseStockTransfer {
+  id              String         @id @default(uuid()) @db.Uuid
+  createdById     String?        @map("created_by_id") @db.Uuid
+  updatedById     String?        @map("updated_by_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  isArchived      Boolean        @default(false) @map("is_archived")
+  archivedAt      DateTime?      @map("archived_at")
+  fromWarehouseId String         @map("from_warehouse_id") @db.Uuid
+  toWarehouseId   String         @map("to_warehouse_id") @db.Uuid
+  productId       String         @map("product_id") @db.Uuid
+  transferReason  TransferReason @map("transfer_reason")
+  quantity        Decimal        @db.Decimal(15, 3)
+  remark          String?
+  createdBy       User?          @relation("WarehouseStockTransferCreator", fields: [createdById], references: [id])
+  product         Product        @relation(fields: [productId], references: [id])
+  updatedBy       User?          @relation("WarehouseStockTransferUpdater", fields: [updatedById], references: [id])
+  fromWarehouse   Warehouse      @relation("StockTransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouse     Warehouse      @relation("StockTransferTo", fields: [toWarehouseId], references: [id])
+
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
+  @@index([productId])
+  @@map("warehouse_stock_transfers")
 }
 
 model PurchaseOrder {
@@ -1749,18 +1754,6 @@ enum UserAccountStatus {
   DEACTIVATED
 }
 
-enum StockMovementType {
-  PURCHASE_RECEIPT
-  SALES_RESERVATION
-  SALES_FULFILLMENT
-  SALES_RETURN
-  PURCHASE_RETURN
-  ADJUSTMENT_IN
-  ADJUSTMENT_OUT
-  TRANSFER_IN
-  TRANSFER_OUT
-}
-
 enum PaymentType {
   CUSTOMER_PAYMENT
   SUPPLIER_PAYMENT
@@ -1863,4 +1856,14 @@ enum InvoiceStatus {
   OVERDUE
   VOID
   CREDITED
+}
+
+enum TransferReason {
+  REBALANCING
+  RESTOCKING
+  DAMAGED_GOODS
+  STORE_REQUEST
+  SEASONAL_ALLOCATION
+  EXCESS_STOCK
+  OTHER
 }
