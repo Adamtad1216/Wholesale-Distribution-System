@@ -68,6 +68,12 @@ router.use(authenticate);
  *                     $ref: '#/components/schemas/Brand'
  *                 meta:
  *                   $ref: '#/components/schemas/PaginationMeta'
+ *       400:
+ *         description: Bad request / validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -94,7 +100,7 @@ router.get(
  *   post:
  *     tags: [03-product-catalog]
  *     summary: Create a brand
- *     description: Create a new product brand.
+ *     description: Create a new product brand (status is automatically ACTIVE).
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -102,11 +108,7 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Brand'
- *           example:
- *             name: Samsung
- *             description: Electronics brand
- *             status: ACTIVE
+ *             $ref: '#/components/schemas/CreateBrandInput'
  *     responses:
  *       201:
  *         description: Brand created successfully
@@ -182,6 +184,12 @@ router.post(
  *                   example: success
  *                 data:
  *                   $ref: '#/components/schemas/Brand'
+ *       400:
+ *         description: Invalid UUID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -229,11 +237,7 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Brand'
- *           example:
- *             name: Samsung Electronics
- *             description: Updated description
- *             status: ACTIVE
+ *             $ref: '#/components/schemas/UpdateBrandInput'
  *     responses:
  *       200:
  *         description: Brand updated successfully
@@ -305,6 +309,12 @@ router.patch(
  *     responses:
  *       204:
  *         description: Brand deleted successfully
+ *       400:
+ *         description: Cannot delete brand with associated products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -319,12 +329,6 @@ router.patch(
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Brand not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       400:
- *         description: Cannot delete brand with associated products
  *         content:
  *           application/json:
  *             schema:

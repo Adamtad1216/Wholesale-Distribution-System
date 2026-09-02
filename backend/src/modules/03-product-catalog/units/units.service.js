@@ -7,13 +7,14 @@ const sanitizeUnit = (unit) => {
   if (!unit) return unit;
   return {
     ...unit,
+    updatedAt: unit.updatedById ? unit.updatedAt : null,
     createdBy: unit.createdBy
       ? {
           id: unit.createdBy.id,
           person: unit.createdBy.person,
         }
       : null,
-    updatedBy: unit.updatedBy
+    updatedBy: unit.updatedById && unit.updatedBy
       ? {
           id: unit.updatedBy.id,
           person: unit.updatedBy.person,
@@ -24,18 +25,24 @@ const sanitizeUnit = (unit) => {
 
 export async function createUnit(data, createdById, req) {
   const existingAbbreviation = await prisma.unit.findFirst({
-    where: { abbreviation: data.abbreviation },
+    where: { abbreviation: data.abbreviation, isArchived: false },
   });
   if (existingAbbreviation) {
     throw new AppError('Unit abbreviation already exists', 409);
   }
+
+  // Clean up any previously archived unit with this abbreviation
+  await prisma.unit.deleteMany({
+    where: { abbreviation: data.abbreviation, isArchived: true },
+  });
 
   const unit = await prisma.unit.create({
     data: {
       name: data.name,
       abbreviation: data.abbreviation,
       createdById,
-      updatedById: createdById,
+      updatedById: null,
+      updatedAt: null,
     },
     include: {
       createdBy: {
@@ -168,7 +175,7 @@ export async function updateUnit(id, data, createdById, req) {
 
   if (data.name && data.name !== existingUnit.name) {
     const duplicateName = await prisma.unit.findFirst({
-      where: { name: data.name, id: { not: id } },
+      where: { name: data.name, id: { not: id }, isArchived: false },
     });
     if (duplicateName) {
       throw new AppError('Unit name already exists', 409);
@@ -177,7 +184,7 @@ export async function updateUnit(id, data, createdById, req) {
 
   if (data.abbreviation && data.abbreviation !== existingUnit.abbreviation) {
     const duplicateAbbreviation = await prisma.unit.findFirst({
-      where: { abbreviation: data.abbreviation, id: { not: id } },
+      where: { abbreviation: data.abbreviation, id: { not: id }, isArchived: false },
     });
     if (duplicateAbbreviation) {
       throw new AppError('Unit abbreviation already exists', 409);
@@ -190,6 +197,7 @@ export async function updateUnit(id, data, createdById, req) {
       name: data.name,
       abbreviation: data.abbreviation,
       updatedById: createdById,
+      updatedAt: new Date(),
     },
     include: {
       createdBy: {
@@ -253,6 +261,7 @@ export async function deleteUnit(id, createdById, req) {
       isArchived: true,
       archivedAt: new Date(),
       updatedById: createdById,
+      updatedAt: new Date(),
     },
   });
 

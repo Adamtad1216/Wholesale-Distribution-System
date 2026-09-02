@@ -63,6 +63,12 @@ router.use(authenticate);
  *                     $ref: '#/components/schemas/Unit'
  *                 meta:
  *                   $ref: '#/components/schemas/PaginationMeta'
+ *       400:
+ *         description: Bad request / validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -97,10 +103,7 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Unit'
- *           example:
- *             name: Piece
- *             abbreviation: PCS
+ *             $ref: '#/components/schemas/CreateUnitInput'
  *     responses:
  *       201:
  *         description: Unit created successfully
@@ -133,7 +136,7 @@ router.get(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
- *         description: Unit name or abbreviation already exists
+ *         description: Unit abbreviation already exists
  *         content:
  *           application/json:
  *             schema:
@@ -176,6 +179,12 @@ router.post(
  *                   example: success
  *                 data:
  *                   $ref: '#/components/schemas/Unit'
+ *       400:
+ *         description: Invalid UUID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -223,10 +232,7 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Unit'
- *           example:
- *             name: Piece
- *             abbreviation: PCS
+ *             $ref: '#/components/schemas/UpdateUnitInput'
  *     responses:
  *       200:
  *         description: Unit updated successfully
@@ -265,7 +271,7 @@ router.get(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
- *         description: Unit name or abbreviation already exists
+ *         description: Unit abbreviation already exists
  *         content:
  *           application/json:
  *             schema:
@@ -298,6 +304,12 @@ router.patch(
  *     responses:
  *       204:
  *         description: Unit deleted successfully
+ *       400:
+ *         description: Cannot delete unit with associated products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -312,12 +324,6 @@ router.patch(
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Unit not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       400:
- *         description: Cannot delete unit with associated products
  *         content:
  *           application/json:
  *             schema:

@@ -7,13 +7,14 @@ const sanitizeBrand = (brand) => {
   if (!brand) return brand;
   return {
     ...brand,
+    updatedAt: brand.updatedById ? brand.updatedAt : null,
     createdBy: brand.createdBy
       ? {
           id: brand.createdBy.id,
           person: brand.createdBy.person,
         }
       : null,
-    updatedBy: brand.updatedBy
+    updatedBy: brand.updatedById && brand.updatedBy
       ? {
           id: brand.updatedBy.id,
           person: brand.updatedBy.person,
@@ -24,11 +25,16 @@ const sanitizeBrand = (brand) => {
 
 export async function createBrand(data, createdById, req) {
   const existingName = await prisma.brand.findFirst({
-    where: { name: data.name },
+    where: { name: data.name, isArchived: false },
   });
   if (existingName) {
     throw new AppError('Brand name already exists', 409);
   }
+
+  // Clean up any previously archived brand with this name
+  await prisma.brand.deleteMany({
+    where: { name: data.name, isArchived: true },
+  });
 
   const brand = await prisma.brand.create({
     data: {
@@ -36,7 +42,8 @@ export async function createBrand(data, createdById, req) {
       description: data.description,
       status: data.status || 'ACTIVE',
       createdById,
-      updatedById: createdById,
+      updatedById: null,
+      updatedAt: null,
     },
     include: {
       createdBy: {
@@ -169,7 +176,7 @@ export async function updateBrand(id, data, createdById, req) {
 
   if (data.name && data.name !== existingBrand.name) {
     const duplicateName = await prisma.brand.findFirst({
-      where: { name: data.name, id: { not: id } },
+      where: { name: data.name, id: { not: id }, isArchived: false },
     });
     if (duplicateName) {
       throw new AppError('Brand name already exists', 409);
@@ -183,6 +190,7 @@ export async function updateBrand(id, data, createdById, req) {
       description: data.description,
       status: data.status,
       updatedById: createdById,
+      updatedAt: new Date(),
     },
     include: {
       createdBy: {
@@ -246,6 +254,7 @@ export async function deleteBrand(id, createdById, req) {
       isArchived: true,
       archivedAt: new Date(),
       updatedById: createdById,
+      updatedAt: new Date(),
     },
   });
 

@@ -108,12 +108,7 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Category'
- *           example:
- *             name: Electronics
- *             description: Electronic products
- *             status: ACTIVE
- *             parentId: null
+ *             $ref: '#/components/schemas/CreateCategoryInput'
  *     responses:
  *       201:
  *         description: Category created successfully
@@ -236,11 +231,7 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Category'
- *           example:
- *             name: Electronics & Appliances
- *             description: Updated description
- *             status: ACTIVE
+ *             $ref: '#/components/schemas/UpdateCategoryInput'
  *     responses:
  *       200:
  *         description: Category updated successfully

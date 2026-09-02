@@ -5,23 +5,22 @@ export const categoryQuerySchema = z.object({
   limit: z.coerce.number().int().positive().default(10),
   search: z.string().optional(),
   status: z.string().optional(),
-  parentId: z.string().uuid().optional(),
+  parentId: z.string().uuid('Invalid parent category ID format').optional(),
 });
 
 export const categoryIdSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().uuid('Invalid category ID format'),
 });
 
 export const createCategorySchema = z.object({
-  name: z.string().min(1).max(255),
+  name: z.string().min(1, 'Category name is required').max(255),
   description: z.string().max(1000).optional(),
-  parentId: z.string().uuid().nullish(),
-  status: z.string().default('ACTIVE'),
+  parentId: z.string().uuid('Invalid parent category ID format').nullish(),
 });
 
 export const updateCategorySchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().max(1000).optional(),
-  parentId: z.string().uuid().nullish(),
+  parentId: z.string().uuid('Invalid parent category ID format').nullish(),
   status: z.string().optional(),
 });

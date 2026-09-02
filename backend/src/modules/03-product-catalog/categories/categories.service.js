@@ -7,13 +7,14 @@ const sanitizeCategory = (category) => {
   if (!category) return category;
   return {
     ...category,
+    updatedAt: category.updatedById ? category.updatedAt : null,
     createdBy: category.createdBy
       ? {
           id: category.createdBy.id,
           person: category.createdBy.person,
         }
       : null,
-    updatedBy: category.updatedBy
+    updatedBy: category.updatedById && category.updatedBy
       ? {
           id: category.updatedBy.id,
           person: category.updatedBy.person,
@@ -42,7 +43,22 @@ export async function createCategory(data, createdById, req) {
     if (!parent) {
       throw new AppError('Parent category not found', 404);
     }
+    const parentProductCount = await prisma.product.count({
+      where: { categoryId: data.parentId, isArchived: false },
+    });
+    if (parentProductCount > 0) {
+      throw new AppError('Cannot add a subcategory to a category that has products assigned to it', 400);
+    }
   }
+
+  // Clean up any previously archived category with this name/parent
+  await prisma.category.deleteMany({
+    where: {
+      name: data.name,
+      parentId: data.parentId ?? null,
+      isArchived: true,
+    },
+  });
 
   const category = await prisma.category.create({
     data: {
@@ -51,7 +67,8 @@ export async function createCategory(data, createdById, req) {
       parentId: data.parentId,
       status: data.status || 'ACTIVE',
       createdById,
-      updatedById: createdById,
+      updatedById: null,
+      updatedAt: null,
     },
     include: {
       parent: {
@@ -105,20 +122,21 @@ export async function getCategories(filters) {
     prisma.category.findMany({
       where,
       include: {
-      parent: {
-        select: {
-          id: true,
-          name: true,
+        parent: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
-      },
-      children: {
-        select: {
-          id: true,
-          name: true,
-          status: true,
+        children: {
+          where: { isArchived: false },
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
         },
-      },
-      createdBy: {
+        createdBy: {
           include: {
             person: {
               select: {
@@ -167,6 +185,7 @@ export async function getCategoryById(id) {
         },
       },
       children: {
+        where: { isArchived: false },
         select: {
           id: true,
           name: true,
@@ -242,6 +261,7 @@ export async function updateCategory(id, data, createdById, req) {
       parentId: data.parentId,
       status: data.status,
       updatedById: createdById,
+      updatedAt: new Date(),
     },
     include: {
       parent: {
@@ -251,6 +271,7 @@ export async function updateCategory(id, data, createdById, req) {
         },
       },
       children: {
+        where: { isArchived: false },
         select: {
           id: true,
           name: true,
@@ -299,7 +320,7 @@ export async function deleteCategory(id, createdById, req) {
   const existingCategory = await prisma.category.findFirst({
     where: { id, isArchived: false },
     include: {
-      children: true,
+      children: { where: { isArchived: false } },
     },
   });
 
@@ -325,6 +346,7 @@ export async function deleteCategory(id, createdById, req) {
       isArchived: true,
       archivedAt: new Date(),
       updatedById: createdById,
+      updatedAt: new Date(),
     },
   });
 
@@ -347,13 +369,14 @@ function buildCategoryWhere(filters) {
     where.status = filters.status;
   }
 
-  if (filters.parentId) {
-    where.parentId = filters.parentId;
+  if (filters.parentId !== undefined) {
+    where.parentId = filters.parentId === null ? null : filters.parentId;
   }
 
   if (filters.search) {
     where.OR = [
       { name: { contains: filters.search, mode: 'insensitive' } },
+      { description: { contains: filters.search, mode: 'insensitive' } },
     ];
   }
 
