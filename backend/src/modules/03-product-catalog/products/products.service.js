@@ -28,6 +28,14 @@ const sanitizeProduct = (product) => {
   if (!product) return product;
   return {
     ...product,
+    warehouseStocks: product.warehouseStocks
+      ? product.warehouseStocks.map((s) => ({
+          ...s,
+          quantity: Number(s.quantity),
+          availableQuantity: Number(s.availableQuantity),
+          reservedQuantity: Number(s.reservedQuantity),
+        }))
+      : undefined,
     updatedAt: product.updatedById ? product.updatedAt : null,
     createdBy: product.createdBy
       ? {
@@ -208,9 +216,9 @@ export async function createProduct(data, createdById, req) {
   return getProductById(product.id);
 }
 
-export async function getProducts(filters) {
+export async function getProducts(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
-  const where = buildProductWhere(filters);
+  const where = await buildProductWhere(filters, user);
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -246,6 +254,23 @@ export async function getProducts(filters) {
         warehouseSellingPrices: {
           where: { isArchived: false },
           include: {
+            warehouse: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+          },
+        },
+        warehouseStocks: {
+          where: { isArchived: false },
+          select: {
+            id: true,
+            warehouseId: true,
+            quantity: true,
+            availableQuantity: true,
+            reservedQuantity: true,
             warehouse: {
               select: {
                 id: true,
@@ -327,6 +352,23 @@ export async function getProductById(id) {
       warehouseSellingPrices: {
         where: { isArchived: false },
         include: {
+          warehouse: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+        },
+      },
+      warehouseStocks: {
+        where: { isArchived: false },
+        select: {
+          id: true,
+          warehouseId: true,
+          quantity: true,
+          availableQuantity: true,
+          reservedQuantity: true,
           warehouse: {
             select: {
               id: true,
@@ -582,7 +624,7 @@ export async function deleteProduct(id, createdById, req) {
   // Restrict deletion if product is linked to existing transactions or inventory stock
   const [
     stockCount,
-    movementCount,
+    transferCount,
     reservationCount,
     adjustmentCount,
     poCount,
@@ -596,7 +638,7 @@ export async function deleteProduct(id, createdById, req) {
     prCount,
   ] = await Promise.all([
     prisma.warehouseStock.count({ where: { productId: id, quantity: { gt: 0 } } }),
-    prisma.stockMovement.count({ where: { productId: id, isArchived: false } }),
+    prisma.warehouseStockTransfer.count({ where: { productId: id, isArchived: false } }),
     prisma.stockReservation.count({ where: { productId: id, isArchived: false } }),
     prisma.stockAdjustmentItem.count({ where: { productId: id, isArchived: false } }),
     prisma.purchaseOrderItem.count({ where: { productId: id, isArchived: false } }),
@@ -612,7 +654,7 @@ export async function deleteProduct(id, createdById, req) {
 
   const totalLinked =
     stockCount +
-    movementCount +
+    transferCount +
     reservationCount +
     adjustmentCount +
     poCount +
@@ -755,7 +797,7 @@ export async function removeProductImage(productId, imageId, createdById, req) {
   return { message: 'Image removed successfully' };
 }
 
-function buildProductWhere(filters) {
+async function buildProductWhere(filters, user = null) {
   const where = { isArchived: filters.includeArchived ? undefined : false };
 
   if (filters.status) {
@@ -778,20 +820,61 @@ function buildProductWhere(filters) {
     where.id = filters.productId;
   }
 
-  if (filters.warehouseId) {
-    where.warehouseSellingPrices = {
-      some: {
-        warehouseId: filters.warehouseId,
-        isArchived: false,
-      },
-    };
+  let targetWarehouseId = filters.warehouseId;
+
+  // Auto-scope if user is assigned/managing a warehouse and not an admin
+  if (!targetWarehouseId && user) {
+    const isAdmin = user.userRoles?.some((ur) => ur.role?.name === 'ADMIN');
+    if (!isAdmin && user.personId) {
+      const managedWarehouse = await prisma.warehouse.findFirst({
+        where: {
+          manager: { personId: user.personId, isArchived: false },
+          isArchived: false,
+        },
+        select: { id: true },
+      });
+      if (managedWarehouse) {
+        targetWarehouseId = managedWarehouse.id;
+      }
+    }
+  }
+
+  const andClauses = [];
+
+  if (targetWarehouseId) {
+    andClauses.push({
+      OR: [
+        {
+          warehouseStocks: {
+            some: {
+              warehouseId: targetWarehouseId,
+              isArchived: false,
+            },
+          },
+        },
+        {
+          warehouseSellingPrices: {
+            some: {
+              warehouseId: targetWarehouseId,
+              isArchived: false,
+            },
+          },
+        },
+      ],
+    });
   }
 
   if (filters.search) {
-    where.OR = [
-      { sku: { contains: filters.search, mode: 'insensitive' } },
-      { name: { contains: filters.search, mode: 'insensitive' } },
-    ];
+    andClauses.push({
+      OR: [
+        { sku: { contains: filters.search, mode: 'insensitive' } },
+        { name: { contains: filters.search, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  if (andClauses.length > 0) {
+    where.AND = andClauses;
   }
 
   return where;

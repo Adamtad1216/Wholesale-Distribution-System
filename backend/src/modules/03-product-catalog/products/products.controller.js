@@ -14,7 +14,7 @@ import {
 export async function listProducts(req, res, next) {
   try {
     const filters = { ...req.query };
-    const { products, meta } = await getProducts(filters);
+    const { products, meta } = await getProducts(filters, req.user);
     sendPaginatedSuccess(res, products, meta);
   } catch (err) {
     next(err);

@@ -28,7 +28,7 @@ router.use(authenticate);
  *   get:
  *     tags: [03-product-catalog]
  *     summary: List products
- *     description: Retrieve a paginated list of products with unified dynamic filters including categoryId, brandId, unitId, and warehouseId (prices).
+ *     description: Retrieve a paginated list of products. Supports filtering by warehouseId (returns products linked via warehouse stock or selling price) and auto-scopes to the assigned warehouse for branch stock managers.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -83,7 +83,7 @@ router.use(authenticate);
  *         schema:
  *           type: string
  *           format: uuid
- *         description: Filter by warehouse ID (returns products priced in this warehouse)
+ *         description: Filter by warehouse ID (returns products linked via warehouse stock or selling price)
  *     responses:
  *       200:
  *         description: List of products
