@@ -7,7 +7,7 @@ export default function PersonalInfoTab({ personData, setPersonData, onSubmit, s
 
   const inputCls =
     'w-full px-4 py-2.5 rounded-lg border font-medium text-sm outline-none ' +
-    'border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white';
+    'border-border bg-card text-foreground   ';
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -23,15 +23,15 @@ export default function PersonalInfoTab({ personData, setPersonData, onSubmit, s
   };
 
   return (
-    <Card className="space-y-6 max-w-3xl border border-slate-200 dark:border-slate-800">
-      <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+    <Card className="space-y-6 max-w-3xl border border-border ">
+      <div className="border-b border-border  pb-4">
         <h2 className="text-lg font-semibold">Personal Information</h2>
         <p className="text-sm font-medium text-muted">Update your profile details and personal information</p>
       </div>
 
       {/* Profile Picture Upload Block */}
       <div className="profile-card-bg flex items-center gap-4 p-4 rounded-xl border shadow-sm">
-        <div className="w-16 h-16 rounded-full bg-blue-600 text-white font-bold text-xl flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-emerald-500">
+        <div className="w-16 h-16 rounded-full bg-blue-600  font-bold text-xl flex items-center justify-center overflow-hidden shrink-0 shadow-md ring-2 ring-emerald-500">
           {personData.avatarUrl ? (
             <img src={personData.avatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
           ) : (
@@ -39,12 +39,12 @@ export default function PersonalInfoTab({ personData, setPersonData, onSubmit, s
           )}
         </div>
         <div className="space-y-1">
-          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-700 dark:text-white">Profile Picture</label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-foreground ">Profile Picture</label>
           <div className="flex items-center gap-2 pt-0.5">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer shadow-sm"
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700  transition-colors cursor-pointer shadow-sm"
             >
               Upload New Photo
             </button>
@@ -55,7 +55,7 @@ export default function PersonalInfoTab({ personData, setPersonData, onSubmit, s
                   setPersonData({ ...personData, avatarUrl: '' });
                   if (onAvatarUpload) onAvatarUpload('');
                 }}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg text-rose-600 dark:text-white bg-rose-50 dark:bg-rose-600/80 border border-rose-200 dark:border-rose-500 hover:bg-rose-100 dark:hover:bg-rose-600 transition-all cursor-pointer shadow-xs"
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg text-rose-600  bg-rose-50  border border-rose-200  hover:bg-rose-100  transition-all cursor-pointer shadow-xs"
               >
                 Remove
               </button>

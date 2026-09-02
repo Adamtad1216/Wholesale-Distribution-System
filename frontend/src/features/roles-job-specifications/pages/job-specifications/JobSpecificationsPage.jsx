@@ -12,7 +12,7 @@ export default function JobSpecificationsPage({
 }) {
   if (loading) {
     return (
-      <Card className="p-12 text-center text-slate-400 text-sm rounded-xl">
+      <Card className="p-12 text-center text-muted-foreground text-sm rounded-xl">
         <div className="flex flex-col items-center justify-center space-y-3">
           <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
           <span>Loading job specifications...</span>
@@ -23,12 +23,12 @@ export default function JobSpecificationsPage({
 
   if (jobSpecs.length === 0) {
     return (
-      <Card className="p-12 text-center text-slate-400 text-sm rounded-xl space-y-3">
-        <svg className="w-12 h-12 mx-auto text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <Card className="p-12 text-center text-muted-foreground text-sm rounded-xl space-y-3">
+        <svg className="w-12 h-12 mx-auto text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
-        <p className="text-slate-300 font-semibold text-base">No Job Specifications Found</p>
-        <p className="text-xs text-slate-500">Click "Create Job Specification" to add job titles for employees.</p>
+        <p className="text-foreground font-semibold text-base">No Job Specifications Found</p>
+        <p className="text-xs text-muted-foreground">Click "Create Job Specification" to add job titles for employees.</p>
       </Card>
     );
   }
@@ -39,7 +39,7 @@ export default function JobSpecificationsPage({
         <Card
           key={spec.id}
           hoverEffect
-          className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/60 backdrop-blur-xl p-5"
+          className="flex flex-col justify-between rounded-xl border border-border bg-card900 backdrop-blur-xl p-5"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -47,20 +47,20 @@ export default function JobSpecificationsPage({
                 {spec.department || 'GENERAL'}
               </span>
               {spec.code && (
-                <span className="text-xs text-slate-400 font-mono font-medium">
+                <span className="text-xs text-muted-foreground font-mono font-medium">
                   {spec.code}
                 </span>
               )}
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">{spec.title}</h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <h3 className="text-lg font-bold ">{spec.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 {spec.description || 'No description specified for this job specification.'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-5 mt-4 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-5 mt-4 border-t border-border">
             <Button
               onClick={() => handleOpenJobSpecForm(spec)}
               variant="secondary"

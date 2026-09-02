@@ -26,7 +26,7 @@ export default function CustomerListTable({
 }) {
   if (loading) {
     return (
-      <Card className="p-12 text-center text-slate-400 text-sm rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-xl">
+      <Card className="p-12 text-center text-muted-foreground text-sm rounded-2xl border border-border bg-card900 backdrop-blur-xl">
         <div className="flex flex-col items-center justify-center space-y-3">
           <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
           <span>Loading customers list...</span>
@@ -37,12 +37,12 @@ export default function CustomerListTable({
 
   if (customers.length === 0) {
     return (
-      <Card className="p-12 text-center text-slate-400 text-sm rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-xl space-y-3">
-        <svg className="w-12 h-12 mx-auto text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+      <Card className="p-12 text-center text-muted-foreground text-sm rounded-2xl border border-border bg-card900 backdrop-blur-xl space-y-3">
+        <svg className="w-12 h-12 mx-auto text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
-        <p className="text-slate-300 font-semibold text-base">No customers found</p>
-        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+        <p className="text-foreground font-semibold text-base">No customers found</p>
+        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
           {search || customerTypeFilter || statusFilter
             ? 'Try clearing or modifying your filter criteria.'
             : 'Click "Add Customer" to create your first B2B client profile.'}
@@ -53,7 +53,7 @@ export default function CustomerListTable({
 
   return (
     <div className="space-y-4">
-      <Table containerClassName="rounded-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-xl">
+      <Table containerClassName="rounded-2xl border border-border bg-card900 backdrop-blur-xl">
         <TableHeader>
           <TableRow>
             <TableHead>Customer / Code</TableHead>
@@ -95,7 +95,7 @@ export default function CustomerListTable({
                     <div>
                       <button
                         onClick={() => handleOpenDetail(c)}
-                        className="font-semibold text-slate-100 hover:text-violet-400 text-left transition"
+                        className="font-semibold text-foreground hover:text-violet-400 text-left transition"
                       >
                         {displayName}
                       </button>
@@ -104,7 +104,7 @@ export default function CustomerListTable({
                           {c.customerCode || 'NO-CODE'}
                         </span>
                         {isOrg && c.organization?.taxNumber && (
-                          <span className="text-[11px] text-slate-400">TIN: {c.organization.taxNumber}</span>
+                          <span className="text-[11px] text-muted-foreground">TIN: {c.organization.taxNumber}</span>
                         )}
                       </div>
                     </div>
@@ -122,10 +122,10 @@ export default function CustomerListTable({
 
                 {/* Contact Info */}
                 <TableCell>
-                  <div className="space-y-0.5 text-xs text-slate-300">
+                  <div className="space-y-0.5 text-xs text-foreground">
                     {email !== '-' && (
                       <div className="flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-3.5 h-3.5 text-muted-foreground shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                         <span>{email}</span>
@@ -133,13 +133,13 @@ export default function CustomerListTable({
                     )}
                     {phone !== '-' && (
                       <div className="flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-3.5 h-3.5 text-muted-foreground shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                         </svg>
                         <span>{phone}</span>
                       </div>
                     )}
-                    {email === '-' && phone === '-' && <span className="text-slate-500">-</span>}
+                    {email === '-' && phone === '-' && <span className="text-muted-foreground">-</span>}
                   </div>
                 </TableCell>
 
@@ -180,7 +180,7 @@ export default function CustomerListTable({
                     <button
                       onClick={() => handleOpenDetail(c)}
                       title="View Full Details"
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-slate-200 hover:text-white font-semibold text-xs inline-flex items-center gap-1.5 transition shadow-sm"
+                      className="px-2.5 py-1.5 bg-muted800 hover:bg-muted700 border border-border rounded-xl text-foreground hover: font-semibold text-xs inline-flex items-center gap-1.5 transition shadow-sm"
                     >
                       <svg className="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -226,17 +226,17 @@ export default function CustomerListTable({
 
       {/* Pagination Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-        <div className="text-xs text-slate-400">
-          Showing <span className="font-semibold text-slate-200">{((page - 1) * limit) + 1}</span> to{' '}
-          <span className="font-semibold text-slate-200">{Math.min(page * limit, meta.total)}</span> of{' '}
-          <span className="font-semibold text-slate-200">{meta.total}</span> customers
+        <div className="text-xs text-muted-foreground">
+          Showing <span className="font-semibold text-foreground">{((page - 1) * limit) + 1}</span> to{' '}
+          <span className="font-semibold text-foreground">{Math.min(page * limit, meta.total)}</span> of{' '}
+          <span className="font-semibold text-foreground">{meta.total}</span> customers
         </div>
 
         <div className="flex items-center gap-2">
           <select
             value={limit}
             onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-            className="px-2.5 py-1.5 bg-slate-800/60 border border-slate-700/60 rounded-xl text-slate-300 text-xs focus:outline-none"
+            className="px-2.5 py-1.5 bg-muted800 border border-border rounded-xl text-foreground text-xs focus:outline-none"
           >
             <option value={10}>10 / page</option>
             <option value={25}>25 / page</option>
@@ -251,7 +251,7 @@ export default function CustomerListTable({
           >
             Previous
           </Button>
-          <span className="text-xs font-semibold text-slate-300 px-2">
+          <span className="text-xs font-semibold text-foreground px-2">
             Page {page} of {meta.totalPages || 1}
           </span>
           <Button

@@ -26,13 +26,13 @@ function AccessDenied({ permission }) {
         Access Denied
       </span>
 
-      <h2 className="text-2xl font-extrabold text-white mb-2">
+      <h2 className="text-2xl font-extrabold  mb-2">
         You don't have permission
       </h2>
-      <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
+      <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
         Your account does not have the{' '}
         {permission ? (
-          <code className="px-1.5 py-0.5 bg-slate-800 text-violet-400 rounded text-xs font-mono">
+          <code className="px-1.5 py-0.5 bg-muted800 text-violet-400 rounded text-xs font-mono">
             {Array.isArray(permission) ? permission.join(', ') : permission}
           </code>
         ) : (
@@ -43,7 +43,7 @@ function AccessDenied({ permission }) {
 
       <button
         onClick={() => window.history.back()}
-        className="mt-8 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold text-slate-200 transition"
+        className="mt-8 px-5 py-2.5 rounded-xl bg-muted800 hover:bg-muted700 border border-border text-sm font-semibold text-foreground transition"
       >
         ← Go Back
       </button>

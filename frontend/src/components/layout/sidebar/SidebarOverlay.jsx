@@ -6,7 +6,7 @@ export default function SidebarOverlay({ isOpen, onClose }) {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm lg:hidden transition-opacity duration-300"
+      className="fixed inset-0 z-40 bg-card950 backdrop-blur-sm lg:hidden transition-opacity duration-300"
     />
   );
 }

@@ -24,7 +24,7 @@ export default function EmployeeDetailView({
       <div className="flex items-center justify-between">
         <button
           onClick={handleBackToList}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-100 transition"
+          className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -66,7 +66,7 @@ export default function EmployeeDetailView({
       </div>
 
       {/* Staff Hero Banner Card */}
-      <Card className="p-6 border border-slate-800 bg-slate-900/60 backdrop-blur-xl rounded-2xl relative overflow-hidden">
+      <Card className="p-6 border border-border bg-card900 backdrop-blur-xl rounded-2xl relative overflow-hidden">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
             <div className="w-16 h-16 rounded-2xl bg-violet-500/20 text-violet-400 border border-violet-500/30 flex items-center justify-center font-bold text-2xl shrink-0">
@@ -77,13 +77,13 @@ export default function EmployeeDetailView({
 
             <div className="space-y-1">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-slate-100">{fullName}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{fullName}</h1>
                 <span className="px-2.5 py-0.5 rounded text-xs font-mono font-semibold badge-slate">
                   {selectedEmployee.employeeCode || `EMP-${selectedEmployee.id?.substring(0, 6)}`}
                 </span>
               </div>
 
-              <div className="flex items-center gap-3 text-xs text-slate-400">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="text-violet-400 font-semibold">{jobTitle}</span>
                 <span>•</span>
                 <span>Registered: {selectedEmployee.createdAt ? new Date(selectedEmployee.createdAt).toLocaleDateString() : 'N/A'}</span>
@@ -111,8 +111,8 @@ export default function EmployeeDetailView({
       {/* Profile Info Details Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Contact Information */}
-        <Card className="p-6 border border-slate-800 bg-slate-900/60 backdrop-blur-xl rounded-2xl space-y-4">
-          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+        <Card className="p-6 border border-border bg-card900 backdrop-blur-xl rounded-2xl space-y-4">
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider border-b border-border pb-3 flex items-center gap-2">
             <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
@@ -120,21 +120,21 @@ export default function EmployeeDetailView({
           </h3>
 
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between py-2 border-b border-slate-800/60">
-              <span className="text-slate-400">Email Address</span>
-              <span className="font-semibold text-slate-200">{email}</span>
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">Email Address</span>
+              <span className="font-semibold text-foreground">{email}</span>
             </div>
 
-            <div className="flex justify-between py-2 border-b border-slate-800/60">
-              <span className="text-slate-400">Phone Number</span>
-              <span className="font-semibold text-slate-200">{phone}</span>
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">Phone Number</span>
+              <span className="font-semibold text-foreground">{phone}</span>
             </div>
           </div>
         </Card>
 
         {/* Position & System Metadata */}
-        <Card className="p-6 border border-slate-800 bg-slate-900/60 backdrop-blur-xl rounded-2xl space-y-4">
-          <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+        <Card className="p-6 border border-border bg-card900 backdrop-blur-xl rounded-2xl space-y-4">
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider border-b border-border pb-3 flex items-center gap-2">
             <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
@@ -142,21 +142,21 @@ export default function EmployeeDetailView({
           </h3>
 
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between py-2 border-b border-slate-800/60">
-              <span className="text-slate-400">Job Title / Specification</span>
-              <span className="font-semibold text-slate-200">{jobTitle}</span>
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">Job Title / Specification</span>
+              <span className="font-semibold text-foreground">{jobTitle}</span>
             </div>
 
-            <div className="flex justify-between py-2 border-b border-slate-800/60">
-              <span className="text-slate-400">Employee Code</span>
-              <span className="font-mono font-semibold text-slate-200">
+            <div className="flex justify-between py-2 border-b border-border">
+              <span className="text-muted-foreground">Employee Code</span>
+              <span className="font-mono font-semibold text-foreground">
                 {selectedEmployee.employeeCode || `EMP-${selectedEmployee.id?.substring(0, 6)}`}
               </span>
             </div>
 
             <div className="flex justify-between py-2">
-              <span className="text-slate-400">Last Profile Update</span>
-              <span className="text-slate-300">
+              <span className="text-muted-foreground">Last Profile Update</span>
+              <span className="text-foreground">
                 {selectedEmployee.updatedAt ? new Date(selectedEmployee.updatedAt).toLocaleString() : 'N/A'}
               </span>
             </div>

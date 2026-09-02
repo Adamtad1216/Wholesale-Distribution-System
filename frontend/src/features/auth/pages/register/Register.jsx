@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { authApi } from "../../authApi";
+import ThemeToggle from "../../../../components/layout/header/ThemeToggle";
 
 const strongPasswordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -132,28 +133,33 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 font-sans relative overflow-hidden py-12 px-4">
+    <div className="bg-background min-h-screen flex items-center justify-center text-foreground font-sans relative overflow-hidden py-12 px-4">
+      {/* Theme Toggle Button */}
+      <div className="absolute top-5 right-5 z-20">
+        <ThemeToggle />
+      </div>
+
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
-      <div className="w-full max-w-xl p-8 rounded-2xl backdrop-blur-xl bg-slate-900/40 border border-slate-800/80 shadow-2xl relative z-10">
+      <div className="w-full max-w-xl p-8 rounded-2xl backdrop-blur-xl bg-card border border-border shadow-2xl relative z-10">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Create Account
           </h1>
-          <p className="text-sm text-slate-450 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Join the Wholesale Distribution Network
           </p>
         </div>
 
-        <div className="flex bg-slate-900/60 p-1.5 rounded-xl border border-slate-800/50 mb-6">
+        <div className="flex bg-card p-1.5 rounded-xl border border-border mb-6">
           <button
             type="button"
             onClick={() => handleTypeChange("PERSON")}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition duration-200 ${
               customerType === "PERSON"
-                ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-gradient-to-r from-violet-600 to-indigo-600  shadow-md"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Individual Customer
@@ -163,8 +169,8 @@ export default function Register() {
             onClick={() => handleTypeChange("ORGANIZATION")}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition duration-200 ${
               customerType === "ORGANIZATION"
-                ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-gradient-to-r from-violet-600 to-indigo-600  shadow-md"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Business Organization
@@ -179,13 +185,13 @@ export default function Register() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     First Name
                   </label>
                   <input
                     type="text"
                     {...register("firstName")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.firstName && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -194,23 +200,23 @@ export default function Register() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Middle Name
                   </label>
                   <input
                     type="text"
                     {...register("middleName")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Last Name
                   </label>
                   <input
                     type="text"
                     {...register("lastName")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.lastName && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -222,23 +228,23 @@ export default function Register() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Phone Number
                   </label>
                   <input
                     type="text"
                     {...register("phone")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Email Address
                   </label>
                   <input
                     type="email"
                     {...register("email")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.email && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -249,13 +255,13 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">
+                <label className="block text-xs text-muted-foreground mb-1">
                   Address
                 </label>
                 <input
                   type="text"
                   {...register("address")}
-                  className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                  className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                 />
               </div>
             </div>
@@ -266,13 +272,13 @@ export default function Register() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Organization / Company Name
                   </label>
                   <input
                     type="text"
                     {...register("name")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.name && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -281,46 +287,46 @@ export default function Register() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Registration Number
                   </label>
                   <input
                     type="text"
                     {...register("registrationNumber")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Tax Number (TIN)
                   </label>
                   <input
                     type="text"
                     {...register("taxNumber")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Company Phone
                   </label>
                   <input
                     type="text"
                     {...register("phone")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Company Email
                   </label>
                   <input
                     type="email"
                     {...register("email")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.email && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -331,30 +337,30 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-xs text-slate-400 mb-1">
+                <label className="block text-xs text-muted-foreground mb-1">
                   Company Address
                 </label>
                 <input
                   type="text"
                   {...register("address")}
-                  className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                  className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                 />
               </div>
 
-              <hr className="border-slate-800/40 my-3" />
+              <hr className="border-border my-3" />
 
               <h3 className="text-sm font-semibold text-violet-400">
                 Primary Contact Person
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     First Name
                   </label>
                   <input
                     type="text"
                     {...register("contactFirstName")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.contactFirstName && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -363,23 +369,23 @@ export default function Register() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Middle Name
                   </label>
                   <input
                     type="text"
                     {...register("contactMiddleName")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Last Name
                   </label>
                   <input
                     type="text"
                     {...register("contactLastName")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.contactLastName && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -391,13 +397,13 @@ export default function Register() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Contact Email
                   </label>
                   <input
                     type="email"
                     {...register("contactEmail")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                   {errors.contactEmail && (
                     <p className="text-xs text-rose-500 mt-1">
@@ -406,57 +412,57 @@ export default function Register() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Contact Phone
                   </label>
                   <input
                     type="text"
                     {...register("contactPhone")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Position / Title
                   </label>
                   <input
                     type="text"
                     {...register("contactPosition")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Contact Address
                   </label>
                   <input
                     type="text"
                     {...register("contactAddress")}
-                    className="w-full px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 text-sm outline-none"
+                    className="w-full px-4 py-2 rounded-xl bg-card border border-border focus:border-violet-500/50 text-sm outline-none"
                   />
                 </div>
               </div>
             </div>
           )}
 
-          <hr className="border-slate-800/40 my-4" />
+          <hr className="border-border my-4" />
           <h3 className="text-sm font-semibold text-violet-400">
             Account Credentials
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Username
               </label>
               <input
                 type="text"
                 {...register("username")}
                 placeholder="Choose username"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 text-sm outline-none transition"
+                className="w-full px-4 py-2.5 rounded-xl bg-card border border-border focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 text-sm outline-none transition"
               />
               {errors.username && (
                 <p className="text-xs text-rose-500 mt-1">
@@ -465,14 +471,14 @@ export default function Register() {
               )}
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 Password
               </label>
               <input
                 type="password"
                 {...register("password")}
                 placeholder="Choose password"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 text-sm outline-none transition"
+                className="w-full px-4 py-2.5 rounded-xl bg-card border border-border focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 text-sm outline-none transition"
               />
               {errors.password && (
                 <p className="text-xs text-rose-500 mt-1">
@@ -490,7 +496,7 @@ export default function Register() {
             {mutation.isPending ? (
               <>
                 <svg
-                  className="animate-spin h-5 w-5 text-white"
+                  className="animate-spin h-5 w-5 "
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -516,7 +522,7 @@ export default function Register() {
           </button>
         </form>
 
-        <div className="mt-8 text-center text-xs text-slate-400 border-t border-slate-900 pt-6">
+        <div className="mt-8 text-center text-xs text-muted-foreground border-t border-border pt-6">
           Already have an account?{" "}
           <Link
             to="/login"

@@ -69,7 +69,7 @@ export default function UserDropdown() {
             className="w-8 h-8 rounded-lg object-cover border border-violet-500/30 shadow-md"
           />
         ) : (
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-violet-500 to-indigo-500 flex items-center justify-center  font-bold text-sm shadow-md">
             {initials}
           </div>
         )}
@@ -99,7 +99,7 @@ export default function UserDropdown() {
                 className="w-9 h-9 rounded-lg object-cover border border-violet-500/30"
               />
             ) : (
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-violet-500 to-indigo-500 flex items-center justify-center  font-bold text-sm">
                 {initials}
               </div>
             )}

@@ -274,8 +274,8 @@ export default function RolesJobSpecsMainPage() {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Roles & Job Specifications</h1>
-          <p className="text-sm text-slate-400">Configure system security roles and organizational job specifications</p>
+          <h1 className="text-2xl font-bold  tracking-tight">Roles & Job Specifications</h1>
+          <p className="text-sm text-muted-foreground">Configure system security roles and organizational job specifications</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -310,13 +310,13 @@ export default function RolesJobSpecsMainPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-800 space-x-6">
+      <div className="flex border-b border-border space-x-6">
         <button
           onClick={() => setActiveTab('ROLES')}
           className={`pb-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
             activeTab === 'ROLES'
               ? 'border-violet-500 text-violet-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -330,7 +330,7 @@ export default function RolesJobSpecsMainPage() {
           className={`pb-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
             activeTab === 'JOB_SPECS'
               ? 'border-violet-500 text-violet-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

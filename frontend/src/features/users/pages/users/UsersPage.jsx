@@ -92,8 +92,8 @@ export default function UsersPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">User Management</h1>
-          <p className="text-sm text-slate-400">Manage system users, credentials, and account statuses</p>
+          <h1 className="text-2xl font-bold  tracking-tight">User Management</h1>
+          <p className="text-sm text-muted-foreground">Manage system users, credentials, and account statuses</p>
         </div>
         {canCreate && (
           <Button
@@ -114,7 +114,7 @@ export default function UsersPage() {
       {/* Filter / Search Bar */}
       <Card noPadding className="p-4 flex items-center gap-4 rounded-lg">
         <div className="relative flex-1">
-          <svg className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -122,16 +122,16 @@ export default function UsersPage() {
             placeholder="Search users by name, username, or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-violet-500 placeholder-slate-500"
+            className="w-full pl-10 pr-4 py-2 bg-muted800 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-violet-500 placeholder:text-muted-foreground"
           />
         </div>
       </Card>
 
       {/* Users Table */}
       {loading ? (
-        <Card className="p-12 text-center text-slate-400 text-sm rounded-lg">Loading users...</Card>
+        <Card className="p-12 text-center text-muted-foreground text-sm rounded-lg">Loading users...</Card>
       ) : users.length === 0 ? (
-        <Card className="p-12 text-center text-slate-400 text-sm rounded-lg">No users found.</Card>
+        <Card className="p-12 text-center text-muted-foreground text-sm rounded-lg">No users found.</Card>
       ) : (
         <Table containerClassName="rounded-lg">
           <TableHeader>
@@ -146,13 +146,13 @@ export default function UsersPage() {
           <TableBody>
             {users.map((u) => (
               <TableRow key={u.id}>
-                <TableCell className="font-medium text-white flex items-center gap-3">
+                <TableCell className="font-medium  flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-violet-600/20 text-violet-400 flex items-center justify-center font-bold text-xs">
                     {u.username?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   {u.username}
                 </TableCell>
-                <TableCell className="text-slate-400">{u.email}</TableCell>
+                <TableCell className="text-muted-foreground">{u.email}</TableCell>
                 <TableCell>
                   <span className="px-2.5 py-1 rounded-full text-xs font-semibold badge-indigo">
                     {u.role?.name || u.roleName || 'User'}
@@ -195,34 +195,34 @@ export default function UsersPage() {
 
       {/* User Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/70 backdrop-blur-sm p-4">
+          <div className="bg-card900 border border-border rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold ">
               {editingUser ? 'Edit User' : 'Create New User'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Username</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Username</label>
                 <input
                   type="text"
                   required
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 bg-muted800 border border-border rounded-xl  text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Email</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Email</label>
                 <input
                   type="email"
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 bg-muted800 border border-border rounded-xl  text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   {editingUser ? 'Password (leave blank to keep current)' : 'Password'}
                 </label>
                 <input
@@ -230,11 +230,11 @@ export default function UsersPage() {
                   required={!editingUser}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 bg-muted800 border border-border rounded-xl  text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Status</label>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Status</label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -245,7 +245,7 @@ export default function UsersPage() {
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
                 <Button
                   type="button"
                   variant="secondary"

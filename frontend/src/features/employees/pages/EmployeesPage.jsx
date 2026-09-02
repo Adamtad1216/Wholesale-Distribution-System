@@ -361,8 +361,8 @@ export default function EmployeesPage() {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Employee Directory</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Employee Directory</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage workforce profiles, job specifications, and employment statuses.
           </p>
         </div>
