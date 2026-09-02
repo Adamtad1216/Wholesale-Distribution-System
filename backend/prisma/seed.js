@@ -12,11 +12,6 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@example.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@123";
 const ADMIN_FULL_NAME = process.env.ADMIN_FULL_NAME || "System Administrator";
 
-const MATI_USERNAME = process.env.MATI_USERNAME || "mati";
-const MATI_EMAIL = process.env.MATI_EMAIL || "mati@example.com";
-const MATI_PASSWORD = process.env.MATI_PASSWORD || "Admin@123";
-const MATI_FULL_NAME = process.env.MATI_FULL_NAME || "Mati Super Admin";
-
 const ALL_PERMISSIONS = [
   // Wildcard Permission — Unrestricted System Access
   {
@@ -350,21 +345,30 @@ async function ensureAdminPermissions(userId) {
 
   const allPermissions = await prisma.permission.findMany();
 
-  for (const role of [superAdminRole, adminRole]) {
-    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
-    for (const perm of allPermissions) {
-      await prisma.rolePermission.create({
-        data: { roleId: role.id, permissionId: perm.id },
-      });
-    }
+  const wildcardPerm = allPermissions.find((p) => p.name === "*");
+
+  await prisma.rolePermission.deleteMany({
+    where: { roleId: superAdminRole.id },
+  });
+  if (wildcardPerm) {
+    await prisma.rolePermission.create({
+      data: { roleId: superAdminRole.id, permissionId: wildcardPerm.id },
+    });
+  }
+
+  await prisma.rolePermission.deleteMany({ where: { roleId: adminRole.id } });
+  for (const perm of allPermissions) {
+    await prisma.rolePermission.create({
+      data: { roleId: adminRole.id, permissionId: perm.id },
+    });
   }
 
   const existing = await prisma.userRole.findFirst({
-    where: { userId, roleId: adminRole.id },
+    where: { userId, roleId: superAdminRole.id },
   });
   if (!existing) {
     await prisma.userRole.create({
-      data: { userId, roleId: adminRole.id },
+      data: { userId, roleId: superAdminRole.id },
     });
   }
 }
@@ -373,6 +377,17 @@ async function main() {
   console.log("Starting seed...");
 
   await ensureDefaultPriceTiers();
+
+  // Remove any legacy mati test user
+  const existingMati = await prisma.user.findFirst({
+    where: {
+      OR: [{ username: "mati" }, { person: { email: "mati@example.com" } }],
+    },
+  });
+  if (existingMati) {
+    await prisma.user.delete({ where: { id: existingMati.id } });
+    console.log("Removed legacy mati user.");
+  }
 
   const existingAdmin = await prisma.user.findFirst({
     where: {
@@ -388,17 +403,6 @@ async function main() {
     await ensureAdminPermissions(existingAdmin.id);
     console.log("Seed completed (idempotent).");
     return;
-  }
-
-  const existingMati = await prisma.user.findFirst({
-    where: {
-      OR: [{ username: MATI_USERNAME }, { person: { email: MATI_EMAIL } }],
-    },
-    include: { person: true },
-  });
-
-  if (existingMati) {
-    await ensureAdminPermissions(existingMati.id);
   }
 
   const { adminRole, superAdminRole, createdPermissions } =
@@ -435,15 +439,17 @@ async function main() {
         createdPermissions.push(p);
       }
 
+      const wildcardPerm = createdPermissions.find((p) => p.name === "*");
+
       await tx.rolePermission.deleteMany({
         where: { roleId: superAdminRole.id },
       });
 
-      for (const perm of createdPermissions) {
+      if (wildcardPerm) {
         await tx.rolePermission.create({
           data: {
             roleId: superAdminRole.id,
-            permissionId: perm.id,
+            permissionId: wildcardPerm.id,
           },
         });
       }
@@ -477,26 +483,17 @@ async function main() {
     `Seeded ${createdPermissions.length} permissions for SUPER_ADMIN & ADMIN roles.`,
   );
 
-  // 2. Ensure Super Admin User 'mati'
-  await createOrUpdateSuperUser({
-    username: MATI_USERNAME,
-    email: MATI_EMAIL,
-    password: MATI_PASSWORD,
-    fullName: MATI_FULL_NAME,
-    roleId: superAdminRole.id,
-  });
-
-  // 3. Ensure Default Admin User 'admin'
+  // 1. Ensure Default Admin User (Super Admin with all permissions)
   await createOrUpdateSuperUser({
     username: ADMIN_USERNAME,
     email: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
     fullName: ADMIN_FULL_NAME,
-    roleId: adminRole.id,
+    roleId: superAdminRole.id,
   });
 
   console.log(
-    "Seed completed successfully! Super admin Mati has all permissions.",
+    "Seed completed successfully! The admin user is now a Super Admin with all permissions.",
   );
 }
 
