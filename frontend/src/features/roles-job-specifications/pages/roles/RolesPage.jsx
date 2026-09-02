@@ -9,6 +9,7 @@ export default function RolesPage({
   canDeleteRole,
   handleOpenRoleForm,
   handleRoleDelete,
+  handleViewRole,
 }) {
   if (loading) {
     return (
@@ -31,7 +32,8 @@ export default function RolesPage({
         <Card
           key={role.id}
           hoverEffect
-          className="flex flex-col justify-between rounded-xl border border-border bg-card900 backdrop-blur-xl p-5"
+          onClick={() => handleViewRole && handleViewRole(role)}
+          className="flex flex-col justify-between rounded-xl border border-border bg-card900 backdrop-blur-xl p-5 cursor-pointer group hover:border-violet-500/50 transition-all duration-200"
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -39,34 +41,55 @@ export default function RolesPage({
                 {role.code || role.name}
               </span>
               <span className="text-xs text-muted-foreground font-mono">
-                {role.permissions?.length || 0} permissions
+                {(() => {
+                  const perms = role.rolePermissions || role.permissions || [];
+                  if (!Array.isArray(perms)) return '0 permissions';
+                  const isWildcard = perms.some(
+                    (p) => p === '*' || p?.permission?.name === '*' || p?.name === '*'
+                  );
+                  if (isWildcard) return 'All permissions';
+                  const count = perms.length;
+                  return `${count} ${count === 1 ? 'permission' : 'permissions'}`;
+                })()}
               </span>
             </div>
-            <h3 className="text-lg font-bold ">{role.name}</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+            <h3 className="text-lg font-bold group-hover:text-violet-400 transition-colors">{role.name}</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
               {role.description || 'No description provided.'}
             </p>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-5 mt-4 border-t border-border">
-            {canUpdateRole && (
-              <Button
-                onClick={() => handleOpenRoleForm(role)}
-                variant="secondary"
-                size="sm"
-              >
-                Edit
-              </Button>
-            )}
-            {canDeleteRole && (
-              <Button
-                onClick={() => handleRoleDelete(role.id)}
-                variant="danger"
-                size="sm"
-              >
-                Delete
-              </Button>
-            )}
+          <div className="flex items-center justify-between pt-5 mt-4 border-t border-border">
+            <span className="text-[11px] font-semibold text-violet-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+              View Details & Users &rarr;
+            </span>
+
+            <div className="flex items-center gap-2">
+              {canUpdateRole && (
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenRoleForm(role);
+                  }}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Edit
+                </Button>
+              )}
+              {canDeleteRole && (
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRoleDelete(role.id);
+                  }}
+                  variant="danger"
+                  size="sm"
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       ))}

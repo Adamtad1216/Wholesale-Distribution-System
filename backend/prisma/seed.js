@@ -373,10 +373,67 @@ async function ensureAdminPermissions(userId) {
   }
 }
 
+async function ensureDefaultOrganizationAndBranch() {
+  const region = await prisma.region.upsert({
+    where: { code: "AA" },
+    update: { name: "Addis Ababa" },
+    create: {
+      code: "AA",
+      name: "Addis Ababa",
+      description: "Capital Region",
+      isActive: true,
+    },
+  });
+
+  const company = await prisma.company.upsert({
+    where: { tradeLicenseNumber: "TL-HQ-001" },
+    update: {
+      name: "Main Wholesale Distribution Enterprise",
+      regionId: region.id,
+    },
+    create: {
+      name: "Main Wholesale Distribution Enterprise",
+      legalName: "Main Wholesale Distribution Enterprise PLC",
+      tradeLicenseNumber: "TL-HQ-001",
+      tinNumber: "TIN-000112233",
+      vatRegistrationNumber: "VAT-998877",
+      isVatRegistered: true,
+      email: "contact@wholesaledistribution.com",
+      phone: "+251 11 123 4567",
+      city: "Addis Ababa",
+      regionId: region.id,
+      status: "ACTIVE",
+    },
+  });
+
+  const branch = await prisma.branch.upsert({
+    where: { branchCode: "BR-HQ-01" },
+    update: {
+      name: "Headquarters Main Branch",
+      companyId: company.id,
+      regionId: region.id,
+    },
+    create: {
+      branchCode: "BR-HQ-01",
+      name: "Headquarters Main Branch",
+      isHeadOffice: true,
+      companyId: company.id,
+      regionId: region.id,
+      city: "Addis Ababa",
+      phone: "+251 11 123 4567",
+      email: "hq@wholesaledistribution.com",
+    },
+  });
+
+  console.log(`Seeded organization: ${company.name} and branch: ${branch.name}`);
+  return { region, company, branch };
+}
+
 async function main() {
   console.log("Starting seed...");
 
   await ensureDefaultPriceTiers();
+  await ensureDefaultOrganizationAndBranch();
 
   // Remove any legacy mati test user
   const existingMati = await prisma.user.findFirst({

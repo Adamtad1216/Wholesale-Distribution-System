@@ -9,6 +9,7 @@ import Button from '../../../components/ui/Button';
 // Sub-components
 import RolesPage from './roles/RolesPage';
 import RoleFormView from './roles/RoleFormView';
+import RoleDetailsView from './roles/RoleDetailsView';
 import JobSpecificationsPage from './job-specifications/JobSpecificationsPage';
 import JobSpecFormView from './job-specifications/JobSpecFormView';
 
@@ -16,7 +17,7 @@ export default function RolesJobSpecsMainPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Navigation & View mode: 'LIST' | 'ROLE_FORM' | 'JOB_SPEC_FORM'
+  // Navigation & View mode: 'LIST' | 'ROLE_FORM' | 'ROLE_DETAILS' | 'JOB_SPEC_FORM'
   const [viewMode, setViewMode] = useState(() => {
     return location.state?.createJobSpec ? 'JOB_SPEC_FORM' : 'LIST';
   });
@@ -27,6 +28,9 @@ export default function RolesJobSpecsMainPage() {
   const [roles, setRoles] = useState([]);
   const [jobSpecs, setJobSpecs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Role Detail View State
+  const [selectedRoleForView, setSelectedRoleForView] = useState(null);
 
   // Role Form State
   const [editingRole, setEditingRole] = useState(null);
@@ -110,12 +114,18 @@ export default function RolesJobSpecsMainPage() {
     }
     setViewMode('LIST');
     setEditingRole(null);
+    setSelectedRoleForView(null);
     setEditingJobSpec(null);
   };
 
   // ═════════════════════════════════════════════════════════════════
   // ROLE HANDLERS
   // ═════════════════════════════════════════════════════════════════
+  const handleViewRole = (role) => {
+    setSelectedRoleForView(role);
+    setViewMode('ROLE_DETAILS');
+  };
+
   const handleOpenRoleForm = (role = null) => {
     if (role) {
       setEditingRole(role);
@@ -156,6 +166,9 @@ export default function RolesJobSpecsMainPage() {
       await rolesApi.deleteRole(id);
       toast.success('Security role deleted successfully');
       fetchData();
+      if (viewMode === 'ROLE_DETAILS') {
+        handleBackToList();
+      }
     } catch (err) {
       toast.error(err?.message || 'Failed to delete role');
     }
@@ -233,6 +246,23 @@ export default function RolesJobSpecsMainPage() {
       toast.error(err?.message || 'Failed to delete job specification');
     }
   };
+
+  // ═════════════════════════════════════════════════════════════════
+  // RENDER FULL PAGE VIEW: ROLE DETAILS
+  // ═════════════════════════════════════════════════════════════════
+  if (viewMode === 'ROLE_DETAILS') {
+    return (
+      <RoleDetailsView
+        roleId={selectedRoleForView?.id}
+        initialRole={selectedRoleForView}
+        canUpdateRole={canUpdateRole}
+        canDeleteRole={canDeleteRole}
+        handleOpenRoleForm={handleOpenRoleForm}
+        handleRoleDelete={handleRoleDelete}
+        handleBackToList={handleBackToList}
+      />
+    );
+  }
 
   // ═════════════════════════════════════════════════════════════════
   // RENDER FULL PAGE VIEW: ROLE FORM
@@ -349,6 +379,7 @@ export default function RolesJobSpecsMainPage() {
           canDeleteRole={canDeleteRole}
           handleOpenRoleForm={handleOpenRoleForm}
           handleRoleDelete={handleRoleDelete}
+          handleViewRole={handleViewRole}
         />
       ) : (
         <JobSpecificationsPage

@@ -139,23 +139,22 @@ export default function EmployeeFormView({
               />
             </div>
 
-            {branches.length > 0 && (
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">Assigned Branch</label>
-                <select
-                  value={formData.branchId}
-                  onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
-                >
-                  <option value="">-- Main Branch / Default --</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.branchCode})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">Assigned Branch *</label>
+              <select
+                required
+                value={formData.branchId}
+                onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+              >
+                <option value="">-- Select Assigned Branch * --</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.branchCode})
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">Employment Status</label>

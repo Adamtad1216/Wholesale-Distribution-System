@@ -10,6 +10,27 @@ export const getAllRoles = async () => {
           permission: true,
         },
       },
+      userRoles: {
+        where: { isArchived: false },
+        include: {
+          user: {
+            include: {
+              person: {
+                include: {
+                  employee: {
+                    select: {
+                      id: true,
+                      employeeCode: true,
+                      department: true,
+                      status: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     orderBy: { name: 'asc' },
   });
@@ -23,6 +44,27 @@ export const getRoleById = async (id) => {
         where: { isArchived: false },
         include: {
           permission: true,
+        },
+      },
+      userRoles: {
+        where: { isArchived: false },
+        include: {
+          user: {
+            include: {
+              person: {
+                include: {
+                  employee: {
+                    select: {
+                      id: true,
+                      employeeCode: true,
+                      department: true,
+                      status: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
