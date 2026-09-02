@@ -6,4 +6,8 @@ export const employeesApi = {
   createEmployee: (data) => api.post('/employees', data),
   updateEmployee: (id, data) => api.patch(`/employees/${id}`, data),
   deleteEmployee: (id) => api.delete(`/employees/${id}`),
+  getJobSpecifications: () => api.get('/job-specifications'),
+  createJobSpecification: (data) => api.post('/job-specifications', data),
+  getBranches: () => api.get('/branches'),
+  getRoles: () => api.get('/roles'),
 };

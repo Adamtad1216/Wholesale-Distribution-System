@@ -19,26 +19,26 @@ import React from 'react';
 
 const VARIANT_CLASSES = {
   primary:
-    'btn-primary bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/20 border border-violet-600 hover:border-violet-500 font-semibold',
+    'btn-primary bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/30 border border-violet-500 font-semibold',
   secondary:
-    'btn-secondary bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-slate-600 font-semibold',
+    'btn-secondary bg-slate-700 hover:bg-slate-600 text-white shadow-md border border-slate-500 font-semibold',
   danger:
-    'btn-danger bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/20 hover:border-rose-500/40 font-semibold',
+    'btn-danger bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-semibold',
   'danger-solid':
-    'btn-danger-solid bg-rose-600 hover:bg-rose-500 text-white border border-rose-600 shadow-md shadow-rose-600/20 font-semibold',
+    'btn-danger-solid bg-rose-600 hover:bg-rose-500 text-white border border-rose-500 shadow-md shadow-rose-600/30 font-semibold',
   ghost:
-    'btn-ghost bg-transparent hover:bg-slate-800/50 text-slate-300 hover:text-white border border-transparent hover:border-slate-700 font-medium',
+    'btn-ghost bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-medium',
   outline:
-    'btn-outline bg-transparent hover:bg-violet-600/10 text-violet-400 hover:text-violet-300 border border-violet-500/40 hover:border-violet-500 font-semibold',
+    'btn-outline bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 border border-violet-500/60 font-semibold',
   success:
-    'btn-success bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/40 font-semibold',
+    'btn-success bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 font-semibold',
 };
 
 const SIZE_CLASSES = {
   xs:  'px-2.5 py-1 text-xs rounded-md gap-1.5',
-  sm:  'px-3 py-1.5 text-xs rounded-lg gap-2',
-  md:  'px-4 py-2.5 text-sm rounded-xl gap-2',
-  lg:  'px-5 py-3 text-base rounded-xl gap-2.5',
+  sm:  'px-3 py-1.5 text-xs rounded-md gap-2',
+  md:  'px-4 py-2.5 text-sm rounded-md gap-2',
+  lg:  'px-5 py-3 text-base rounded-md gap-2.5',
 };
 
 const ICON_SIZE = {

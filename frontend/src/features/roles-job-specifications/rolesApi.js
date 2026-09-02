@@ -7,3 +7,5 @@ export const rolesApi = {
   updateRole: (id, data) => api.patch(`/roles/${id}`, data),
   deleteRole: (id) => api.delete(`/roles/${id}`),
 };
+
+export default rolesApi;

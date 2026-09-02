@@ -74,7 +74,7 @@ export const navigationSections = [
         ),
       },
       {
-        name: 'Roles',
+        name: 'Roles & Job Specifications',
         href: '/roles',
         permission: 'roles:read',
         icon: (

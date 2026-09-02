@@ -174,30 +174,64 @@ export async function createEmployee(data, createdById, req) {
 
     let user = null;
     if (data.needsUserAccount) {
-      const invitationToken = crypto.randomBytes(32).toString('hex');
-      const invitationTokenHash = crypto
-        .createHash('sha256')
-        .update(invitationToken)
-        .digest('hex');
-      const invitationTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      if (data.username && data.password) {
+        const existingUsername = await tx.user.findUnique({
+          where: { username: data.username },
+        });
+        if (existingUsername) {
+          throw new AppError('Username already taken', 409);
+        }
 
-      user = await tx.user.create({
-        data: {
-          personId: person.id,
-          accountStatus: 'INVITED',
-          invitationTokenHash,
-          invitationTokenExpiresAt,
-          isActive: false,
-          createdById,
-          updatedById: createdById,
-        },
-        include: {
-          person: true,
-        },
-      });
+        const passwordHash = await hashPassword(data.password);
+        user = await tx.user.create({
+          data: {
+            personId: person.id,
+            username: data.username,
+            passwordHash,
+            accountStatus: 'ACTIVE',
+            isActive: true,
+            createdById,
+            updatedById: createdById,
+          },
+          include: {
+            person: true,
+          },
+        });
 
-      if (data.email) {
-        await sendInvitationEmail(data.email, invitationToken, `${data.firstName} ${data.lastName}`);
+        if (data.roleId) {
+          await tx.userRole.create({
+            data: {
+              createdById: user.id,
+              roleId: data.roleId,
+            },
+          });
+        }
+      } else {
+        const invitationToken = crypto.randomBytes(32).toString('hex');
+        const invitationTokenHash = crypto
+          .createHash('sha256')
+          .update(invitationToken)
+          .digest('hex');
+        const invitationTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        user = await tx.user.create({
+          data: {
+            personId: person.id,
+            accountStatus: 'INVITED',
+            invitationTokenHash,
+            invitationTokenExpiresAt,
+            isActive: false,
+            createdById,
+            updatedById: createdById,
+          },
+          include: {
+            person: true,
+          },
+        });
+
+        if (data.email) {
+          await sendInvitationEmail(data.email, invitationToken, `${data.firstName} ${data.lastName}`);
+        }
       }
     }
 
