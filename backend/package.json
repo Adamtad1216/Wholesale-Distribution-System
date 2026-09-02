@@ -9,6 +9,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
+    "prisma:seed:sales": "node prisma/seed.sales.js",
     "lint": "eslint src/",
     "test": "vitest run"
   },

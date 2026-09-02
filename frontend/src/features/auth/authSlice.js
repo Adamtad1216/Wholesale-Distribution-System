@@ -5,6 +5,7 @@ const SESSION_EXPIRY_KEY = 'sessionExpiresAt';
 const PERMISSIONS_KEY = 'auth_permissions';
 const ROLE_KEY = 'auth_role';
 const USER_KEY = 'auth_user';
+const CUSTOMER_KEY = 'auth_customer';
 
 function decodeJwt(token) {
   try {
@@ -35,6 +36,15 @@ try {
   parsedUser = null;
 }
 
+let parsedCustomer = null;
+try {
+  parsedCustomer = localStorage.getItem(CUSTOMER_KEY)
+    ? JSON.parse(localStorage.getItem(CUSTOMER_KEY))
+    : null;
+} catch {
+  parsedCustomer = null;
+}
+
 const initialState = {
   user: parsedUser,
   token: token,
@@ -42,6 +52,7 @@ const initialState = {
   isAuthenticated: !!token,
   role: storedRole || null,
   permissions: parsedPermissions,
+  customer: parsedCustomer,
   loading: false,
   error: null,
   sessionExpiresAt: storedSessionExpiry ? Number(storedSessionExpiry) : null,
@@ -63,6 +74,7 @@ const authSlice = createSlice({
       state.user = payload.user;
       state.role = payload.role;
       state.permissions = payload.permissions || [];
+      state.customer = payload.customer || null;
       state.isAuthenticated = true;
 
       const refreshPayload = decodeJwt(payload.refreshToken);
@@ -75,6 +87,7 @@ const authSlice = createSlice({
       localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(payload.permissions || []));
       if (payload.role) localStorage.setItem(ROLE_KEY, payload.role);
       if (payload.user) localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
+      if (payload.customer) localStorage.setItem(CUSTOMER_KEY, JSON.stringify(payload.customer));
 
       tokenService.setToken(payload.accessToken);
       if (payload.refreshToken) {
@@ -98,6 +111,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.role = null;
       state.permissions = [];
+      state.customer = null;
       state.isAuthenticated = false;
       state.sessionExpiresAt = null;
       tokenService.clearAll();
@@ -105,12 +119,14 @@ const authSlice = createSlice({
       localStorage.removeItem(PERMISSIONS_KEY);
       localStorage.removeItem(ROLE_KEY);
       localStorage.removeItem(USER_KEY);
+      localStorage.removeItem(CUSTOMER_KEY);
     },
     setProfile(state, action) {
       const payload = action.payload?.data || action.payload;
       state.user = payload.user || payload;
       state.role = payload.role || state.role;
       state.permissions = payload.permissions || state.permissions || [];
+      state.customer = payload.customer || state.customer;
       if (payload.permissions) {
         localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(payload.permissions));
       }
@@ -119,6 +135,9 @@ const authSlice = createSlice({
       }
       if (payload.user) {
         localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
+      }
+      if (payload.customer) {
+        localStorage.setItem(CUSTOMER_KEY, JSON.stringify(payload.customer));
       }
     },
   },

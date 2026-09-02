@@ -23,7 +23,7 @@ export const createEmployeeSchema = z.object({
   employeeCode: z.string().min(1).max(50).optional(),
   hireDate: z.string().min(1),
   department: z.string().max(255).optional(),
-  jobSpecificationId: z.string().uuid(),
+  jobSpecificationIds: z.array(z.string().uuid()).min(1),
   status: z.string().default('ACTIVE'),
   needsUserAccount: z.boolean().default(false),
   username: z.string().min(3).max(50).optional(),
@@ -33,9 +33,23 @@ export const createEmployeeSchema = z.object({
   salesTerritory: z.string().max(255).optional(),
   driverLicenseNumber: z.string().max(50).optional(),
   driverLicenseExpiry: z.string().optional(),
-  branchId: z.string().uuid().optional(),
+  branchId: z.string().uuid(),
   isAvailableForSales: z.boolean().default(true),
-});
+  username: z.string().min(3).max(50).optional(),
+  password: z.string().min(8).max(100).optional(),
+  roleIds: z.array(z.string().uuid()).min(1).optional(),
+}).refine(
+  (data) => {
+    if (data.needsUserAccount && data.username) {
+      return !!data.roleIds && data.roleIds.length > 0;
+    }
+    return true;
+  },
+  {
+    message: 'roleIds is required when creating an employee with a user account and username',
+    path: ['roleIds'],
+  }
+);
 
 export const updateEmployeeSchema = z.object({
   firstName: z.string().min(1).max(100).optional(),
@@ -46,7 +60,7 @@ export const updateEmployeeSchema = z.object({
   address: z.string().max(255).optional().nullable(),
   employeeCode: z.string().min(1).max(50).optional(),
   department: z.string().max(255).optional().nullable(),
-  jobSpecificationId: z.string().uuid().optional(),
+  jobSpecificationIds: z.array(z.string().uuid()).min(1).optional(),
   status: z.string().optional(),
   needsUserAccount: z.boolean().optional(),
   username: z.string().min(3).max(50).optional().nullable(),

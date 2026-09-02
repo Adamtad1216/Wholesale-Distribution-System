@@ -11,7 +11,7 @@ export const requirePermission = (permission) => {
       ur.role.rolePermissions.map((rp) => rp.permission.name)
     );
 
-    if (!permissions.includes(permission)) {
+    if (!permissions.includes(permission) && !permissions.includes('*')) {
       return res.status(403).json({
         status: 'error',
         message: 'Insufficient permissions',

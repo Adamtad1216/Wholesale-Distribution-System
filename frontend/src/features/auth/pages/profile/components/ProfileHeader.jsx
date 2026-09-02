@@ -6,7 +6,8 @@ export default function ProfileHeader({ user, role, personData, joinedDate, getI
   const person = user?.person || {};
   const firstName = person.firstName || '';
   const lastName = person.lastName || '';
-  const fullName = [firstName, lastName].filter(Boolean).join(' ') || user?.username || 'User';
+  const middleName = person.middleName || '';
+  const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ') || user?.username || 'User';
 
   const avatarUrl = personData.avatarUrl || user?.avatarUrl || person.avatarUrl || null;
 
