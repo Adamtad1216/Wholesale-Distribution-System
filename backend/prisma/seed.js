@@ -228,13 +228,92 @@ const ALL_PERMISSIONS = [
     action: "resetPassword",
     description: "Reset user passwords",
   },
+
+  // Permissions
+  {
+    name: "permissions:read",
+    module: "permissions",
+    action: "read",
+    description: "Read permissions",
+  },
+  {
+    name: "permissions:write",
+    module: "permissions",
+    action: "write",
+    description: "Create and update permissions",
+  },
+  {
+    name: "permissions:delete",
+    module: "permissions",
+    action: "delete",
+    description: "Delete permissions",
+  },
+
+  // Reporting & Dashboards
+  {
+    name: "REPORT_VIEW_DASHBOARD",
+    module: "reporting",
+    action: "view_dashboard",
+    description: "View dashboard metrics",
+  },
+  {
+    name: "REPORT_VIEW_SALES",
+    module: "reporting",
+    action: "view_sales",
+    description: "View sales reports",
+  },
+  {
+    name: "REPORT_VIEW_PRODUCTS",
+    module: "reporting",
+    action: "view_products",
+    description: "View product sales reports",
+  },
+  {
+    name: "REPORT_VIEW_CUSTOMERS",
+    module: "reporting",
+    action: "view_customers",
+    description: "View customer reports",
+  },
+  {
+    name: "REPORT_VIEW_SALES_REPS",
+    module: "reporting",
+    action: "view_sales_reps",
+    description: "View sales representative reports",
+  },
+  {
+    name: "REPORT_VIEW_WAREHOUSE",
+    module: "reporting",
+    action: "view_warehouse",
+    description: "View warehouse reports",
+  },
+  {
+    name: "REPORT_VIEW_DELIVERIES",
+    module: "reporting",
+    action: "view_deliveries",
+    description: "View delivery reports",
+  },
 ];
 
 async function ensureDefaultPriceTiers() {
   const tiers = [
-    { name: "Retail", description: "Standard retail pricing", isDefault: true, priority: 0 },
-    { name: "Wholesale", description: "Wholesale tier pricing", isDefault: false, priority: 10 },
-    { name: "Bulk", description: "Bulk purchase tier pricing", isDefault: false, priority: 20 },
+    {
+      name: "Retail",
+      description: "Standard retail pricing",
+      isDefault: true,
+      priority: 0,
+    },
+    {
+      name: "Wholesale",
+      description: "Wholesale tier pricing",
+      isDefault: false,
+      priority: 10,
+    },
+    {
+      name: "Bulk",
+      description: "Bulk purchase tier pricing",
+      isDefault: false,
+      priority: 20,
+    },
   ];
 
   for (const tier of tiers) {
@@ -256,6 +335,18 @@ async function ensureAdminPermissions(userId) {
   });
   const adminRole = await prisma.role.findUnique({ where: { name: "ADMIN" } });
   if (!superAdminRole || !adminRole) return;
+
+  for (const perm of ALL_PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { name: perm.name },
+      update: {
+        description: perm.description,
+        module: perm.module,
+        action: perm.action,
+      },
+      create: perm,
+    });
+  }
 
   const allPermissions = await prisma.permission.findMany();
 

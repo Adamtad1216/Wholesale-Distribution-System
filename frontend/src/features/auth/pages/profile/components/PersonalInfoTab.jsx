@@ -72,13 +72,22 @@ export default function PersonalInfoTab({ personData, setPersonData, onSubmit, s
       </div>
 
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium uppercase tracking-wide mb-1">First Name</label>
             <input
               type="text"
               value={personData.firstName}
               onChange={(e) => setPersonData({ ...personData, firstName: e.target.value })}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-wide mb-1">Middle Name</label>
+            <input
+              type="text"
+              value={personData.middleName || ''}
+              onChange={(e) => setPersonData({ ...personData, middleName: e.target.value })}
               className={inputCls}
             />
           </div>

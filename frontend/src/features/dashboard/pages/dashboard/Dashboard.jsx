@@ -1,52 +1,98 @@
-import React from 'react';
 import { useSelector } from 'react-redux';
-import Card from '../../../../components/ui/Card';
+import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import StatsCards from '../../components/StatsCards';
+import { OrdersByStatusChart, RevenueChart } from '../../components/Charts';
+import { StatusBreakdownTable, TopCustomersTable, WarehouseCard } from '../../components/ReportTables';
+import { reportsApi } from '../../reportsApi';
 
 export default function Dashboard() {
   const { user } = useSelector((state) => state.auth);
 
+  const {
+    data: dashboardRes,
+  } = useQuery({
+    queryKey: ['reports', 'dashboard'],
+    queryFn: () => reportsApi.getDashboard().catch(() => ({ data: {} })),
+    staleTime: 60000,
+    retry: 1,
+  });
+
+  const { data: orderStatusRes } = useQuery({
+    queryKey: ['reports', 'orders-status'],
+    queryFn: () => reportsApi.getOrderStatusReport().catch(() => ({ data: [] })),
+    staleTime: 60000,
+    retry: 1,
+  });
+
+  const { data: productSalesRes } = useQuery({
+    queryKey: ['reports', 'product-sales'],
+    queryFn: () => reportsApi.getProductSalesReport({ limit: 10 }).catch(() => ({ data: [] })),
+    staleTime: 60000,
+    retry: 1,
+  });
+
+  const { data: customerRes } = useQuery({
+    queryKey: ['reports', 'customers'],
+    queryFn: () => reportsApi.getCustomerReport({ limit: 10 }).catch(() => ({ data: [] })),
+    staleTime: 60000,
+    retry: 1,
+  });
+
+  const { data: warehouseRes } = useQuery({
+    queryKey: ['reports', 'warehouse'],
+    queryFn: () => reportsApi.getWarehouseReport().catch(() => ({ data: {} })),
+    staleTime: 60000,
+    retry: 1,
+  });
+
+  const dashboardData = dashboardRes?.data || {};
+
   return (
     <div className="space-y-6">
-      {/* Welcome Banner */}
-      <Card noPadding className="p-8 md:p-10 rounded-lg relative overflow-hidden">
-        <div className="relative z-10 max-w-xl">
-          <span className="px-3 py-1 text-xs font-semibold badge-violet rounded-full">
-            Workspace Active
-          </span>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-100 light:text-slate-900 mt-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-100 light:text-slate-900">
             Welcome back, {user?.username || 'Partner'}
           </h2>
-          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-            Manage your bulk inventory orders, view invoice updates, monitor delivery statuses, and handle B2B documentation in one centralized console.
+          <p className="text-sm text-slate-450 mt-1">
+            {format(new Date(), 'EEEE, MMMM d, yyyy')}
           </p>
         </div>
-      </Card>
+      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card hoverEffect className="rounded-lg">
-          <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 font-bold mb-4">
-            $
-          </div>
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Total Orders</h3>
-          <p className="text-2xl font-bold text-slate-100 light:text-slate-900 mt-1">128</p>
-        </Card>
+      <StatsCards dashboardData={dashboardData} />
 
-        <Card hoverEffect className="rounded-lg">
-          <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold mb-4">
-            📄
-          </div>
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Pending Invoices</h3>
-          <p className="text-2xl font-bold text-slate-100 light:text-slate-900 mt-1">12</p>
-        </Card>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-1">
+          <OrdersByStatusChart
+            data={orderStatusRes || { data: [] }}
+          />
+        </div>
+        <div className="xl:col-span-2">
+          <RevenueChart
+            data={productSalesRes || { data: [] }}
+          />
+        </div>
+      </div>
 
-        <Card hoverEffect className="rounded-lg">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold mb-4">
-            ☁️
-          </div>
-          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Uploaded Docs</h3>
-          <p className="text-2xl font-bold text-slate-100 light:text-slate-900 mt-1">45</p>
-        </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <StatusBreakdownTable
+            data={orderStatusRes || { data: [] }}
+          />
+        </div>
+        <div>
+          <WarehouseCard
+            data={warehouseRes || { data: {} }}
+          />
+        </div>
+      </div>
+
+      <div>
+        <TopCustomersTable
+          data={customerRes || { data: [] }}
+        />
       </div>
     </div>
   );

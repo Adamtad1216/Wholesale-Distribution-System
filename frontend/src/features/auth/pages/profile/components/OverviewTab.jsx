@@ -2,7 +2,11 @@ import React from 'react';
 import Card from '../../../../../components/ui/Card';
 import Button from '../../../../../components/ui/Button';
 
-export default function OverviewTab({ personData, user, role, onEditProfile }) {
+export default function OverviewTab({ personData, user, role, customer, onEditProfile }) {
+  const fullName = [personData.firstName, personData.middleName, personData.lastName]
+    .filter(Boolean)
+    .join(' ') || user?.username || 'User';
+
   const infoTiles = [
     {
       label: 'Email', value: personData.email || user?.email || (user?.username ? `${user.username}@system.com` : 'N/A'),
@@ -25,6 +29,29 @@ export default function OverviewTab({ personData, user, role, onEditProfile }) {
       color: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30',
     },
   ];
+
+  const customerTiles = customer
+    ? [
+        {
+          label: 'Customer Code',
+          value: <span className="text-xs font-mono font-semibold">{customer.customerCode || 'N/A'}</span>,
+          icon: 'M11 17l3-3m0 0l3-3m-3 3l-3-3m3 3l3 3',
+          color: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-500/20 dark:text-cyan-400 dark:border-cyan-500/30',
+        },
+        {
+          label: 'Customer Type',
+          value: <span className="text-xs font-semibold capitalize">{customer.customerType || 'N/A'}</span>,
+          icon: 'M12 14l9-5-9-5-9 5 9 5z M12 14l9-5 9 5 9-5',
+          color: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200 dark:bg-fuchsia-500/20 dark:text-fuchsia-400 dark:border-fuchsia-500/30',
+        },
+        {
+          label: 'Credit Limit',
+          value: <span className="text-xs font-semibold">${customer.creditLimit ?? '0.00'}</span>,
+          icon: 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z M12 2v2m0 16v2',
+          color: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30',
+        },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -76,6 +103,113 @@ export default function OverviewTab({ personData, user, role, onEditProfile }) {
             ))}
           </div>
         </Card>
+
+        {customer && (
+          <Card className="lg:col-span-2 space-y-4 border border-slate-200 dark:border-slate-800 mt-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-400">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 17l3-3m0 0l3-3m-3 3l-3-3m3 3l3 3" />
+                </svg>
+              </div>
+              <h2 className="text-base font-semibold">Customer Information</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              {customerTiles.map(({ label, value, icon, color }) => (
+                <div key={label} className="flex items-center gap-3.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent">
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${color}`}>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={icon} />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <span className="block text-xs font-medium text-muted uppercase tracking-wide">{label}</span>
+                    <span className="block text-sm font-semibold truncate mt-0.5">{value}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Organization Details */}
+        {customer?.organization && (
+          <Card className="lg:col-span-2 space-y-4 border border-slate-200 dark:border-slate-800 mt-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-400">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14l3-2m0 0v5m0-5l-3-2" />
+                </svg>
+              </div>
+              <h2 className="text-base font-semibold">Organization Details</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <span className="block text-xs font-medium text-muted uppercase tracking-wide">Name</span>
+                <span className="block text-sm font-semibold mt-0.5">{customer.organization.name || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="block text-xs font-medium text-muted uppercase tracking-wide">Registration Number</span>
+                <span className="block text-sm font-semibold mt-0.5">{customer.organization.registrationNumber || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="block text-xs font-medium text-muted uppercase tracking-wide">Tax Number (TIN)</span>
+                <span className="block text-sm font-semibold mt-0.5">{customer.organization.taxNumber || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="block text-xs font-medium text-muted uppercase tracking-wide">Phone</span>
+                <span className="block text-sm font-semibold mt-0.5">{customer.organization.phone || 'N/A'}</span>
+              </div>
+              {customer.organization.email && (
+                <div className="sm:col-span-2">
+                  <span className="block text-xs font-medium text-muted uppercase tracking-wide">Email</span>
+                  <span className="block text-sm font-semibold mt-0.5">{customer.organization.email}</span>
+                </div>
+              )}
+              {customer.organization.address && (
+                <div className="sm:col-span-2">
+                  <span className="block text-xs font-medium text-muted uppercase tracking-wide">Address</span>
+                  <span className="block text-sm font-semibold mt-0.5">{customer.organization.address}</span>
+                </div>
+              )}
+              {customer.organization.paymentTerms && (
+                <div>
+                  <span className="block text-xs font-medium text-muted uppercase tracking-wide">Payment Terms</span>
+                  <span className="block text-sm font-semibold mt-0.5">{customer.organization.paymentTerms.name || 'N/A'}</span>
+                </div>
+              )}
+              {customer.organization.contacts && customer.organization.contacts.length > 0 && (
+                <div className="sm:col-span-2">
+                  <span className="block text-xs font-medium text-muted uppercase tracking-wide mb-1.5">Primary Contact</span>
+                  <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-transparent">
+                    <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center">
+                      {customer.organization.contacts[0].person
+                        ? (customer.organization.contacts[0].person.firstName?.[0] || '') +
+                          (customer.organization.contacts[0].person.lastName?.[0] || '')
+                        : 'PC'}
+                    </div>
+                    <div>
+                      <span className="block text-sm font-semibold">
+                        {[customer.organization.contacts[0].person?.firstName, customer.organization.contacts[0].person?.lastName]
+                          .filter(Boolean)
+                          .join(' ') || 'N/A'}
+                      </span>
+                      {customer.organization.contacts[0].person?.email && (
+                        <span className="block text-xs text-muted">{customer.organization.contacts[0].person.email}</span>
+                      )}
+                      {customer.organization.contacts[0].person?.phone && (
+                        <span className="block text-xs text-muted">{customer.organization.contacts[0].person.phone}</span>
+                      )}
+                      {customer.organization.contacts[0].position && (
+                        <span className="block text-xs text-muted">{customer.organization.contacts[0].position}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Account Details & Activity Cards Grid */}
         <div className="space-y-4">

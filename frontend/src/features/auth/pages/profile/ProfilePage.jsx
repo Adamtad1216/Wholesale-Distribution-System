@@ -11,9 +11,11 @@ import PersonalInfoTab from './components/PersonalInfoTab';
 import SecurityTab from './components/SecurityTab';
 import ActivityTab from './components/ActivityTab';
 
+const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
 export default function ProfilePage() {
   const dispatch = useDispatch();
-  const { user, role } = useSelector((state) => state.auth);
+  const { user, role, customer } = useSelector((state) => state.auth);
 
   const [activeTab, setActiveTab] = useState('overview');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -22,9 +24,11 @@ export default function ProfilePage() {
   const person = user?.person || {};
   const firstName = person.firstName || '';
   const lastName = person.lastName || '';
+  const middleName = person.middleName || '';
 
   const [personData, setPersonData] = useState({
     firstName,
+    middleName,
     lastName,
     email: person.email || user?.email || '',
     phone: person.phone || '',
@@ -58,6 +62,7 @@ export default function ProfilePage() {
       const p = user.person || {};
       setPersonData({
         firstName: p.firstName || '',
+        middleName: p.middleName || '',
         lastName: p.lastName || '',
         email: p.email || user.email || '',
         phone: p.phone || '',
@@ -72,7 +77,16 @@ export default function ProfilePage() {
     if (!fileOrEmpty) {
       try {
         setPersonData((prev) => ({ ...prev, avatarUrl: '' }));
-        await authApi.updateProfile({ ...personData, avatarUrl: '' });
+        await authApi.updateProfile({
+          firstName: personData.firstName,
+          middleName: personData.middleName,
+          lastName: personData.lastName,
+          email: personData.email,
+          phone: personData.phone,
+          address: personData.address,
+          bio: personData.bio,
+          avatarUrl: '',
+        });
         const res = await authApi.getProfile();
         const data = res?.data || res;
         if (data) dispatch(setProfile(data));
@@ -97,7 +111,16 @@ export default function ProfilePage() {
       }
 
       setPersonData((prev) => ({ ...prev, avatarUrl: cloudinaryUrl }));
-      await authApi.updateProfile({ ...personData, avatarUrl: cloudinaryUrl });
+      await authApi.updateProfile({
+        firstName: personData.firstName,
+        middleName: personData.middleName,
+        lastName: personData.lastName,
+        email: personData.email,
+        phone: personData.phone,
+        address: personData.address,
+        bio: personData.bio,
+        avatarUrl: cloudinaryUrl,
+      });
 
       const res = await authApi.getProfile();
       const updatedData = res?.data || res;
@@ -126,7 +149,16 @@ export default function ProfilePage() {
     e.preventDefault();
     try {
       setSavingProfile(true);
-      await authApi.updateProfile(personData);
+       await authApi.updateProfile({
+          firstName: personData.firstName,
+          middleName: personData.middleName,
+          lastName: personData.lastName,
+          email: personData.email,
+          phone: personData.phone,
+          address: personData.address,
+          bio: personData.bio,
+          avatarUrl: personData.avatarUrl,
+        });
       const res = await authApi.getProfile();
       const updatedData = res?.data || res;
       if (updatedData) dispatch(setProfile(updatedData));
@@ -142,8 +174,10 @@ export default function ProfilePage() {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword)
       return toast.error('New passwords do not match');
-    if (passwordData.newPassword.length < 6)
-      return toast.error('Password must be at least 6 characters long');
+    if (!strongPasswordRegex.test(passwordData.newPassword))
+      return toast.error(
+        'Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)'
+      );
     try {
       setSavingPassword(true);
       await authApi.changePassword({
@@ -184,6 +218,7 @@ export default function ProfilePage() {
           personData={personData}
           user={user}
           role={role}
+          customer={customer}
           onEditProfile={() => setActiveTab('personal')}
         />
       )}
@@ -207,7 +242,7 @@ export default function ProfilePage() {
         />
       )}
 
-      {activeTab === 'activity' && <ActivityTab user={user} personData={personData} />}
+      {activeTab === 'activity' && <ActivityTab user={user} personData={personData} customer={customer} />}
     </div>
   );
 }
