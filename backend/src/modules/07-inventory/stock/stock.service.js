@@ -2,6 +2,7 @@ import prisma from '../../../config/prisma.js';
 import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
+import { getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
 
 const sanitizeStock = (stock) => {
   if (!stock) return stock;
@@ -15,7 +16,9 @@ const sanitizeStock = (stock) => {
   };
 };
 
-export async function createStock(data, createdById, req) {
+export async function createStock(data, createdById, req, user = null) {
+  await enforceWarehouseScope(user, data.warehouseId);
+
   const warehouse = await prisma.warehouse.findFirst({
     where: { id: data.warehouseId, isArchived: false },
   });
@@ -75,11 +78,20 @@ export async function createStock(data, createdById, req) {
   return sanitizeStock(stock);
 }
 
-export async function getStocks(filters) {
+export async function getStocks(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
   const where = { isArchived: false };
 
-  if (filters.warehouseId) where.warehouseId = filters.warehouseId;
+  const assignedWarehouseId = await getAssignedWarehouseId(user);
+  if (assignedWarehouseId) {
+    if (filters.warehouseId && filters.warehouseId !== assignedWarehouseId) {
+      throw new AppError('You are not authorized to view stock for this warehouse', 403);
+    }
+    where.warehouseId = assignedWarehouseId;
+  } else if (filters.warehouseId) {
+    where.warehouseId = filters.warehouseId;
+  }
+
   if (filters.productId) where.productId = filters.productId;
   if (filters.lowStock) {
     where.availableQuantity = { lte: prisma.warehouseStock.fields.reorderLevel };
@@ -105,7 +117,7 @@ export async function getStocks(filters) {
   };
 }
 
-export async function getStockById(id) {
+export async function getStockById(id, user = null) {
   const stock = await prisma.warehouseStock.findFirst({
     where: { id, isArchived: false },
     include: {
@@ -115,14 +127,16 @@ export async function getStockById(id) {
   });
 
   if (!stock) throw new AppError('Stock not found', 404);
+  await enforceWarehouseScope(user, stock.warehouseId);
   return sanitizeStock(stock);
 }
 
-export async function updateStock(id, data, createdById, req) {
+export async function updateStock(id, data, createdById, req, user = null) {
   const existing = await prisma.warehouseStock.findFirst({
     where: { id, isArchived: false },
   });
   if (!existing) throw new AppError('Stock not found', 404);
+  await enforceWarehouseScope(user, existing.warehouseId);
 
   const updateData = {};
   if (data.quantity !== undefined && data.quantity !== Number(existing.quantity)) {
@@ -180,7 +194,7 @@ export async function updateStock(id, data, createdById, req) {
   return sanitizeStock(stock);
 }
 
-export async function deleteStock(id, deletedById, req) {
+export async function deleteStock(id, deletedById, req, user = null) {
   const existing = await prisma.warehouseStock.findFirst({
     where: { id, isArchived: false },
     include: {
@@ -189,6 +203,7 @@ export async function deleteStock(id, deletedById, req) {
     },
   });
   if (!existing) throw new AppError('Stock not found', 404);
+  await enforceWarehouseScope(user, existing.warehouseId);
 
   const stock = await prisma.$transaction(async (tx) => {
     const deletedStock = await tx.warehouseStock.update({

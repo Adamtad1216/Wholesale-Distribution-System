@@ -2,8 +2,10 @@ import prisma from '../../../config/prisma.js';
 import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
+import { getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
 
-export async function createReservation(data, createdById, req) {
+export async function createReservation(data, createdById, req, user = null) {
+  await enforceWarehouseScope(user, data.warehouseId);
   const warehouse = await prisma.warehouse.findFirst({
     where: { id: data.warehouseId, isArchived: false },
   });
@@ -76,11 +78,20 @@ export async function createReservation(data, createdById, req) {
   return result;
 }
 
-export async function getReservations(filters) {
+export async function getReservations(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
   const where = { isArchived: false };
 
-  if (filters.warehouseId) where.warehouseId = filters.warehouseId;
+  const assignedWarehouseId = await getAssignedWarehouseId(user);
+  if (assignedWarehouseId) {
+    if (filters.warehouseId && filters.warehouseId !== assignedWarehouseId) {
+      throw new AppError('You are not authorized to view reservations for this warehouse', 403);
+    }
+    where.warehouseId = assignedWarehouseId;
+  } else if (filters.warehouseId) {
+    where.warehouseId = filters.warehouseId;
+  }
+
   if (filters.productId) where.productId = filters.productId;
   if (filters.salesOrderId) where.salesOrderId = filters.salesOrderId;
   if (filters.status) where.status = filters.status;
@@ -106,12 +117,13 @@ export async function getReservations(filters) {
   };
 }
 
-export async function releaseReservation(id, quantity, createdById, req) {
+export async function releaseReservation(id, quantity, createdById, req, user = null) {
   const existing = await prisma.stockReservation.findFirst({
     where: { id, isArchived: false },
     include: { warehouse: true, product: true },
   });
   if (!existing) throw new AppError('Reservation not found', 404);
+  await enforceWarehouseScope(user, existing.warehouseId);
   if (existing.status === 'RELEASED' || existing.status === 'CANCELLED') {
     throw new AppError('Reservation already released or cancelled', 400);
   }
@@ -171,12 +183,13 @@ export async function releaseReservation(id, quantity, createdById, req) {
   return result;
 }
 
-export async function deleteReservation(id, deletedById, req) {
+export async function deleteReservation(id, deletedById, req, user = null) {
   const existing = await prisma.stockReservation.findFirst({
     where: { id, isArchived: false },
     include: { warehouse: true, product: true },
   });
   if (!existing) throw new AppError('Stock reservation not found', 404);
+  await enforceWarehouseScope(user, existing.warehouseId);
 
   const result = await prisma.$transaction(async (tx) => {
     const reservation = await tx.stockReservation.update({
