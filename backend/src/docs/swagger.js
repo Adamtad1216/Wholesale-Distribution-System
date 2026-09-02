@@ -931,7 +931,25 @@ const swaggerOptions = {
             createdBy: { type: 'object', nullable: true },
             updatedBy: { type: 'object', nullable: true },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateCategoryInput: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string', example: 'Electronics' },
+            description: { type: 'string', nullable: true, example: 'Electronic products and gadgets' },
+            parentId: { type: 'string', format: 'uuid', nullable: true, example: '123e4567-e89b-12d3-a456-426614174000' },
+          },
+        },
+        UpdateCategoryInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'Consumer Electronics' },
+            description: { type: 'string', nullable: true, example: 'Updated description' },
+            parentId: { type: 'string', format: 'uuid', nullable: true },
+            status: { type: 'string', example: 'ACTIVE' },
           },
         },
         Brand: {
@@ -944,7 +962,23 @@ const swaggerOptions = {
             createdBy: { type: 'object', nullable: true },
             updatedBy: { type: 'object', nullable: true },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateBrandInput: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string', example: 'Samsung' },
+            description: { type: 'string', nullable: true, example: 'Electronics brand' },
+          },
+        },
+        UpdateBrandInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'Samsung Electronics' },
+            description: { type: 'string', nullable: true, example: 'Updated description' },
+            status: { type: 'string', example: 'ACTIVE' },
           },
         },
         Unit: {
@@ -956,7 +990,22 @@ const swaggerOptions = {
             createdBy: { type: 'object', nullable: true },
             updatedBy: { type: 'object', nullable: true },
             createdAt: { type: 'string', format: 'date-time' },
-            updatedAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateUnitInput: {
+          type: 'object',
+          required: ['name', 'abbreviation'],
+          properties: {
+            name: { type: 'string', example: 'Piece' },
+            abbreviation: { type: 'string', example: 'PCS' },
+          },
+        },
+        UpdateUnitInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'Piece' },
+            abbreviation: { type: 'string', example: 'PCS' },
           },
         },
         Product: {
@@ -968,18 +1017,12 @@ const swaggerOptions = {
             categoryId: { type: 'string', format: 'uuid' },
             brandId: { type: 'string', format: 'uuid', nullable: true },
             unitId: { type: 'string', format: 'uuid' },
-            purchasePrice: { type: 'number', example: 100 },
-            sellingPrice: { type: 'number', example: 150 },
-            wholesalePrice: { type: 'number', example: 120 },
-            minimumStockLevel: { type: 'number', example: 0 },
-            reorderLevel: { type: 'number', example: 0 },
             status: { type: 'string', example: 'ACTIVE' },
             category: { type: 'object' },
             brand: { type: 'object', nullable: true },
             unit: { type: 'object' },
             images: { type: 'array', items: { type: 'object' } },
-            priceTiers: { type: 'array', items: { type: 'object' } },
-            discountRules: { type: 'array', items: { type: 'object' } },
+            warehouseSellingPrices: { type: 'array', items: { $ref: '#/components/schemas/WarehouseSellingPrice' } },
             createdBy: { type: 'object', nullable: true },
             updatedBy: { type: 'object', nullable: true },
             createdAt: { type: 'string', format: 'date-time' },
@@ -992,6 +1035,98 @@ const swaggerOptions = {
             id: { type: 'string', format: 'uuid' },
             imageUrl: { type: 'string', format: 'uri', example: 'https://example.com/image.jpg' },
             isPrimary: { type: 'boolean', example: false },
+          },
+        },
+        WarehouseSellingPrice: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            warehouseId: { type: 'string', format: 'uuid' },
+            sellingPrice: { type: 'number', example: 150.00 },
+            wholesalePrice: { type: 'number', example: 120.00 },
+            status: { type: 'string', example: 'ACTIVE' },
+            warehouse: { type: 'object', nullable: true },
+            product: { type: 'object', nullable: true },
+            createdBy: { type: 'object', nullable: true },
+            updatedBy: { type: 'object', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateProductInput: {
+          type: 'object',
+          required: ['name', 'categoryId', 'unitId'],
+          properties: {
+            sku: { type: 'string', example: 'PRD-001' },
+            name: { type: 'string', example: 'Wireless Mouse' },
+            categoryId: { type: 'string', format: 'uuid', example: '123e4567-e89b-12d3-a456-426614174000' },
+            brandId: { type: 'string', format: 'uuid', nullable: true, example: '123e4567-e89b-12d3-a456-426614174001' },
+            unitId: { type: 'string', format: 'uuid', example: '123e4567-e89b-12d3-a456-426614174002' },
+            images: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['imageUrl'],
+                properties: {
+                  imageUrl: { type: 'string', format: 'uri', example: 'https://example.com/image.jpg' },
+                  isPrimary: { type: 'boolean', default: false },
+                },
+              },
+            },
+            warehouseSellingPrices: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['warehouseId', 'sellingPrice', 'wholesalePrice'],
+                properties: {
+                  warehouseId: { type: 'string', format: 'uuid', example: '123e4567-e89b-12d3-a456-426614174003' },
+                  sellingPrice: { type: 'number', example: 150.00 },
+                  wholesalePrice: { type: 'number', example: 120.00 },
+                },
+              },
+            },
+          },
+        },
+        UpdateProductInput: {
+          type: 'object',
+          properties: {
+            sku: { type: 'string', example: 'PRD-001' },
+            name: { type: 'string', example: 'Wireless Mouse' },
+            categoryId: { type: 'string', format: 'uuid' },
+            brandId: { type: 'string', format: 'uuid', nullable: true },
+            unitId: { type: 'string', format: 'uuid' },
+            status: { type: 'string', example: 'ACTIVE' },
+            warehouseSellingPrices: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  warehouseId: { type: 'string', format: 'uuid' },
+                  sellingPrice: { type: 'number', example: 160.00 },
+                  wholesalePrice: { type: 'number', example: 130.00 },
+                  status: { type: 'string', example: 'ACTIVE' },
+                },
+              },
+            },
+          },
+        },
+        CreateWarehouseSellingPriceInput: {
+          type: 'object',
+          required: ['productId', 'warehouseId', 'sellingPrice', 'wholesalePrice'],
+          properties: {
+            productId: { type: 'string', format: 'uuid', example: '123e4567-e89b-12d3-a456-426614174000' },
+            warehouseId: { type: 'string', format: 'uuid', example: '123e4567-e89b-12d3-a456-426614174001' },
+            sellingPrice: { type: 'number', example: 150.00 },
+            wholesalePrice: { type: 'number', example: 120.00 },
+          },
+        },
+        UpdateWarehouseSellingPriceInput: {
+          type: 'object',
+          properties: {
+            sellingPrice: { type: 'number', example: 155.00 },
+            wholesalePrice: { type: 'number', example: 125.00 },
+            status: { type: 'string', example: 'ACTIVE' },
           },
         },
         PriceTier: {
