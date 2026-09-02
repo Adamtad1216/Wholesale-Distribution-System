@@ -20,7 +20,7 @@ const swaggerOptions = {
     ],
     tags: [
       { name: '03-product-catalog', description: 'Product catalog management (categories, brands, units, products)' },
-      { name: '07-inventory', description: 'Inventory management (stock, movements, adjustments, reservations)' },
+      { name: '07-inventory', description: 'Inventory management (stock, transfers, adjustments, reservations)' },
       { name: '01-identity-access', description: 'Authentication, users, employees, and job specifications' },
       { name: '06-branches-warehouses', description: 'Companies, branches, warehouses, and regions' },
       { name: '09-customers', description: 'Customer management (PERSON and ORGANIZATION)' },
@@ -1207,22 +1207,30 @@ const swaggerOptions = {
             updatedAt: { type: 'string', format: 'date-time', nullable: true },
           },
         },
-        StockMovement: {
+        WarehouseStockTransfer: {
           type: 'object',
           properties: {
             id: { type: 'string', format: 'uuid' },
-            warehouseId: { type: 'string', format: 'uuid' },
+            fromWarehouseId: { type: 'string', format: 'uuid' },
+            toWarehouseId: { type: 'string', format: 'uuid' },
             productId: { type: 'string', format: 'uuid' },
-            movementType: { type: 'string', enum: ['PURCHASE_RECEIPT', 'SALES_RESERVATION', 'SALES_FULFILLMENT', 'SALES_RETURN', 'PURCHASE_RETURN', 'ADJUSTMENT_IN', 'ADJUSTMENT_OUT', 'TRANSFER_IN', 'TRANSFER_OUT'] },
-            quantity: { type: 'number', example: 100 },
-            unitCost: { type: 'number', nullable: true },
-            notes: { type: 'string', nullable: true },
-            warehouse: {
+            transferReason: { type: 'string', enum: ['REBALANCING', 'RESTOCKING', 'DAMAGED_GOODS', 'STORE_REQUEST', 'SEASONAL_ALLOCATION', 'EXCESS_STOCK', 'OTHER'] },
+            quantity: { type: 'number', example: 25 },
+            remark: { type: 'string', nullable: true },
+            fromWarehouse: {
               type: 'object',
               properties: {
                 id: { type: 'string', format: 'uuid' },
                 name: { type: 'string', example: 'Bole Central Warehouse' },
                 code: { type: 'string', example: 'WH-001' },
+              },
+            },
+            toWarehouse: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Kality Distribution Hub' },
+                code: { type: 'string', example: 'WH-002' },
               },
             },
             product: {
