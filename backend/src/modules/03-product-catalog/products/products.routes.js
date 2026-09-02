@@ -7,21 +7,12 @@ import {
   removeProduct,
   addImage,
   removeImage,
-  addTier,
-  modifyTier,
-  removeTier,
-  addDiscount,
-  modifyDiscount,
-  removeDiscount,
 } from "./products.controller.js";
 import {
   productQuerySchema,
-  productIdSchema,
   createProductSchema,
   updateProductSchema,
   productImageSchema,
-  priceTierSchema,
-  discountRuleSchema,
 } from "./products.validation.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 import { requirePermission } from "../../../middleware/permission.middleware.js";
@@ -37,7 +28,7 @@ router.use(authenticate);
  *   get:
  *     tags: [03-product-catalog]
  *     summary: List products
- *     description: Retrieve a paginated list of products with optional filtering.
+ *     description: Retrieve a paginated list of products with unified dynamic filters including categoryId, brandId, unitId, and warehouseId (prices).
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -64,6 +55,12 @@ router.use(authenticate);
  *           type: string
  *         description: Filter by status
  *       - in: query
+ *         name: productId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by product ID
+ *       - in: query
  *         name: categoryId
  *         schema:
  *           type: string
@@ -81,6 +78,12 @@ router.use(authenticate);
  *           type: string
  *           format: uuid
  *         description: Filter by unit ID
+ *       - in: query
+ *         name: warehouseId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by warehouse ID (returns products priced in this warehouse)
  *     responses:
  *       200:
  *         description: List of products
@@ -98,6 +101,12 @@ router.use(authenticate);
  *                     $ref: '#/components/schemas/Product'
  *                 meta:
  *                   $ref: '#/components/schemas/PaginationMeta'
+ *       400:
+ *         description: Bad request / validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -124,7 +133,7 @@ router.get(
  *   post:
  *     tags: [03-product-catalog]
  *     summary: Create a product
- *     description: Create a new product with pricing, category, brand, and unit. Optionally add initial images.
+ *     description: Create a new product with optional initial images and warehouse selling prices (status is automatically ACTIVE).
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -132,22 +141,7 @@ router.get(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Product'
- *           example:
- *             sku: PRD-001
- *             name: Wireless Headphones
- *             categoryId: 123e4567-e89b-12d3-a456-426614174000
- *             brandId: 123e4567-e89b-12d3-a456-426614174001
- *             unitId: 123e4567-e89b-12d3-a456-426614174002
- *             purchasePrice: 100
- *             sellingPrice: 150
- *             wholesalePrice: 120
- *             minimumStockLevel: 10
- *             reorderLevel: 5
- *             status: ACTIVE
- *             images:
- *               - imageUrl: https://example.com/image.jpg
- *                 isPrimary: true
+ *             $ref: '#/components/schemas/CreateProductInput'
  *     responses:
  *       201:
  *         description: Product created successfully
@@ -162,7 +156,7 @@ router.get(
  *                 data:
  *                   $ref: '#/components/schemas/Product'
  *       400:
- *         description: Validation error
+ *         description: Validation error or leaf category constraint violation
  *         content:
  *           application/json:
  *             schema:
@@ -179,8 +173,14 @@ router.get(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Category, Brand, or Unit not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
- *         description: Product SKU already exists
+ *         description: SKU collision
  *         content:
  *           application/json:
  *             schema:
@@ -199,7 +199,7 @@ router.post(
  *   get:
  *     tags: [03-product-catalog]
  *     summary: Get product by ID
- *     description: Retrieve detailed information for a specific product including images, price tiers, and discount rules.
+ *     description: Retrieve detailed information for a specific product including relations and selling prices.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -223,6 +223,12 @@ router.post(
  *                   example: success
  *                 data:
  *                   $ref: '#/components/schemas/Product'
+ *       400:
+ *         description: Invalid UUID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -254,7 +260,7 @@ router.get(
  *   patch:
  *     tags: [03-product-catalog]
  *     summary: Update a product
- *     description: Update product details including pricing and relations.
+ *     description: Update product details and sync warehouse selling prices dynamically.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -266,15 +272,10 @@ router.get(
  *           format: uuid
  *         description: Product ID
  *     requestBody:
- *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Product'
- *           example:
- *             name: Wireless Headphones Pro
- *             sellingPrice: 160
- *             status: ACTIVE
+ *             $ref: '#/components/schemas/UpdateProductInput'
  *     responses:
  *       200:
  *         description: Product updated successfully
@@ -289,7 +290,7 @@ router.get(
  *                 data:
  *                   $ref: '#/components/schemas/Product'
  *       400:
- *         description: Validation error
+ *         description: Validation error or leaf category constraint violation
  *         content:
  *           application/json:
  *             schema:
@@ -313,7 +314,7 @@ router.get(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
- *         description: Product SKU already exists
+ *         description: SKU collision
  *         content:
  *           application/json:
  *             schema:
@@ -332,7 +333,7 @@ router.patch(
  *   delete:
  *     tags: [03-product-catalog]
  *     summary: Delete a product
- *     description: Soft-delete a product by ID.
+ *     description: Soft delete an existing product if not linked to active transactional records.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -346,6 +347,12 @@ router.patch(
  *     responses:
  *       204:
  *         description: Product deleted successfully
+ *       400:
+ *         description: Cannot delete product linked to active stock or transactions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -377,7 +384,7 @@ router.delete(
  *   post:
  *     tags: [03-product-catalog]
  *     summary: Add product image
- *     description: Add a new image URL to a product. Set isPrimary to true to mark it as the primary image.
+ *     description: Add an image to a product.
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -393,10 +400,16 @@ router.delete(
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ProductImage'
- *           example:
- *             imageUrl: https://example.com/image.jpg
- *             isPrimary: true
+ *             type: object
+ *             required: [imageUrl]
+ *             properties:
+ *               imageUrl:
+ *                 type: string
+ *                 format: uri
+ *                 example: https://example.com/item.jpg
+ *               isPrimary:
+ *                 type: boolean
+ *                 default: false
  *     responses:
  *       201:
  *         description: Image added successfully
@@ -469,6 +482,12 @@ router.post(
  *     responses:
  *       204:
  *         description: Image removed successfully
+ *       400:
+ *         description: Invalid UUID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -492,419 +511,6 @@ router.delete(
   "/:id/images/:imageId",
   requirePermission("products:update"),
   removeImage,
-);
-
-/**
- * @swagger
- * /api/v1/catalog/products/{id}/price-tiers:
- *   post:
- *     tags: [03-product-catalog]
- *     summary: Add price tier
- *     description: Add a quantity-based price tier to a product.
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/PriceTier'
- *           example:
- *             minQuantity: 10
- *             maxQuantity: 100
- *             unitPrice: 70
- *             warehouseId: 123e4567-e89b-12d3-a456-426614174000
- *             startsAt: "2026-01-01T00:00:00Z"
- *             endsAt: "2026-12-31T23:59:59Z"
- *             status: ACTIVE
- *     responses:
- *       201:
- *         description: Price tier added successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   $ref: '#/components/schemas/PriceTier'
- *       400:
- *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: Product not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.post(
-  "/:id/price-tiers",
-  validate(priceTierSchema),
-  requirePermission("products:update"),
-  addTier,
-);
-
-/**
- * @swagger
- * /api/v1/catalog/products/{id}/price-tiers/{tierId}:
- *   patch:
- *     tags: [03-product-catalog]
- *     summary: Update price tier
- *     description: Update an existing price tier for a product.
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *       - in: path
- *         name: tierId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Price Tier ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/PriceTier'
- *           example:
- *             minQuantity: 10
- *             maxQuantity: 200
- *             unitPrice: 65
- *     responses:
- *       200:
- *         description: Price tier updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   $ref: '#/components/schemas/PriceTier'
- *       400:
- *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: Price tier not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.patch(
-  "/:id/price-tiers/:tierId",
-  validate(priceTierSchema),
-  requirePermission("products:update"),
-  modifyTier,
-);
-
-/**
- * @swagger
- * /api/v1/catalog/products/{id}/price-tiers/{tierId}:
- *   delete:
- *     tags: [03-product-catalog]
- *     summary: Remove price tier
- *     description: Remove a price tier from a product.
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *       - in: path
- *         name: tierId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Price Tier ID
- *     responses:
- *       204:
- *         description: Price tier removed successfully
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: Price tier not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.delete(
-  "/:id/price-tiers/:tierId",
-  requirePermission("products:update"),
-  removeTier,
-);
-
-/**
- * @swagger
- * /api/v1/catalog/products/{id}/discount-rules:
- *   post:
- *     tags: [03-product-catalog]
- *     summary: Add discount rule
- *     description: Add a quantity or date-based discount rule to a product.
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/DiscountRule'
- *           example:
- *             name: Summer Sale
- *             discountType: PERCENTAGE
- *             discountValue: 10
- *             minQuantity: 5
- *             maxQuantity: 50
- *             status: ACTIVE
- *     responses:
- *       201:
- *         description: Discount rule added successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   $ref: '#/components/schemas/DiscountRule'
- *       400:
- *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: Product not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.post(
-  "/:id/discount-rules",
-  validate(discountRuleSchema),
-  requirePermission("products:update"),
-  addDiscount,
-);
-
-/**
- * @swagger
- * /api/v1/catalog/products/{id}/discount-rules/{ruleId}:
- *   patch:
- *     tags: [03-product-catalog]
- *     summary: Update discount rule
- *     description: Update an existing discount rule for a product.
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *       - in: path
- *         name: ruleId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Discount Rule ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/DiscountRule'
- *           example:
- *             name: Summer Sale Extended
- *             discountValue: 15
- *             status: ACTIVE
- *     responses:
- *       200:
- *         description: Discount rule updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 data:
- *                   $ref: '#/components/schemas/DiscountRule'
- *       400:
- *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: Discount rule not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.patch(
-  "/:id/discount-rules/:ruleId",
-  validate(discountRuleSchema),
-  requirePermission("products:update"),
-  modifyDiscount,
-);
-
-/**
- * @swagger
- * /api/v1/catalog/products/{id}/discount-rules/{ruleId}:
- *   delete:
- *     tags: [03-product-catalog]
- *     summary: Remove discount rule
- *     description: Soft-delete a discount rule from a product.
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Product ID
- *       - in: path
- *         name: ruleId
- *         required: true
- *         schema:
- *           type: string
- *           format: uuid
- *         description: Discount Rule ID
- *     responses:
- *       204:
- *         description: Discount rule removed successfully
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Forbidden
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: Discount rule not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.delete(
-  "/:id/discount-rules/:ruleId",
-  requirePermission("products:update"),
-  removeDiscount,
 );
 
 export default router;

@@ -5,71 +5,59 @@ export const productQuerySchema = z.object({
   limit: z.coerce.number().int().positive().default(10),
   search: z.string().optional(),
   status: z.string().optional(),
-  categoryId: z.string().uuid().optional(),
-  brandId: z.string().uuid().optional(),
-  unitId: z.string().uuid().optional(),
+  productId: z.string().uuid('Invalid product ID format').optional(),
+  categoryId: z.string().uuid('Invalid category ID format').optional(),
+  brandId: z.string().uuid('Invalid brand ID format').optional(),
+  unitId: z.string().uuid('Invalid unit ID format').optional(),
+  warehouseId: z.string().uuid('Invalid warehouse ID format').optional(),
+  includeArchived: z.coerce.boolean().optional().default(false),
 });
 
 export const productIdSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().uuid('Invalid product ID format'),
+});
+
+const createWarehouseSellingPriceItemSchema = z.object({
+  warehouseId: z.string().uuid('Invalid warehouse ID format'),
+  sellingPrice: z.coerce.number().min(0, 'Selling price cannot be negative'),
+  wholesalePrice: z.coerce.number().min(0, 'Wholesale price cannot be negative'),
+});
+
+const updateWarehouseSellingPriceItemSchema = z.object({
+  warehouseId: z.string().uuid('Invalid warehouse ID format'),
+  sellingPrice: z.coerce.number().min(0, 'Selling price cannot be negative'),
+  wholesalePrice: z.coerce.number().min(0, 'Wholesale price cannot be negative'),
+  status: z.string().optional(),
 });
 
 export const createProductSchema = z.object({
   sku: z.string().min(1).max(100).optional(),
-  name: z.string().min(1).max(255),
-  categoryId: z.string().uuid(),
-  brandId: z.string().uuid(),
-  unitId: z.string().uuid(),
-  purchasePrice: z.coerce.number().min(0),
-  sellingPrice: z.coerce.number().min(0),
-  wholesalePrice: z.coerce.number().min(0),
-  minimumStockLevel: z.coerce.number().min(0).default(0),
-  reorderLevel: z.coerce.number().min(0).default(0),
-  status: z.string().default('ACTIVE'),
-  images: z.array(
-    z.object({
-      imageUrl: z.string().url(),
-      isPrimary: z.boolean().default(false),
-    })
-  ).optional(),
+  name: z.string().min(1, 'Product name is required').max(255),
+  categoryId: z.string().uuid('Invalid category ID format'),
+  brandId: z.string().uuid('Invalid brand ID format').optional().nullable(),
+  unitId: z.string().uuid('Invalid unit ID format'),
+  images: z
+    .array(
+      z.object({
+        imageUrl: z.string().url('Invalid image URL format'),
+        isPrimary: z.boolean().default(false),
+      })
+    )
+    .optional(),
+  warehouseSellingPrices: z.array(createWarehouseSellingPriceItemSchema).optional(),
 });
 
 export const updateProductSchema = z.object({
   sku: z.string().min(1).max(100).optional(),
   name: z.string().min(1).max(255).optional(),
-  categoryId: z.string().uuid().optional(),
-  brandId: z.string().uuid().optional(),
-  unitId: z.string().uuid().optional(),
-  purchasePrice: z.coerce.number().min(0).optional(),
-  sellingPrice: z.coerce.number().min(0).optional(),
-  wholesalePrice: z.coerce.number().min(0).optional(),
-  minimumStockLevel: z.coerce.number().min(0).optional(),
-  reorderLevel: z.coerce.number().min(0).optional(),
+  categoryId: z.string().uuid('Invalid category ID format').optional(),
+  brandId: z.string().uuid('Invalid brand ID format').optional().nullable(),
+  unitId: z.string().uuid('Invalid unit ID format').optional(),
   status: z.string().optional(),
+  warehouseSellingPrices: z.array(updateWarehouseSellingPriceItemSchema).optional(),
 });
 
 export const productImageSchema = z.object({
-  imageUrl: z.string().url(),
+  imageUrl: z.string().url('Invalid image URL format'),
   isPrimary: z.boolean().default(false),
-});
-
-export const priceTierSchema = z.object({
-  minQuantity: z.coerce.number().min(0).optional(),
-  maxQuantity: z.coerce.number().min(0).optional(),
-  unitPrice: z.coerce.number().min(0).optional(),
-  warehouseId: z.string().uuid().optional(),
-  startsAt: z.string().optional(),
-  endsAt: z.string().optional(),
-  status: z.string().default('ACTIVE'),
-});
-
-export const discountRuleSchema = z.object({
-  name: z.string().min(1).max(100),
-  discountType: z.enum(['PERCENTAGE', 'FIXED_AMOUNT']),
-  discountValue: z.coerce.number().min(0),
-  minQuantity: z.coerce.number().min(0),
-  maxQuantity: z.coerce.number().min(0).optional(),
-  startsAt: z.string().optional(),
-  endsAt: z.string().optional(),
-  status: z.string().default('ACTIVE'),
 });
