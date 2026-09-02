@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
+export { strongPasswordRegex };
+
 export const registerSchema = z.discriminatedUnion('customerType', [
   z.object({
     customerType: z.literal('PERSON'),

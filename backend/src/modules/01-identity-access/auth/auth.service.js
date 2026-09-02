@@ -10,6 +10,17 @@ import { env } from "../../../utils/env.js";
 import { AppError } from "../../../utils/errors.js";
 import crypto from 'crypto';
 import { sendResetPasswordEmail } from "../../../utils/email.js";
+import { strongPasswordRegex } from "./auth.validation.js";
+
+// Fast SHA-256 hash for refresh tokens.
+// Refresh tokens are already high-entropy random JWTs — they don't need
+// bcrypt's brute-force resistance. SHA-256 is synchronous and takes <1ms.
+function hashRefreshToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+function compareRefreshToken(token, hash) {
+  return hashRefreshToken(token) === hash;
+}
 import { ensureUniqueCode } from '../../09-customers/customers/customers.service.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -156,6 +167,13 @@ export async function register(data, req) {
 
       if (!primaryPerson && createdPersons.length > 0) {
         primaryPerson = createdPersons[0];
+        await tx.organizationContact.updateMany({
+          where: {
+            organizationId: organization.id,
+            personId: primaryPerson.id,
+          },
+          data: { isPrimary: true },
+        });
       }
 
       if (primaryPerson) {
@@ -222,7 +240,7 @@ export async function register(data, req) {
     userId: result.user.id,
     username: result.user.username,
   });
-  const refreshTokenHash = await hashPassword(refreshToken);
+  const refreshTokenHash = hashRefreshToken(refreshToken);
 
   await prisma.user.update({
     where: { id: result.user.id },
@@ -264,6 +282,10 @@ export async function login(data, req) {
     where: { username: data.username },
     include: {
       person: true,
+      auditLogs: {
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+      },
       userRoles: {
         include: {
           role: {
@@ -354,15 +376,25 @@ export async function login(data, req) {
     throw new AppError('Invalid username or password', 401);
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      lastLoginAt: new Date(),
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-    },
+  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const permissionsSet = new Set();
+
+  user.userRoles?.forEach((ur) => {
+    ur.role?.rolePermissions?.forEach((rp) => {
+      if (rp.permission?.name) {
+        permissionsSet.add(rp.permission.name);
+      }
+    });
   });
 
+  if (roles.includes('SUPER_ADMIN') || roles.includes('ADMIN')) {
+    permissionsSet.add('*');
+  }
+
+  const permissions = Array.from(permissionsSet);
+  const primaryRole = roles[0] || 'USER';
+
+  // Merge both updates into a single DB write to save a round-trip
   const accessToken = signAccessToken({
     userId: user.id,
     username: user.username,
@@ -371,25 +403,46 @@ export async function login(data, req) {
     userId: user.id,
     username: user.username,
   });
-  const refreshTokenHash = await hashPassword(refreshToken);
+  const refreshTokenHash = hashRefreshToken(refreshToken);
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
+      lastLoginAt: new Date(),
+      failedLoginAttempts: 0,
+      lockedUntil: null,
       refreshTokenHash,
       refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
   });
 
-  await logAudit({
+  // Fire audit log without awaiting it — don't block the login response
+  logAudit({
     userId: user.id,
     action: 'LOGIN_SUCCESS',
     entityType: 'User',
     entityId: user.id,
     req,
-  });
+  }).catch(() => {}); // fire-and-forget; audit failures never block login
 
-  return { user, accessToken, refreshToken };
+  return {
+    user: {
+      id: user.id,
+      username: user.username,
+      person: user.person,
+      isActive: user.isActive,
+      accountStatus: user.accountStatus,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      lastLoginAt: user.lastLoginAt,
+      auditLogs: user.auditLogs || [],
+    },
+    role: primaryRole,
+    roles,
+    permissions,
+    accessToken,
+    refreshToken,
+  };
 }
 
 export async function refreshTokens(refreshToken, req) {
@@ -416,7 +469,7 @@ export async function refreshTokens(refreshToken, req) {
     throw new AppError('Refresh token expired', 401);
   }
 
-  const isTokenValid = await comparePassword(refreshToken, user.refreshTokenHash);
+  const isTokenValid = compareRefreshToken(refreshToken, user.refreshTokenHash);
   if (!isTokenValid) {
     throw new AppError('Invalid refresh token', 401);
   }
@@ -429,7 +482,7 @@ export async function refreshTokens(refreshToken, req) {
     userId: user.id,
     username: user.username,
   });
-  const newRefreshTokenHash = await hashPassword(newRefreshToken);
+  const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -437,14 +490,6 @@ export async function refreshTokens(refreshToken, req) {
       refreshTokenHash: newRefreshTokenHash,
       refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
-  });
-
-  await logAudit({
-    userId: user.id,
-    action: 'TOKEN_REFRESHED',
-    entityType: 'User',
-    entityId: user.id,
-    req,
   });
 
   return { accessToken, refreshToken: newRefreshToken };
@@ -472,7 +517,40 @@ export async function getMe(userId) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      person: true,
+      person: {
+        include: {
+          customers: {
+            orderBy: { createdAt: 'desc' },
+            include: {
+              organization: {
+                include: {
+                  contacts: {
+                    where: { isPrimary: true },
+                    include: {
+                      person: {
+                        select: {
+                          id: true,
+                          firstName: true,
+                          middleName: true,
+                          lastName: true,
+                          phone: true,
+                          email: true,
+                          address: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              paymentTerms: true,
+            },
+          },
+        },
+      },
+      auditLogs: {
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+      },
       userRoles: {
         include: {
           role: {
@@ -493,7 +571,152 @@ export async function getMe(userId) {
     throw new AppError('User not found', 404);
   }
 
-  return user;
+  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const permissionsSet = new Set();
+
+  user.userRoles?.forEach((ur) => {
+    ur.role?.rolePermissions?.forEach((rp) => {
+      if (rp.permission?.name) {
+        permissionsSet.add(rp.permission.name);
+      }
+    });
+  });
+
+  if (roles.includes('SUPER_ADMIN') || roles.includes('ADMIN')) {
+    permissionsSet.add('*');
+  }
+
+  const permissions = Array.from(permissionsSet);
+  const primaryRole = roles[0] || 'USER';
+
+  const customer = user.person?.customers?.[0] || null;
+
+  return {
+    user: {
+      id: user.id,
+      username: user.username,
+      person: user.person,
+      isActive: user.isActive,
+      accountStatus: user.accountStatus,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      lastLoginAt: user.lastLoginAt,
+      auditLogs: user.auditLogs || [],
+    },
+    role: primaryRole,
+    roles,
+    permissions,
+    customer: customer
+      ? {
+          id: customer.id,
+          customerCode: customer.customerCode,
+          customerType: customer.customerType,
+          creditLimit: customer.creditLimit,
+          status: customer.status,
+          paymentTerms: customer.paymentTerms,
+          organization: customer.organization
+            ? {
+                id: customer.organization.id,
+                name: customer.organization.name,
+                registrationNumber: customer.organization.registrationNumber,
+                taxNumber: customer.organization.taxNumber,
+                phone: customer.organization.phone,
+                email: customer.organization.email,
+                address: customer.organization.address,
+                contacts: customer.organization.contacts?.map((c) => ({
+                  id: c.id,
+                  position: c.position,
+                  isPrimary: c.isPrimary,
+                  person: c.person,
+                })) || [],
+              }
+            : null,
+        }
+      : null,
+  };
+}
+
+export async function updateProfile(userId, data) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { personId: true },
+  });
+
+  if (!user || !user.personId) {
+    throw new AppError('User person record not found', 404);
+  }
+
+  const { firstName, lastName, middleName, email, phone, address, bio, avatarUrl } = data;
+
+  await prisma.person.update({
+    where: { id: user.personId },
+    data: {
+       ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+      ...(middleName !== undefined && { middleName }),
+      ...(email !== undefined && { email }),
+      ...(phone !== undefined && { phone }),
+      ...(address !== undefined && { address }),
+      ...(bio !== undefined && { bio }),
+      ...(avatarUrl !== undefined && { avatarUrl }),
+    },
+  });
+
+  await logAudit({
+    createdById: userId,
+    action: 'PROFILE_UPDATED',
+    entityType: 'User',
+    entityId: userId,
+    newValues: { firstName, lastName, email, phone },
+  }).catch(() => {});
+
+  return getMe(userId);
+}
+
+export async function changePassword(userId, { currentPassword, newPassword }, req) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true },
+  });
+
+  if (!user) throw new AppError('User not found', 404);
+
+  if (!strongPasswordRegex.test(newPassword)) {
+    throw new AppError(
+      'Password must be at least 8 characters with uppercase, lowercase, number, and special character',
+      400
+    );
+  }
+
+  const isValid = await comparePassword(currentPassword, user.passwordHash);
+  if (!isValid) {
+    await logAudit({
+      createdById: userId,
+      userId,
+      action: 'PASSWORD_CHANGE_FAILED',
+      entityType: 'User',
+      entityId: userId,
+      newValues: { reason: 'Current password is incorrect' },
+      req,
+    });
+    throw new AppError('Current password is incorrect', 401);
+  }
+
+  const newHash = await hashPassword(newPassword);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: newHash },
+  });
+
+  await logAudit({
+    createdById: userId,
+    userId,
+    action: 'PASSWORD_CHANGED',
+    entityType: 'User',
+    entityId: userId,
+    req,
+  });
 }
 
 export async function cleanupExpiredRefreshTokens() {

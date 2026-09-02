@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 
 export async function logAudit({
   createdById,
+  userId,
   action,
   entityType,
   entityId,
@@ -11,9 +12,16 @@ export async function logAudit({
   req,
 }) {
   try {
+    // activeUserId is the performing user — used for BOTH createdById and userId
+    // so the log shows up in user.auditLogs (userId) AND has a creator (createdById)
+    const activeUserId = createdById || userId;
+
     await prisma.auditLog.create({
       data: {
-        ...(createdById ? { createdBy: { connect: { id: createdById } } } : {}),
+        // Link as creator of the log row
+        ...(activeUserId ? { createdBy: { connect: { id: activeUserId } } } : {}),
+        // Link as the subject user — this populates user.auditLogs on the User model
+        ...(activeUserId ? { user: { connect: { id: activeUserId } } } : {}),
         action,
         entityType,
         entityId: entityId || '00000000-0000-0000-0000-000000000000',

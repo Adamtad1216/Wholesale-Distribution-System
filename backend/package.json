@@ -9,6 +9,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
+    "prisma:seed:sales": "node prisma/seed.sales.js",
     "lint": "eslint src/",
     "test": "vitest run"
   },
@@ -20,6 +21,7 @@
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -29,6 +31,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.11.0",
+    "multer": "^2.3.0",
     "nodemailer": "^9.0.5",
     "pg": "^8.23.0",
     "pino": "^10.3.1",
@@ -48,5 +51,8 @@
     "prettier": "^3.9.6",
     "supertest": "^7.2.2",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.0"
   }
 }

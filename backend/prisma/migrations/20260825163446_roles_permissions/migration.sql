@@ -1,0 +1,13 @@
+-- ============================================================
+-- ROLES & PERMISSIONS migration (no-op)
+--
+-- The previous migration `20260824123859_pluralize_table_names`
+-- already renamed every table (and Postgres automatically
+-- renamed its constraints / indexes / fkeys to follow). Every
+-- rename attempted here would therefore fail with
+--   "constraint ... does not exist"
+--   "index ... does not exist"
+--
+-- The DB is already in the target state, so this migration
+-- is intentionally a no-op.
+-- ============================================================

@@ -23,12 +23,14 @@ const sanitizeJobSpecification = (jobSpec) => {
 };
 
 export async function createJobSpecification(data, createdById, req) {
+  const generatedCode = data.code?.trim() || `SPEC-${(data.title || 'JOB').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)}-${Date.now().toString().slice(-4)}`;
+  
   const jobSpec = await prisma.jobSpecification.create({
     data: {
-      code: data.code,
+      code: generatedCode,
       title: data.title,
-      description: data.description,
-      department: data.department,
+      description: data.description || undefined,
+      department: data.department || undefined,
       status: data.status || 'ACTIVE',
       createdById,
       updatedById: createdById,

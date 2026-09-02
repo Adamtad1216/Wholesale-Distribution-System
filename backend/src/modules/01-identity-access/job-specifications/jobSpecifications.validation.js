@@ -13,7 +13,7 @@ export const jobSpecificationIdSchema = z.object({
 });
 
 export const createJobSpecificationSchema = z.object({
-  code: z.string().min(1).max(50),
+  code: z.string().max(50).optional(),
   title: z.string().min(1).max(255),
   description: z.string().max(1000).optional(),
   department: z.string().max(255).optional(),
