@@ -81,6 +81,10 @@ const ALL_PERMISSIONS = [
   { name: 'products:read', module: 'products', action: 'read', description: 'Read products' },
   { name: 'products:update', module: 'products', action: 'update', description: 'Update products' },
   { name: 'products:delete', module: 'products', action: 'delete', description: 'Delete products' },
+  { name: 'warehouse-selling-prices:create', module: 'warehouse-selling-prices', action: 'create', description: 'Create warehouse selling prices' },
+  { name: 'warehouse-selling-prices:read', module: 'warehouse-selling-prices', action: 'read', description: 'Read warehouse selling prices' },
+  { name: 'warehouse-selling-prices:update', module: 'warehouse-selling-prices', action: 'update', description: 'Update warehouse selling prices' },
+  { name: 'warehouse-selling-prices:delete', module: 'warehouse-selling-prices', action: 'delete', description: 'Delete warehouse selling prices' },
 ];
 
 // Role definitions with specific permissions for testing
