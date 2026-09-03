@@ -1,4 +1,4 @@
-﻿generator client {
+generator client {
   provider = "prisma-client-js"
 }
 
@@ -367,6 +367,10 @@ model User {
   updatedDiscountRules            DiscountRule[]            @relation("DiscountRuleUpdater")
   createdSalesQuotas              SalesQuota[]              @relation("SalesQuotaCreator")
   updatedSalesQuotas              SalesQuota[]              @relation("SalesQuotaUpdater")
+  createdStockTransfers           WarehouseStockTransfer[]  @relation("WarehouseStockTransferCreator")
+  updatedStockTransfers           WarehouseStockTransfer[]  @relation("WarehouseStockTransferUpdater")
+  createdWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceCreator")
+  updatedWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceUpdater")
   createdCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressCreator")
   updatedCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressUpdater")
 
@@ -619,6 +623,9 @@ model Warehouse {
   status          String             @default("ACTIVE")
   stocks          WarehouseStock[]
   stockMovements  StockMovement[]
+  warehouseSellingPrices WarehouseSellingPrice[]
+  transfersFrom   WarehouseStockTransfer[]   @relation("StockTransferFrom")
+  transfersTo     WarehouseStockTransfer[]   @relation("StockTransferTo")
   reservations    StockReservation[]
   adjustments     StockAdjustment[]
   purchaseOrders  PurchaseOrder[]
@@ -858,6 +865,8 @@ model Product {
   status              String                    @default("ACTIVE")
   images              ProductImage[]
   warehouseStocks     WarehouseStock[]
+  warehouseSellingPrices WarehouseSellingPrice[]
+  stockTransfers      WarehouseStockTransfer[]
   stockMovements      StockMovement[]
   reservations        StockReservation[]
   adjustmentItems     StockAdjustmentItem[]
@@ -2154,4 +2163,65 @@ model Document {
   updatedBy      User?        @relation("DocumentUpdater", fields: [updatedById], references: [id])
 
   @@map("documents")
+}
+
+model WarehouseStockTransfer {
+  id              String         @id @default(uuid()) @db.Uuid
+  createdById     String?        @map("created_by_id") @db.Uuid
+  updatedById     String?        @map("updated_by_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  isArchived      Boolean        @default(false) @map("is_archived")
+  archivedAt      DateTime?      @map("archived_at")
+  fromWarehouseId String         @map("from_warehouse_id") @db.Uuid
+  toWarehouseId   String         @map("to_warehouse_id") @db.Uuid
+  productId       String         @map("product_id") @db.Uuid
+  transferReason  TransferReason @map("transfer_reason")
+  quantity        Decimal        @db.Decimal(15, 3)
+  remark          String?
+
+  createdBy     User?     @relation("WarehouseStockTransferCreator", fields: [createdById], references: [id])
+  updatedBy     User?     @relation("WarehouseStockTransferUpdater", fields: [updatedById], references: [id])
+  product       Product   @relation(fields: [productId], references: [id])
+  fromWarehouse Warehouse @relation("StockTransferFrom", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse @relation("StockTransferTo", fields: [toWarehouseId], references: [id])
+
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
+  @@index([productId])
+  @@map("warehouse_stock_transfers")
+}
+
+model WarehouseSellingPrice {
+  id             String    @id @default(uuid()) @db.Uuid
+  createdById    String?   @map("created_by_id") @db.Uuid
+  updatedById    String?   @map("updated_by_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  isArchived     Boolean   @default(false) @map("is_archived")
+  archivedAt     DateTime? @map("archived_at")
+  productId      String    @map("product_id") @db.Uuid
+  warehouseId    String    @map("warehouse_id") @db.Uuid
+  sellingPrice   Decimal   @map("selling_price") @db.Decimal(15, 2)
+  wholesalePrice Decimal   @map("wholesale_price") @db.Decimal(15, 2)
+  status         String    @default("ACTIVE")
+
+  createdBy User?     @relation("WarehouseSellingPriceCreator", fields: [createdById], references: [id])
+  updatedBy User?     @relation("WarehouseSellingPriceUpdater", fields: [updatedById], references: [id])
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+  @@index([productId, warehouseId, status])
+  @@map("warehouse_selling_prices")
+}
+
+enum TransferReason {
+  REBALANCING
+  RESTOCKING
+  DAMAGED_GOODS
+  STORE_REQUEST
+  SEASONAL_ALLOCATION
+  EXCESS_STOCK
+  OTHER
 }
