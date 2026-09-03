@@ -76,7 +76,7 @@ export async function createUser(data, createdById, req) {
     throw new AppError('Username already taken', 409);
   }
 
-  if (data.email) {
+  if (data.email && !data.personId) {
     const existingEmail = await prisma.person.findUnique({
       where: { email: data.email },
     });
@@ -95,23 +95,49 @@ export async function createUser(data, createdById, req) {
   const passwordHash = await hashPassword(data.password);
 
   const user = await prisma.$transaction(async (tx) => {
-    const person = await tx.person.create({
-      data: {
-        firstName: data.firstName,
-        middleName: data.middleName,
-        lastName: data.lastName,
-        phone: data.phone,
-        email: data.email,
-        address: data.address,
-        status: 'ACTIVE',
-        createdById: createdById,
-        updatedById: createdById,
-      },
-    });
+    let personId = data.personId;
+
+    if (personId) {
+      const existingUserForPerson = await tx.user.findFirst({
+        where: { personId, isArchived: false },
+      });
+      if (existingUserForPerson) {
+        throw new AppError('This person already has an active user account', 409);
+      }
+
+      // Update person details if needed
+      await tx.person.update({
+        where: { id: personId },
+        data: {
+          firstName: data.firstName,
+          middleName: data.middleName,
+          lastName: data.lastName,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+          updatedById: createdById,
+        },
+      });
+    } else {
+      const person = await tx.person.create({
+        data: {
+          firstName: data.firstName,
+          middleName: data.middleName,
+          lastName: data.lastName,
+          phone: data.phone,
+          email: data.email,
+          address: data.address,
+          status: 'ACTIVE',
+          createdById: createdById,
+          updatedById: createdById,
+        },
+      });
+      personId = person.id;
+    }
 
     const userRecord = await tx.user.create({
       data: {
-        personId: person.id,
+        personId,
         username: data.username,
         passwordHash,
         isActive: data.isActive,

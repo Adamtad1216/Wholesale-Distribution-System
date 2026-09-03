@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 
@@ -647,7 +647,8 @@ button[disabled] {
    BUTTONS — ALL THEMES (VARIABLE DRIVEN)
    ============================================================ */
 
-.btn-primary, button.btn-primary {
+.btn-primary,
+button.btn-primary {
   background-color: var(--btn-primary-bg) !important;
   color: var(--btn-primary-text) !important;
   border-color: var(--btn-primary-border) !important;
@@ -655,11 +656,13 @@ button[disabled] {
   opacity: 1 !important;
 }
 
-.btn-primary:hover, button.btn-primary:hover {
+.btn-primary:hover,
+button.btn-primary:hover {
   background-color: var(--btn-primary-hover-bg) !important;
 }
 
-.btn-secondary, button.btn-secondary {
+.btn-secondary,
+button.btn-secondary {
   background-color: var(--btn-secondary-bg) !important;
   color: var(--btn-secondary-text) !important;
   border-color: var(--btn-secondary-border) !important;
@@ -667,11 +670,13 @@ button[disabled] {
   opacity: 1 !important;
 }
 
-.btn-secondary:hover, button.btn-secondary:hover {
+.btn-secondary:hover,
+button.btn-secondary:hover {
   background-color: var(--btn-secondary-hover-bg) !important;
 }
 
-.btn-danger, button.btn-danger {
+.btn-danger,
+button.btn-danger {
   background-color: var(--btn-danger-bg) !important;
   color: var(--btn-danger-text) !important;
   border-color: var(--btn-danger-border) !important;
@@ -679,21 +684,25 @@ button[disabled] {
   opacity: 1 !important;
 }
 
-.btn-danger:hover, button.btn-danger:hover {
+.btn-danger:hover,
+button.btn-danger:hover {
   background-color: var(--btn-danger-hover-bg) !important;
   color: var(--btn-danger-hover-text) !important;
 }
 
-.btn-ghost, button.btn-ghost {
+.btn-ghost,
+button.btn-ghost {
   color: var(--btn-ghost-text) !important;
   font-weight: 600 !important;
 }
 
-.btn-ghost:hover, button.btn-ghost:hover {
+.btn-ghost:hover,
+button.btn-ghost:hover {
   background-color: var(--btn-ghost-hover-bg) !important;
 }
 
-.btn-outline, button.btn-outline {
+.btn-outline,
+button.btn-outline {
   color: var(--btn-outline-text) !important;
   border-color: var(--btn-outline-border) !important;
   font-weight: 600 !important;
@@ -844,7 +853,8 @@ option {
   border-color: var(--color-border);
 }
 
-.ui-table-header, table thead {
+.ui-table-header,
+table thead {
   background-color: var(--table-header-bg) !important;
   color: var(--table-header-text) !important;
   border-bottom: 1px solid var(--color-border);

@@ -24,13 +24,13 @@ import { setProfile } from './features/auth/authSlice';
 // Protected pages
 import Dashboard from './features/dashboard/pages/dashboard/Dashboard';
 import ProfilePage from './features/auth/pages/profile/ProfilePage';
-import UsersPage from './features/users/pages/users/UsersPage';
+import UsersPage from './features/users/pages/UsersPage';
 import RolesJobSpecsMainPage from './features/roles-job-specifications/pages/RolesJobSpecsMainPage';
 import PermissionsPage from './features/permissions/pages/permissions/PermissionsPage';
 import EmployeesPage from './features/employees/pages/EmployeesPage';
 import BranchesPage from './features/branches/pages/branches/BranchesPage';
 import Customers from './features/customers/pages/Customers';
-import Documents from './features/documents/pages/documents/Documents';
+import Documents from './features/documents/pages/Documents';
 import Payments from './features/payments/pages/payments/Payments';
 
 /**

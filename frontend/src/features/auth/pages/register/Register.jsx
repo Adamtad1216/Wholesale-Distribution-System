@@ -156,22 +156,20 @@ export default function Register() {
           <button
             type="button"
             onClick={() => handleTypeChange("PERSON")}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition duration-200 ${
-              customerType === "PERSON"
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition duration-200 ${customerType === "PERSON"
                 ? "bg-gradient-to-r from-violet-600 to-indigo-600  shadow-md"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             Individual Customer
           </button>
           <button
             type="button"
             onClick={() => handleTypeChange("ORGANIZATION")}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition duration-200 ${
-              customerType === "ORGANIZATION"
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition duration-200 ${customerType === "ORGANIZATION"
                 ? "bg-gradient-to-r from-violet-600 to-indigo-600  shadow-md"
                 : "text-muted-foreground hover:text-foreground"
-            }`}
+              }`}
           >
             Business Organization
           </button>

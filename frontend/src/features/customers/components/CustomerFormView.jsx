@@ -53,18 +53,32 @@ export default function CustomerFormView({
                 onClick={() => setFormData({ ...formData, customerType: 'ORGANIZATION' })}
                 className={`p-5 rounded-xl border text-left flex items-start gap-4 transition ${
                   formData.customerType === 'ORGANIZATION'
-                    ? 'border-indigo-500 bg-indigo-500/10 text-indigo-300 font-semibold shadow-lg'
-                    : 'border-border bg-muted800 text-muted-foreground hover:bg-muted800'
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 font-semibold shadow-lg'
+                    : 'border-border bg-card text-muted-foreground hover:bg-secondary/40'
                 }`}
               >
-                <div className="p-3 bg-indigo-500/20 rounded-xl text-indigo-400">
+                <div className={`p-3 rounded-xl transition ${
+                  formData.customerType === 'ORGANIZATION'
+                    ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
                 <div>
-                  <div className="text-base font-bold text-foreground">Organization / Corporate Entity</div>
-                  <div className="text-xs text-muted-foreground mt-1 font-normal">
+                  <div className={`text-base font-bold transition ${
+                    formData.customerType === 'ORGANIZATION'
+                      ? 'text-indigo-950 dark:text-foreground'
+                      : 'text-foreground'
+                  }`}>
+                    Organization / Corporate Entity
+                  </div>
+                  <div className={`text-xs mt-1 font-normal transition ${
+                    formData.customerType === 'ORGANIZATION'
+                      ? 'text-indigo-900/80 dark:text-muted-foreground'
+                      : 'text-muted-foreground'
+                  }`}>
                     For registered commercial businesses, wholesalers, retail chains, and enterprise clients.
                   </div>
                 </div>
@@ -75,18 +89,32 @@ export default function CustomerFormView({
                 onClick={() => setFormData({ ...formData, customerType: 'PERSON' })}
                 className={`p-5 rounded-xl border text-left flex items-start gap-4 transition ${
                   formData.customerType === 'PERSON'
-                    ? 'border-violet-500 bg-violet-500/10 text-violet-300 font-semibold shadow-lg'
-                    : 'border-border bg-muted800 text-muted-foreground hover:bg-muted800'
+                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 font-semibold shadow-lg'
+                    : 'border-border bg-card text-muted-foreground hover:bg-secondary/40'
                 }`}
               >
-                <div className="p-3 bg-violet-500/20 rounded-xl text-violet-400">
+                <div className={`p-3 rounded-xl transition ${
+                  formData.customerType === 'PERSON'
+                    ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400'
+                    : 'bg-muted text-muted-foreground'
+                }`}>
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
                 <div>
-                  <div className="text-base font-bold text-foreground">Individual Person</div>
-                  <div className="text-xs text-muted-foreground mt-1 font-normal">
+                  <div className={`text-base font-bold transition ${
+                    formData.customerType === 'PERSON'
+                      ? 'text-violet-950 dark:text-foreground'
+                      : 'text-foreground'
+                  }`}>
+                    Individual Person
+                  </div>
+                  <div className={`text-xs mt-1 font-normal transition ${
+                    formData.customerType === 'PERSON'
+                      ? 'text-violet-900/80 dark:text-muted-foreground'
+                      : 'text-muted-foreground'
+                  }`}>
                     For sole proprietors, independent traders, or retail buyer accounts.
                   </div>
                 </div>
@@ -101,18 +129,7 @@ export default function CustomerFormView({
             1. Commercial & Payment Terms
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">Customer Code</label>
-              <input
-                type="text"
-                disabled={isEdit}
-                placeholder="Auto-generated (e.g. CUS-M29-V92)"
-                value={formData.customerCode}
-                onChange={(e) => setFormData({ ...formData, customerCode: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500 disabled:opacity-60"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">Credit Limit ($)</label>
@@ -157,10 +174,10 @@ export default function CustomerFormView({
                     />
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                       st === 'ACTIVE'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                         : st === 'SUSPENDED'
-                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/30'
+                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30'
                     }`}>
                       {st}
                     </span>

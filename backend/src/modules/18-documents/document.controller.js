@@ -21,6 +21,15 @@ export const getDocumentTypes = async (req, res, next) => {
   }
 };
 
+export const getDocuments = async (req, res, next) => {
+  try {
+    const documents = await documentService.getDocuments(req.query);
+    res.status(200).json({ success: true, data: documents });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createDocument = async (req, res, next) => {
   try {
     const document = await documentService.createDocument(req.body, req.user?.id);
@@ -35,6 +44,15 @@ export const updateDocumentStatus = async (req, res, next) => {
     const { status } = req.body;
     const document = await documentService.updateDocumentStatus(req.params.id, status, req.user?.id);
     res.status(200).json({ success: true, data: document });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteDocument = async (req, res, next) => {
+  try {
+    await documentService.deleteDocument(req.params.id);
+    res.status(200).json({ success: true, message: 'Document deleted successfully' });
   } catch (error) {
     next(error);
   }

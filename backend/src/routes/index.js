@@ -25,6 +25,7 @@ import warehousesRoutes from "../modules/06-branches-warehouses/warehouses/wareh
 import regionsRoutes from "../modules/06-branches-warehouses/regions/regions.routes.js";
 import jobSpecificationsRoutes from "../modules/01-identity-access/job-specifications/jobSpecifications.routes.js";
 import employeesRoutes from "../modules/01-identity-access/employees/employees.routes.js";
+import personsRoutes from "../modules/01-identity-access/persons/persons.routes.js";
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.use("/v1/warehouses", warehousesRoutes);
 router.use("/v1/regions", regionsRoutes);
 router.use("/v1/job-specifications", jobSpecificationsRoutes);
 router.use("/v1/employees", employeesRoutes);
+router.use("/v1/persons", personsRoutes);
 router.use("/v1/users", usersRoutes);
 router.use("/v1/roles", rolesRoutes);
 router.use("/v1/permissions", permissionsRoutes);

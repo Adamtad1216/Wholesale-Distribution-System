@@ -37,40 +37,12 @@ router.use(requireAuth);
  *       200:
  *         description: List of Document Types
  */
-router.post('/types', docController.createDocumentType);
 router.get('/types', docController.getDocumentTypes);
+router.post('/types', docController.createDocumentType);
 
-/**
- * @swagger
- * /api/v1/documents:
- *   post:
- *     summary: Attach a Document (e.g. to a Goods Receipt)
- *     tags: [18 - Documents]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               documentTypeId:
- *                 type: string
- *               entityType:
- *                 type: string
- *                 example: GOODS_RECEIPT
- *               entityId:
- *                 type: string
- *               fileUrl:
- *                 type: string
- *               fileName:
- *                 type: string
- *     responses:
- *       201:
- *         description: Document attached
- */
+router.get('/', docController.getDocuments);
 router.post('/', docController.createDocument);
+router.delete('/:id', docController.deleteDocument);
 
 /**
  * @swagger

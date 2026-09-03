@@ -80,17 +80,6 @@ export default function EmployeeFormView({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">Employee Code</label>
-              <input
-                type="text"
-                placeholder="Auto-generated if empty (e.g. EMP-001)"
-                value={formData.employeeCode}
-                onChange={(e) => setFormData({ ...formData, employeeCode: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500 font-mono"
-              />
-            </div>
-
-            <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">Hire Date *</label>
               <input
                 type="date"

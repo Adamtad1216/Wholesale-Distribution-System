@@ -44,7 +44,7 @@ export default function JobSpecFormView({
             Job Specification Details
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">Job Title *</label>
               <input
@@ -68,18 +68,7 @@ export default function JobSpecFormView({
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">Job Code (Optional)</label>
-              <input
-                type="text"
-                placeholder="e.g. SPEC-WH-01"
-                value={jobSpecFormData.code}
-                onChange={(e) => setJobSpecFormData({ ...jobSpecFormData, code: e.target.value.toUpperCase() })}
-                className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500 font-mono"
-              />
-            </div>
-
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-foreground mb-1.5">Job Specification Description</label>
               <textarea
                 rows="4"

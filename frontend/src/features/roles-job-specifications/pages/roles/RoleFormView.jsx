@@ -44,7 +44,7 @@ export default function RoleFormView({
             Role Identity & Parameters
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">Role Name *</label>
               <input
@@ -54,18 +54,6 @@ export default function RoleFormView({
                 value={roleFormData.name}
                 onChange={(e) => setRoleFormData({ ...roleFormData, name: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1.5">Role Code Key *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. SALES_MANAGER"
-                value={roleFormData.code}
-                onChange={(e) => setRoleFormData({ ...roleFormData, code: e.target.value.toUpperCase() })}
-                className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500 font-mono"
               />
             </div>
 
