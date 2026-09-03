@@ -11,15 +11,15 @@ const sanitizePrice = (price) => {
     updatedAt: price.updatedById ? price.updatedAt : null,
     createdBy: price.createdBy
       ? {
-          id: price.createdBy.id,
-          person: price.createdBy.person,
-        }
+        id: price.createdBy.id,
+        person: price.createdBy.person,
+      }
       : null,
     updatedBy: price.updatedById && price.updatedBy
       ? {
-          id: price.updatedBy.id,
-          person: price.updatedBy.person,
-        }
+        id: price.updatedBy.id,
+        person: price.updatedBy.person,
+      }
       : null,
   };
 };
@@ -87,7 +87,6 @@ export async function createWarehouseSellingPrice(data, createdById, req) {
         status: data.status || 'ACTIVE',
         createdById,
         updatedById: null,
-        updatedAt: null,
       },
       include: {
         product: { select: { id: true, name: true, sku: true } },
@@ -377,7 +376,6 @@ export async function updateWarehouseSellingPriceByProductId(productId, data, cr
         status: data.status || 'ACTIVE',
         createdById,
         updatedById: null,
-        updatedAt: null,
       },
       include: {
         product: { select: { id: true, name: true, sku: true } },

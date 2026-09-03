@@ -30,24 +30,24 @@ const sanitizeProduct = (product) => {
     ...product,
     warehouseStocks: product.warehouseStocks
       ? product.warehouseStocks.map((s) => ({
-          ...s,
-          quantity: Number(s.quantity),
-          availableQuantity: Number(s.availableQuantity),
-          reservedQuantity: Number(s.reservedQuantity),
-        }))
+        ...s,
+        quantity: Number(s.quantity),
+        availableQuantity: Number(s.availableQuantity),
+        reservedQuantity: Number(s.reservedQuantity),
+      }))
       : undefined,
     updatedAt: product.updatedById ? product.updatedAt : null,
     createdBy: product.createdBy
       ? {
-          id: product.createdBy.id,
-          person: product.createdBy.person,
-        }
+        id: product.createdBy.id,
+        person: product.createdBy.person,
+      }
       : null,
     updatedBy: product.updatedById && product.updatedBy
       ? {
-          id: product.updatedBy.id,
-          person: product.updatedBy.person,
-        }
+        id: product.updatedBy.id,
+        person: product.updatedBy.person,
+      }
       : null,
   };
 };
@@ -130,7 +130,6 @@ export async function createProduct(data, createdById, req) {
         status: data.status || 'ACTIVE',
         createdById,
         updatedById: null,
-        updatedAt: null,
       },
     });
 
@@ -142,7 +141,6 @@ export async function createProduct(data, createdById, req) {
           isPrimary: Boolean(img.isPrimary),
           createdById,
           updatedById: null,
-          updatedAt: null,
         })),
       });
     }
@@ -173,7 +171,6 @@ export async function createProduct(data, createdById, req) {
             status: sp.status || 'ACTIVE',
             createdById,
             updatedById: null,
-            updatedAt: null,
           },
           update: {
             sellingPrice: sp.sellingPrice,
@@ -573,7 +570,6 @@ export async function updateProduct(id, data, createdById, req) {
             status: sp.status || 'ACTIVE',
             createdById,
             updatedById: null,
-            updatedAt: null,
           },
           update: {
             sellingPrice: sp.sellingPrice,
@@ -630,8 +626,6 @@ export async function deleteProduct(id, createdById, req) {
     poCount,
     grCount,
     soCount,
-    quotationCount,
-    srCount,
     salesReturnCount,
     deliveryCount,
     invoiceCount,
@@ -644,8 +638,6 @@ export async function deleteProduct(id, createdById, req) {
     prisma.purchaseOrderItem.count({ where: { productId: id, isArchived: false } }),
     prisma.goodsReceiptItem.count({ where: { productId: id, isArchived: false } }),
     prisma.salesOrderItem.count({ where: { productId: id, isArchived: false } }),
-    prisma.salesOrderQuotationItem.count({ where: { productId: id, isArchived: false } }),
-    prisma.salesRequestItem.count({ where: { productId: id, isArchived: false } }),
     prisma.salesReturnItem.count({ where: { productId: id, isArchived: false } }),
     prisma.deliveryItem.count({ where: { productId: id, isArchived: false } }),
     prisma.invoiceItem.count({ where: { productId: id, isArchived: false } }),
@@ -660,8 +652,6 @@ export async function deleteProduct(id, createdById, req) {
     poCount +
     grCount +
     soCount +
-    quotationCount +
-    srCount +
     salesReturnCount +
     deliveryCount +
     invoiceCount +
@@ -740,7 +730,6 @@ export async function addProductImage(productId, data, createdById, req) {
       isPrimary: Boolean(data.isPrimary),
       createdById,
       updatedById: null,
-      updatedAt: null,
     },
   });
 

@@ -10,15 +10,15 @@ const sanitizeBrand = (brand) => {
     updatedAt: brand.updatedById ? brand.updatedAt : null,
     createdBy: brand.createdBy
       ? {
-          id: brand.createdBy.id,
-          person: brand.createdBy.person,
-        }
+        id: brand.createdBy.id,
+        person: brand.createdBy.person,
+      }
       : null,
     updatedBy: brand.updatedById && brand.updatedBy
       ? {
-          id: brand.updatedBy.id,
-          person: brand.updatedBy.person,
-        }
+        id: brand.updatedBy.id,
+        person: brand.updatedBy.person,
+      }
       : null,
   };
 };
@@ -43,7 +43,6 @@ export async function createBrand(data, createdById, req) {
       status: data.status || 'ACTIVE',
       createdById,
       updatedById: null,
-      updatedAt: null,
     },
     include: {
       createdBy: {

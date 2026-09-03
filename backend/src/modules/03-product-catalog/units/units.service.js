@@ -10,15 +10,15 @@ const sanitizeUnit = (unit) => {
     updatedAt: unit.updatedById ? unit.updatedAt : null,
     createdBy: unit.createdBy
       ? {
-          id: unit.createdBy.id,
-          person: unit.createdBy.person,
-        }
+        id: unit.createdBy.id,
+        person: unit.createdBy.person,
+      }
       : null,
     updatedBy: unit.updatedById && unit.updatedBy
       ? {
-          id: unit.updatedBy.id,
-          person: unit.updatedBy.person,
-        }
+        id: unit.updatedBy.id,
+        person: unit.updatedBy.person,
+      }
       : null,
   };
 };
@@ -42,7 +42,6 @@ export async function createUnit(data, createdById, req) {
       abbreviation: data.abbreviation,
       createdById,
       updatedById: null,
-      updatedAt: null,
     },
     include: {
       createdBy: {

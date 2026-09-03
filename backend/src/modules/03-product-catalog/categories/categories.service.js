@@ -10,15 +10,15 @@ const sanitizeCategory = (category) => {
     updatedAt: category.updatedById ? category.updatedAt : null,
     createdBy: category.createdBy
       ? {
-          id: category.createdBy.id,
-          person: category.createdBy.person,
-        }
+        id: category.createdBy.id,
+        person: category.createdBy.person,
+      }
       : null,
     updatedBy: category.updatedById && category.updatedBy
       ? {
-          id: category.updatedBy.id,
-          person: category.updatedBy.person,
-        }
+        id: category.updatedBy.id,
+        person: category.updatedBy.person,
+      }
       : null,
   };
 };
@@ -68,7 +68,6 @@ export async function createCategory(data, createdById, req) {
       status: data.status || 'ACTIVE',
       createdById,
       updatedById: null,
-      updatedAt: null,
     },
     include: {
       parent: {
