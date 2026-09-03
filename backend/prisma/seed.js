@@ -124,6 +124,20 @@ const ALL_PERMISSIONS = [
   },
 
   {
+    name: "products:read",
+    module: "products",
+    action: "read",
+    description: "Read products",
+  },
+
+  {
+    name: "sales_orders:create",
+    module: "sales_orders",
+    action: "create",
+    description: "Create sales orders",
+  },
+
+  {
     name: "regions:create",
     module: "regions",
     action: "create",
@@ -373,6 +387,39 @@ async function ensureAdminPermissions(userId) {
   }
 }
 
+async function ensureCustomerPermissions() {
+  const customerRole = await prisma.role.findFirst({
+    where: { name: "CUSTOMER" },
+  });
+
+  if (!customerRole) {
+    console.log("CUSTOMER role not found, skipping customer permissions.");
+    return;
+  }
+
+  const allPermissions = await prisma.permission.findMany();
+  const customerPermissions = [
+    "customers:read",
+    "warehouses:read",
+    "products:read",
+    "sales_orders:create",
+  ];
+
+  for (const permName of customerPermissions) {
+    const perm = allPermissions.find((p) => p.name === permName);
+    if (!perm) continue;
+    const existing = await prisma.rolePermission.findFirst({
+      where: { roleId: customerRole.id, permissionId: perm.id },
+    });
+    if (!existing) {
+      await prisma.rolePermission.create({
+        data: { roleId: customerRole.id, permissionId: perm.id },
+      });
+      console.log(`Granted ${permName} to CUSTOMER role.`);
+    }
+  }
+}
+
 async function main() {
   console.log("Starting seed...");
 
@@ -402,6 +449,7 @@ async function main() {
     );
     await ensureAdminPermissions(existingAdmin.id);
     console.log("Seed completed (idempotent).");
+    await ensureCustomerPermissions();
     return;
   }
 
@@ -467,15 +515,6 @@ async function main() {
         });
       }
 
-      await tx.role.upsert({
-        where: { name: "CUSTOMER" },
-        update: {},
-        create: {
-          name: "CUSTOMER",
-          description: "Customer Role",
-        },
-      });
-
       return { superAdminRole, adminRole, createdPermissions };
     });
 
@@ -491,6 +530,8 @@ async function main() {
     fullName: ADMIN_FULL_NAME,
     roleId: superAdminRole.id,
   });
+
+  await ensureCustomerPermissions();
 
   console.log(
     "Seed completed successfully! The admin user is now a Super Admin with all permissions.",
