@@ -105,6 +105,21 @@ async function main() {
       },
     });
     console.log(`Product ready: ${product.name} (${product.id})`);
+
+    await prisma.warehouseStock.upsert({
+      where: { warehouseId_productId: { warehouseId: warehouse.id, productId: product.id } },
+      update: { quantity: 100, reservedQuantity: 0, availableQuantity: 100, minimumStock: 10, reorderLevel: 5 },
+      create: {
+        warehouseId: warehouse.id,
+        productId: product.id,
+        quantity: 100,
+        reservedQuantity: 0,
+        availableQuantity: 100,
+        minimumStock: 10,
+        reorderLevel: 5,
+      },
+    });
+    console.log(`Stock ready: ${product.name} @ ${warehouse.name}`);
   }
 
   console.log('\nSales test data seed completed successfully.');

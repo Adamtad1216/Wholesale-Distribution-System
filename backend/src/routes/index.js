@@ -18,6 +18,7 @@ import purchaseOrderRoutes from "../modules/03-procurement/purchase-order.routes
 import goodsReceiptRoutes from "../modules/03-procurement/goods-receipt.routes.js";
 import documentRoutes from "../modules/18-documents/document.routes.js";
 import pricingRoutes from "../modules/11-pricing-discounts/pricing.routes.js";
+import productsRoutes from "../modules/05-product-catalog/products.routes.js";
 
 import companiesRoutes from "../modules/06-branches-warehouses/companies/companies.routes.js";
 import branchesRoutes from "../modules/06-branches-warehouses/branches/branches.routes.js";
@@ -52,8 +53,9 @@ router.use("/v1/suppliers", supplierRoutes);
 router.use("/v1/purchase-orders", purchaseOrderRoutes);
 router.use("/v1/goods-receipts", goodsReceiptRoutes);
 router.use("/v1/documents", documentRoutes);
-router.use("/v1/pricing", pricingRoutes);
+  router.use("/v1/pricing", pricingRoutes);
+  router.use("/v1/products", productsRoutes);
 
-export const registerRoutes = (app) => {
+  export const registerRoutes = (app) => {
   app.use("/api", router);
 };

@@ -32,6 +32,9 @@ import BranchesPage from './features/branches/pages/branches/BranchesPage';
 import Customers from './features/customers/pages/Customers';
 import Documents from './features/documents/pages/documents/Documents';
 import Payments from './features/payments/pages/payments/Payments';
+import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
+import MySalesOrders from './features/sales-orders/pages/MySalesOrders';
+import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
 
 /**
  * AppRoutes — inner component mounted inside <Router>.
@@ -110,6 +113,10 @@ function AppRoutes() {
         <Route element={<PermissionRoute permission="payments:read" />}>
           <Route path="/payments" element={<Payments />} />
         </Route>
+
+        <Route path="/sales-orders/new" element={<NewSalesOrder />} />
+        <Route path="/sales-orders" element={<MySalesOrders />} />
+        <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
 
         {/* Default redirect inside the shell */}
         <Route index element={<Navigate to="/dashboard" replace />} />
