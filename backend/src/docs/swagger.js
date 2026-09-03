@@ -1,4 +1,4 @@
-﻿import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerJsdoc from 'swagger-jsdoc';
 import { env } from '../utils/env.js';
 
 const swaggerOptions = {
@@ -27,8 +27,10 @@ const swaggerOptions = {
       { name: '01 - Job Specifications', description: 'Job titles and specifications' },
       { name: '02 - Suppliers', description: 'Supplier management' },
       { name: '03 - Procurement', description: 'Purchase orders and goods receipts' },
+      { name: '03-product-catalog', description: 'Product catalog: categories, brands, units, products, and warehouse selling prices' },
       { name: '04 - Finance', description: 'Finance and payment operations' },
       { name: '06-branches-warehouses', description: 'Companies, branches, warehouses, and regions' },
+      { name: '07-inventory', description: 'Inventory management: warehouse stock, transfers, adjustments, and reservations' },
       { name: '09-customers', description: 'Customer management (PERSON and ORGANIZATION)' },
       { name: '10-sales', description: 'Sales requests' },
       { name: '12-delivery-logistics', description: 'Delivery operations and logistics' },
@@ -1219,6 +1221,327 @@ const swaggerOptions = {
                 },
               },
             },
+          },
+        },
+        Product: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            sku: { type: 'string', example: 'PRD-001' },
+            name: { type: 'string', example: 'Standard Product' },
+            categoryId: { type: 'string', format: 'uuid' },
+            brandId: { type: 'string', format: 'uuid', nullable: true },
+            unitId: { type: 'string', format: 'uuid' },
+            status: { type: 'string', example: 'ACTIVE' },
+            isArchived: { type: 'boolean', example: false },
+            category: { $ref: '#/components/schemas/Category' },
+            brand: { $ref: '#/components/schemas/Brand', nullable: true },
+            unit: { $ref: '#/components/schemas/Unit' },
+            images: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/ProductImage' },
+            },
+            warehouseSellingPrices: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/WarehouseSellingPrice' },
+            },
+            warehouseStocks: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/WarehouseStock' },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateProductInput: {
+          type: 'object',
+          required: ['name', 'categoryId', 'unitId'],
+          properties: {
+            sku: { type: 'string', example: 'PRD-TEST-001' },
+            name: { type: 'string', example: 'New Product' },
+            categoryId: { type: 'string', format: 'uuid', example: '3cf0a7fd-0500-4619-8956-4f63ad796182' },
+            brandId: { type: 'string', format: 'uuid', nullable: true, example: '0452ba89-9739-416b-b9e4-55ab06a3a0de' },
+            unitId: { type: 'string', format: 'uuid', example: '805cf238-065e-4336-9097-baa2e979f03f' },
+            images: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['imageUrl'],
+                properties: {
+                  imageUrl: { type: 'string', format: 'uri', example: 'https://example.com/product.jpg' },
+                  isPrimary: { type: 'boolean', example: true },
+                },
+              },
+            },
+            warehouseSellingPrices: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['warehouseId', 'sellingPrice', 'wholesalePrice'],
+                properties: {
+                  warehouseId: { type: 'string', format: 'uuid', example: '1f4551f2-46d8-4dca-97a6-c54f7d5ec2bc' },
+                  sellingPrice: { type: 'number', example: 100 },
+                  wholesalePrice: { type: 'number', example: 80 },
+                },
+              },
+            },
+          },
+        },
+        UpdateProductInput: {
+          type: 'object',
+          properties: {
+            sku: { type: 'string', example: 'PRD-TEST-001' },
+            name: { type: 'string', example: 'Updated Product Name' },
+            categoryId: { type: 'string', format: 'uuid', example: '3cf0a7fd-0500-4619-8956-4f63ad796182' },
+            brandId: { type: 'string', format: 'uuid', nullable: true, example: '0452ba89-9739-416b-b9e4-55ab06a3a0de' },
+            unitId: { type: 'string', format: 'uuid', example: '805cf238-065e-4336-9097-baa2e979f03f' },
+            status: { type: 'string', example: 'ACTIVE' },
+            warehouseSellingPrices: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  warehouseId: { type: 'string', format: 'uuid', example: '1f4551f2-46d8-4dca-97a6-c54f7d5ec2bc' },
+                  sellingPrice: { type: 'number', example: 120 },
+                  wholesalePrice: { type: 'number', example: 95 },
+                  status: { type: 'string', example: 'ACTIVE' },
+                },
+              },
+            },
+          },
+        },
+        ProductImage: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            imageUrl: { type: 'string', format: 'uri', example: 'https://example.com/product.jpg' },
+            isPrimary: { type: 'boolean', example: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        Category: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'Electronics' },
+            description: { type: 'string', nullable: true, example: 'Electronic equipment and gadgets' },
+            parentId: { type: 'string', format: 'uuid', nullable: true },
+            status: { type: 'string', example: 'ACTIVE' },
+            isArchived: { type: 'boolean', example: false },
+            parent: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string' },
+              },
+            },
+            children: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  name: { type: 'string' },
+                },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateCategoryInput: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string', example: 'Electronics' },
+            description: { type: 'string', example: 'Electronic equipment and gadgets' },
+            parentId: { type: 'string', format: 'uuid', nullable: true, example: '123e4567-e89b-12d3-a456-426614174000' },
+          },
+        },
+        UpdateCategoryInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'Consumer Electronics' },
+            description: { type: 'string', example: 'Updated category description' },
+            parentId: { type: 'string', format: 'uuid', nullable: true },
+            status: { type: 'string', example: 'ACTIVE' },
+          },
+        },
+        Brand: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'Sony' },
+            description: { type: 'string', nullable: true, example: 'Consumer electronics brand' },
+            status: { type: 'string', example: 'ACTIVE' },
+            isArchived: { type: 'boolean', example: false },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateBrandInput: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string', example: 'Sony' },
+            description: { type: 'string', example: 'Consumer electronics brand' },
+            status: { type: 'string', example: 'ACTIVE' },
+          },
+        },
+        UpdateBrandInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'Sony Corporation' },
+            description: { type: 'string', example: 'Updated brand description' },
+            status: { type: 'string', example: 'ACTIVE' },
+          },
+        },
+        Unit: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            name: { type: 'string', example: 'Piece' },
+            abbreviation: { type: 'string', example: 'PCS' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateUnitInput: {
+          type: 'object',
+          required: ['name', 'abbreviation'],
+          properties: {
+            name: { type: 'string', example: 'Piece' },
+            abbreviation: { type: 'string', example: 'PCS' },
+          },
+        },
+        UpdateUnitInput: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'Box' },
+            abbreviation: { type: 'string', example: 'BX' },
+          },
+        },
+        WarehouseSellingPrice: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            warehouseId: { type: 'string', format: 'uuid' },
+            sellingPrice: { type: 'number', example: 100 },
+            wholesalePrice: { type: 'number', example: 80 },
+            status: { type: 'string', example: 'ACTIVE' },
+            isArchived: { type: 'boolean', example: false },
+            product: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Test Product 1' },
+                sku: { type: 'string', example: 'PROD-TEST-001' },
+              },
+            },
+            warehouse: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Central Warehouse' },
+                code: { type: 'string', example: 'WH-TEST-001' },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        CreateWarehouseSellingPriceInput: {
+          type: 'object',
+          required: ['productId', 'warehouseId', 'sellingPrice', 'wholesalePrice'],
+          properties: {
+            productId: { type: 'string', format: 'uuid', example: 'ccfab367-8110-47bb-9fde-9c675868d16e' },
+            warehouseId: { type: 'string', format: 'uuid', example: '1f4551f2-46d8-4dca-97a6-c54f7d5ec2bc' },
+            sellingPrice: { type: 'number', example: 100 },
+            wholesalePrice: { type: 'number', example: 80 },
+          },
+        },
+        UpdateWarehouseSellingPriceInput: {
+          type: 'object',
+          properties: {
+            sellingPrice: { type: 'number', example: 110 },
+            wholesalePrice: { type: 'number', example: 85 },
+            status: { type: 'string', example: 'ACTIVE' },
+          },
+        },
+        WarehouseStock: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            warehouseId: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            quantity: { type: 'number', example: 100 },
+            availableQuantity: { type: 'number', example: 90 },
+            reservedQuantity: { type: 'number', example: 10 },
+            minimumStock: { type: 'number', example: 10 },
+            reorderLevel: { type: 'number', example: 20 },
+            warehouse: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Central Warehouse' },
+                code: { type: 'string', example: 'WH-TEST-001' },
+              },
+            },
+            product: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid' },
+                name: { type: 'string', example: 'Test Product 1' },
+                sku: { type: 'string', example: 'PROD-TEST-001' },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        StockAdjustment: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            warehouseId: { type: 'string', format: 'uuid' },
+            reason: { type: 'string', example: 'Routine audit reconciliation' },
+            status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED'], example: 'PENDING' },
+            approvedById: { type: 'string', format: 'uuid', nullable: true },
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  productId: { type: 'string', format: 'uuid' },
+                  actualQuantity: { type: 'number', example: 45 },
+                  reason: { type: 'string', nullable: true, example: 'Damaged during transit' },
+                },
+              },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+        StockReservation: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            salesOrderId: { type: 'string', format: 'uuid' },
+            warehouseId: { type: 'string', format: 'uuid' },
+            productId: { type: 'string', format: 'uuid' },
+            quantity: { type: 'number', example: 10 },
+            status: {
+              type: 'string',
+              enum: ['RESERVED', 'PARTIALLY_FULFILLED', 'FULFILLED', 'RELEASED', 'CANCELLED'],
+              example: 'RESERVED',
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time', nullable: true },
           },
         },
       },

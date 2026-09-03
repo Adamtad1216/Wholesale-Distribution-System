@@ -1,4 +1,4 @@
-﻿import { Router } from "express";
+import { Router } from "express";
 import authRoutes from "../modules/01-identity-access/auth/auth.routes.js";
 import customersRoutes from "../modules/09-customers/customers/customers.routes.js";
 import usersRoutes from "../modules/01-identity-access/users/users.routes.js";
@@ -18,6 +18,8 @@ import purchaseOrderRoutes from "../modules/03-procurement/purchase-order.routes
 import goodsReceiptRoutes from "../modules/03-procurement/goods-receipt.routes.js";
 import documentRoutes from "../modules/18-documents/document.routes.js";
 import pricingRoutes from "../modules/11-pricing-discounts/pricing.routes.js";
+import catalogRoutes from "../modules/03-product-catalog/catalog.routes.js";
+import inventoryRoutes from "../modules/07-inventory/inventory.routes.js";
 
 import companiesRoutes from "../modules/06-branches-warehouses/companies/companies.routes.js";
 import branchesRoutes from "../modules/06-branches-warehouses/branches/branches.routes.js";
@@ -53,6 +55,8 @@ router.use("/v1/purchase-orders", purchaseOrderRoutes);
 router.use("/v1/goods-receipts", goodsReceiptRoutes);
 router.use("/v1/documents", documentRoutes);
 router.use("/v1/pricing", pricingRoutes);
+router.use("/v1/catalog", catalogRoutes);
+router.use("/v1/inventory", inventoryRoutes);
 
 export const registerRoutes = (app) => {
   app.use("/api", router);
