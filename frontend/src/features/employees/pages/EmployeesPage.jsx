@@ -162,6 +162,7 @@ export default function EmployeesPage() {
     setFormData({
       ...initialFormState,
       jobSpecificationId: jobSpecifications.length > 0 ? jobSpecifications[0].id : '',
+      branchId: branches.length > 0 ? branches[0].id : '',
       roleId: systemRoles.length > 0 ? systemRoles[0].id : '',
     });
     setViewMode('CREATE');
@@ -204,6 +205,12 @@ export default function EmployeesPage() {
   // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.branchId) {
+      toast.error('Please select an assigned branch');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -238,12 +245,14 @@ export default function EmployeesPage() {
           hireDate: formData.hireDate || undefined,
           department: formData.department.trim() || undefined,
           jobSpecificationId: targetJobSpecId || undefined,
+          jobSpecificationIds: targetJobSpecId ? [targetJobSpecId] : undefined,
           branchId: formData.branchId || undefined,
           status: formData.status,
           needsUserAccount: formData.needsUserAccount,
           username: formData.needsUserAccount ? formData.username.trim() || undefined : undefined,
           password: formData.needsUserAccount && formData.password ? formData.password : undefined,
           roleId: formData.needsUserAccount ? formData.roleId || undefined : undefined,
+          roleIds: formData.needsUserAccount && formData.roleId ? [formData.roleId] : undefined,
         };
 
         await employeesApi.updateEmployee(editingEmployee.id, updatePayload);
@@ -260,13 +269,15 @@ export default function EmployeesPage() {
           employeeCode: formData.employeeCode.trim() || undefined,
           hireDate: formData.hireDate || getTodayFormatted(),
           department: formData.department.trim() || undefined,
-          jobSpecificationId: targetJobSpecId,
+          jobSpecificationId: targetJobSpecId || undefined,
+          jobSpecificationIds: targetJobSpecId ? [targetJobSpecId] : undefined,
           branchId: formData.branchId || undefined,
           status: formData.status || 'ACTIVE',
           needsUserAccount: formData.needsUserAccount,
           username: formData.needsUserAccount ? formData.username.trim() || undefined : undefined,
           password: formData.needsUserAccount ? formData.password || undefined : undefined,
           roleId: formData.needsUserAccount ? formData.roleId || undefined : undefined,
+          roleIds: formData.needsUserAccount && formData.roleId ? [formData.roleId] : undefined,
         };
 
         await employeesApi.createEmployee(createPayload);
@@ -361,8 +372,8 @@ export default function EmployeesPage() {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Employee Directory</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Employee Directory</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage workforce profiles, job specifications, and employment statuses.
           </p>
         </div>

@@ -15,8 +15,8 @@ export default function Payments() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-100 light:text-slate-900">Finance & Billing</h2>
-        <p className="text-sm text-slate-400">Review generated invoices, trigger payments, and submit bank transfer validation proofs.</p>
+        <h2 className="text-xl font-bold text-foreground ">Finance & Billing</h2>
+        <p className="text-sm text-muted-foreground">Review generated invoices, trigger payments, and submit bank transfer validation proofs.</p>
       </div>
 
       <Table>
@@ -32,20 +32,20 @@ export default function Payments() {
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan="5" className="text-center text-slate-400 py-8">
+              <TableCell colSpan="5" className="text-center text-muted-foreground py-8">
                 Loading invoices...
               </TableCell>
             </TableRow>
           ) : invoices.length === 0 ? (
             <TableRow>
-              <TableCell colSpan="5" className="text-center text-slate-400 py-8">
+              <TableCell colSpan="5" className="text-center text-muted-foreground py-8">
                 No invoices found. (Database empty or offline)
               </TableCell>
             </TableRow>
           ) : (
             invoices.map((inv) => (
               <TableRow key={inv.id}>
-                <TableCell className="font-semibold text-slate-100 light:text-slate-900">{inv.invoiceNumber}</TableCell>
+                <TableCell className="font-semibold text-foreground ">{inv.invoiceNumber}</TableCell>
                 <TableCell className="font-bold text-violet-500">${inv.totalAmount}</TableCell>
                 <TableCell>
                   <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${
@@ -54,7 +54,7 @@ export default function Payments() {
                     {inv.status}
                   </span>
                 </TableCell>
-                <TableCell className="text-slate-400">{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
+                <TableCell className="text-muted-foreground">{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
                 <TableCell>
                   {inv.status !== 'PAID' && (
                     <Button variant="primary" size="xs">

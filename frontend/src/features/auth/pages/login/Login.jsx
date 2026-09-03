@@ -10,6 +10,7 @@ import { authApi } from '../../authApi';
 import { loginSuccess } from '../../authSlice';
 import Card from '../../../../components/ui/Card';
 import Button from '../../../../components/ui/Button';
+import ThemeToggle from '../../../../components/layout/header/ThemeToggle';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -55,20 +56,25 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="bg-background min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Theme Toggle Button */}
+      <div className="absolute top-5 right-5 z-20">
+        <ThemeToggle />
+      </div>
+
       {/* Glow Effects */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none"></div>
 
       <Card className="w-full max-w-md p-8 relative z-10 space-y-6">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/20 mb-4 text-white text-2xl font-bold">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/20 mb-4  text-2xl font-bold">
             W
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100 light:text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground ">
             Welcome Back
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Wholesale Distribution System
           </p>
         </div>
@@ -81,7 +87,7 @@ export default function Login() {
           )}
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Username
             </label>
             <input
@@ -96,7 +102,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Password
             </label>
             <div className="relative">
@@ -109,7 +115,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 focus:outline-none"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
               >
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -139,7 +145,7 @@ export default function Login() {
           </Button>
         </form>
 
-        <div className="text-center text-xs text-slate-400 border-t border-slate-800/80 light:border-slate-200 pt-6">
+        <div className="text-center text-xs text-muted-foreground border-t border-border  pt-6">
           Don't have an account?{' '}
           <Link to="/register" className="text-violet-400 hover:text-violet-300 font-semibold transition duration-150">
             Create an account

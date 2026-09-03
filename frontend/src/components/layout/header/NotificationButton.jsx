@@ -4,7 +4,7 @@ export default function NotificationButton() {
   return (
     <button
       type="button"
-      className="p-2.5 rounded-xl bg-transparent hover:bg-white border border-transparent hover:border-slate-300 transition-all duration-200 relative flex items-center justify-center cursor-pointer header-notify-btn"
+      className="p-2.5 rounded-xl bg-transparent hover:bg-card border border-transparent hover:border-border transition-all duration-200 relative flex items-center justify-center cursor-pointer header-notify-btn"
       aria-label="Notifications"
       title="Notifications"
     >

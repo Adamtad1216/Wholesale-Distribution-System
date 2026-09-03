@@ -53,7 +53,7 @@ export default function StatsCards({ dashboardData }) {
           <Card hoverEffect className="p-5">
             <div className="flex items-center justify-between mb-3">
               <div
-                className={`w-10 h-10 rounded-lg ${stat.color}/10 border ${stat.color}/20 flex items-center justify-center text-${stat.color.replace('bg-', 'text-').replace('500', '400')} sm:text-${stat.color.replace('bg-', 'text-').replace('500', '400')}`}
+                className="w-10 h-10 rounded-lg border flex items-center justify-center bg-[var(--icon-box-bg)] text-[var(--icon-box-text)] border-[var(--icon-box-border)]"
               >
                 <Icon className="w-5 h-5" />
               </div>
@@ -61,7 +61,7 @@ export default function StatsCards({ dashboardData }) {
                 {stat.trend}
               </span>
             </div>
-            <p className="text-2xl font-bold text-slate-100 light:text-slate-900 mb-0.5">{stat.value}</p>
+            <p className="text-2xl font-bold text-foreground  mb-0.5">{stat.value}</p>
             <p className="text-xs text-slate-450">{stat.label}</p>
           </Card>
         );

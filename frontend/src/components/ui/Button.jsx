@@ -19,15 +19,15 @@ import React from 'react';
 
 const VARIANT_CLASSES = {
   primary:
-    'btn-primary bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/30 border border-violet-500 font-semibold',
+    'btn-primary bg-violet-600 hover:bg-violet-500  shadow-md shadow-violet-600/30 border border-violet-500 font-semibold',
   secondary:
-    'btn-secondary bg-slate-700 hover:bg-slate-600 text-white shadow-md border border-slate-500 font-semibold',
+    'btn-secondary bg-muted700 hover:bg-slate-600  shadow-md border border-border font-semibold',
   danger:
     'btn-danger bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-semibold',
   'danger-solid':
-    'btn-danger-solid bg-rose-600 hover:bg-rose-500 text-white border border-rose-500 shadow-md shadow-rose-600/30 font-semibold',
+    'btn-danger-solid bg-rose-600 hover:bg-rose-500  border border-rose-500 shadow-md shadow-rose-600/30 font-semibold',
   ghost:
-    'btn-ghost bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-medium',
+    'btn-ghost bg-muted800 hover:bg-muted700 text-foreground hover: border border-border font-medium',
   outline:
     'btn-outline bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 border border-violet-500/60 font-semibold',
   success:
@@ -85,7 +85,7 @@ export default function Button({
       onClick={onClick}
       disabled={isDisabled}
       className={[
-        'inline-flex items-center justify-center font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 select-none',
+        'inline-flex items-center justify-center font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none',
         VARIANT_CLASSES[variant] ?? VARIANT_CLASSES.primary,
         SIZE_CLASSES[size] ?? SIZE_CLASSES.md,
         fullWidth ? 'w-full' : '',

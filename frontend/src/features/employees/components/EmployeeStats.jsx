@@ -5,11 +5,11 @@ export default function EmployeeStats({ stats }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Total Workforce */}
-      <Card className="p-5 border border-slate-800 bg-slate-900/60 backdrop-blur-xl rounded-2xl relative overflow-hidden">
+      <Card className="p-5 border border-border bg-card900 backdrop-blur-xl rounded-2xl relative overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Staff</p>
-            <h3 className="text-2xl font-bold text-slate-100 mt-1">{stats.total}</h3>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Staff</p>
+            <h3 className="text-2xl font-bold text-foreground mt-1">{stats.total}</h3>
           </div>
           <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 flex items-center justify-center">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -20,10 +20,10 @@ export default function EmployeeStats({ stats }) {
       </Card>
 
       {/* Active Personnel */}
-      <Card className="p-5 border border-slate-800 bg-slate-900/60 backdrop-blur-xl rounded-2xl relative overflow-hidden">
+      <Card className="p-5 border border-border bg-card900 backdrop-blur-xl rounded-2xl relative overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Staff</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Staff</p>
             <h3 className="text-2xl font-bold text-emerald-400 mt-1">{stats.activeCount}</h3>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -35,10 +35,10 @@ export default function EmployeeStats({ stats }) {
       </Card>
 
       {/* Inactive / Suspended */}
-      <Card className="p-5 border border-slate-800 bg-slate-900/60 backdrop-blur-xl rounded-2xl relative overflow-hidden">
+      <Card className="p-5 border border-border bg-card900 backdrop-blur-xl rounded-2xl relative overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Inactive Staff</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Inactive Staff</p>
             <h3 className="text-2xl font-bold text-amber-400 mt-1">{stats.inactiveCount}</h3>
           </div>
           <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -50,10 +50,10 @@ export default function EmployeeStats({ stats }) {
       </Card>
 
       {/* Distinct Job Specifications */}
-      <Card className="p-5 border border-slate-800 bg-slate-900/60 backdrop-blur-xl rounded-2xl relative overflow-hidden">
+      <Card className="p-5 border border-border bg-card900 backdrop-blur-xl rounded-2xl relative overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Unique Roles</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Unique Roles</p>
             <h3 className="text-2xl font-bold text-indigo-400 mt-1">{stats.rolesCount}</h3>
           </div>
           <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">

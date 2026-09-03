@@ -9,6 +9,7 @@ import Button from '../../../components/ui/Button';
 // Sub-components
 import RolesPage from './roles/RolesPage';
 import RoleFormView from './roles/RoleFormView';
+import RoleDetailsView from './roles/RoleDetailsView';
 import JobSpecificationsPage from './job-specifications/JobSpecificationsPage';
 import JobSpecFormView from './job-specifications/JobSpecFormView';
 
@@ -16,7 +17,7 @@ export default function RolesJobSpecsMainPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Navigation & View mode: 'LIST' | 'ROLE_FORM' | 'JOB_SPEC_FORM'
+  // Navigation & View mode: 'LIST' | 'ROLE_FORM' | 'ROLE_DETAILS' | 'JOB_SPEC_FORM'
   const [viewMode, setViewMode] = useState(() => {
     return location.state?.createJobSpec ? 'JOB_SPEC_FORM' : 'LIST';
   });
@@ -27,6 +28,9 @@ export default function RolesJobSpecsMainPage() {
   const [roles, setRoles] = useState([]);
   const [jobSpecs, setJobSpecs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Role Detail View State
+  const [selectedRoleForView, setSelectedRoleForView] = useState(null);
 
   // Role Form State
   const [editingRole, setEditingRole] = useState(null);
@@ -110,12 +114,18 @@ export default function RolesJobSpecsMainPage() {
     }
     setViewMode('LIST');
     setEditingRole(null);
+    setSelectedRoleForView(null);
     setEditingJobSpec(null);
   };
 
   // ═════════════════════════════════════════════════════════════════
   // ROLE HANDLERS
   // ═════════════════════════════════════════════════════════════════
+  const handleViewRole = (role) => {
+    setSelectedRoleForView(role);
+    setViewMode('ROLE_DETAILS');
+  };
+
   const handleOpenRoleForm = (role = null) => {
     if (role) {
       setEditingRole(role);
@@ -156,6 +166,9 @@ export default function RolesJobSpecsMainPage() {
       await rolesApi.deleteRole(id);
       toast.success('Security role deleted successfully');
       fetchData();
+      if (viewMode === 'ROLE_DETAILS') {
+        handleBackToList();
+      }
     } catch (err) {
       toast.error(err?.message || 'Failed to delete role');
     }
@@ -235,6 +248,23 @@ export default function RolesJobSpecsMainPage() {
   };
 
   // ═════════════════════════════════════════════════════════════════
+  // RENDER FULL PAGE VIEW: ROLE DETAILS
+  // ═════════════════════════════════════════════════════════════════
+  if (viewMode === 'ROLE_DETAILS') {
+    return (
+      <RoleDetailsView
+        roleId={selectedRoleForView?.id}
+        initialRole={selectedRoleForView}
+        canUpdateRole={canUpdateRole}
+        canDeleteRole={canDeleteRole}
+        handleOpenRoleForm={handleOpenRoleForm}
+        handleRoleDelete={handleRoleDelete}
+        handleBackToList={handleBackToList}
+      />
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════
   // RENDER FULL PAGE VIEW: ROLE FORM
   // ═════════════════════════════════════════════════════════════════
   if (viewMode === 'ROLE_FORM') {
@@ -274,8 +304,8 @@ export default function RolesJobSpecsMainPage() {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Roles & Job Specifications</h1>
-          <p className="text-sm text-slate-400">Configure system security roles and organizational job specifications</p>
+          <h1 className="text-2xl font-bold  tracking-tight">Roles & Job Specifications</h1>
+          <p className="text-sm text-muted-foreground">Configure system security roles and organizational job specifications</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -310,13 +340,13 @@ export default function RolesJobSpecsMainPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-800 space-x-6">
+      <div className="flex border-b border-border space-x-6">
         <button
           onClick={() => setActiveTab('ROLES')}
           className={`pb-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
             activeTab === 'ROLES'
               ? 'border-violet-500 text-violet-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -330,7 +360,7 @@ export default function RolesJobSpecsMainPage() {
           className={`pb-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
             activeTab === 'JOB_SPECS'
               ? 'border-violet-500 text-violet-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -349,6 +379,7 @@ export default function RolesJobSpecsMainPage() {
           canDeleteRole={canDeleteRole}
           handleOpenRoleForm={handleOpenRoleForm}
           handleRoleDelete={handleRoleDelete}
+          handleViewRole={handleViewRole}
         />
       ) : (
         <JobSpecificationsPage

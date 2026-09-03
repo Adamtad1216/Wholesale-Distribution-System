@@ -7,7 +7,7 @@ const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za
 export default function SecurityTab({ passwordData, setPasswordData, onSubmit, saving }) {
   const inputCls =
     'w-full px-4 py-2.5 rounded-lg border font-medium text-sm outline-none ' +
-    'border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900';
+    'border-border bg-card  ';
 
   const hasMinLength = passwordData.newPassword?.length >= 8;
   const hasUpper = /[A-Z]/.test(passwordData.newPassword || '');
@@ -23,8 +23,8 @@ export default function SecurityTab({ passwordData, setPasswordData, onSubmit, s
   ];
 
   return (
-    <Card className="space-y-6 max-w-xl border border-slate-200 dark:border-slate-800">
-      <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+    <Card className="space-y-6 max-w-xl border border-border ">
+      <div className="border-b border-border  pb-4">
         <h2 className="text-lg font-semibold">Security & Password</h2>
         <p className="text-sm font-medium text-muted">Update your account credentials and security password</p>
       </div>
@@ -46,28 +46,28 @@ export default function SecurityTab({ passwordData, setPasswordData, onSubmit, s
           <div className="space-y-1.5 pt-2">
             <p className="text-xs font-medium text-muted">Password must include:</p>
             <div className="grid grid-cols-2 gap-1 text-xs">
-              <span className={`flex items-center gap-1 ${hasMinLength ? 'text-emerald-600' : 'text-slate-400'}`}>
-                <span className={`w-1 h-1 rounded-full ${hasMinLength ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+              <span className={`flex items-center gap-1 ${hasMinLength ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                <span className={`w-1 h-1 rounded-full ${hasMinLength ? 'bg-emerald-500' : 'bg-muted400'}`}></span>
                 At least 8 characters
               </span>
-              <span className={`flex items-center gap-1 ${hasUpper ? 'text-emerald-600' : 'text-slate-400'}`}>
-                <span className={`w-1 h-1 rounded-full ${hasUpper ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+              <span className={`flex items-center gap-1 ${hasUpper ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                <span className={`w-1 h-1 rounded-full ${hasUpper ? 'bg-emerald-500' : 'bg-muted400'}`}></span>
                 One uppercase letter
               </span>
-              <span className={`flex items-center gap-1 ${hasLower ? 'text-emerald-600' : 'text-slate-400'}`}>
-                <span className={`w-1 h-1 rounded-full ${hasLower ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+              <span className={`flex items-center gap-1 ${hasLower ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                <span className={`w-1 h-1 rounded-full ${hasLower ? 'bg-emerald-500' : 'bg-muted400'}`}></span>
                 One lowercase letter
               </span>
-              <span className={`flex items-center gap-1 ${hasNumber ? 'text-emerald-600' : 'text-slate-400'}`}>
-                <span className={`w-1 h-1 rounded-full ${hasNumber ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+              <span className={`flex items-center gap-1 ${hasNumber ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                <span className={`w-1 h-1 rounded-full ${hasNumber ? 'bg-emerald-500' : 'bg-muted400'}`}></span>
                 One number
               </span>
-              <span className={`flex items-center gap-1 ${hasSpecial ? 'text-emerald-600' : 'text-slate-400'}`}>
-                <span className={`w-1 h-1 rounded-full ${hasSpecial ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+              <span className={`flex items-center gap-1 ${hasSpecial ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                <span className={`w-1 h-1 rounded-full ${hasSpecial ? 'bg-emerald-500' : 'bg-muted400'}`}></span>
                 One special character (@$!%*?&)
               </span>
-              <span className={`flex items-center gap-1 ${allValid ? 'text-emerald-600' : 'text-slate-400'}`}>
-                <span className={`w-1 h-1 rounded-full ${allValid ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+              <span className={`flex items-center gap-1 ${allValid ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                <span className={`w-1 h-1 rounded-full ${allValid ? 'bg-emerald-500' : 'bg-muted400'}`}></span>
                 All requirements met
               </span>
             </div>

@@ -1,6 +1,7 @@
 import api from '../../services/api';
 
 export const documentsApi = {
+  getDocuments: (params) => api.get('/documents', { params }),
   uploadFile: (file, folder = 'wholesale_docs') => {
     const formData = new FormData();
     formData.append('file', file);
@@ -17,4 +18,5 @@ export const documentsApi = {
   getDocumentTypes: () => api.get('/documents/types'),
   createDocumentType: (typeData) => api.post('/documents/types', typeData),
   updateDocumentStatus: (id, status) => api.patch(`/documents/${id}/status`, { status }),
+  deleteDocument: (id) => api.delete(`/documents/${id}`),
 };

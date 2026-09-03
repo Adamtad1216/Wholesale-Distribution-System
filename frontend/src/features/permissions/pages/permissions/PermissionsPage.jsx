@@ -41,14 +41,14 @@ export default function PermissionsPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Permissions Matrix</h1>
-        <p className="text-sm text-slate-400">View and audit all granular system permission keys</p>
+        <h1 className="text-2xl font-bold  tracking-tight">Permissions Matrix</h1>
+        <p className="text-sm text-muted-foreground">View and audit all granular system permission keys</p>
       </div>
 
       {/* Filter / Search Bar */}
       <Card noPadding className="p-4 flex flex-col sm:flex-row items-center gap-4 rounded-lg">
         <div className="relative flex-1 w-full">
-          <svg className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -56,7 +56,7 @@ export default function PermissionsPage() {
             placeholder="Search permissions by key or description..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-violet-500 placeholder-slate-500"
+            className="w-full pl-10 pr-4 py-2 bg-muted800 border border-border rounded-lg text-foreground text-sm focus:outline-none focus:border-violet-500 placeholder:text-muted-foreground"
           />
         </div>
 
@@ -75,9 +75,9 @@ export default function PermissionsPage() {
 
       {/* Permissions Table */}
       {loading ? (
-        <Card className="p-12 text-center text-slate-400 text-sm rounded-lg">Loading permissions...</Card>
+        <Card className="p-12 text-center text-muted-foreground text-sm rounded-lg">Loading permissions...</Card>
       ) : filteredPermissions.length === 0 ? (
-        <Card className="p-12 text-center text-slate-400 text-sm rounded-lg">No permissions found.</Card>
+        <Card className="p-12 text-center text-muted-foreground text-sm rounded-lg">No permissions found.</Card>
       ) : (
         <Table containerClassName="rounded-lg">
           <TableHeader>
@@ -98,7 +98,7 @@ export default function PermissionsPage() {
                     {p.module || p.key?.split(':')[0] || 'System'}
                   </span>
                 </TableCell>
-                <TableCell className="text-slate-400">
+                <TableCell className="text-muted-foreground">
                   {p.description || 'No description provided.'}
                 </TableCell>
               </TableRow>

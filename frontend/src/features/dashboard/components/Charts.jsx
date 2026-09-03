@@ -44,7 +44,7 @@ export function OrdersByStatusChart({ data, isLoading }) {
   if (isLoading) {
     return (
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
           Orders by Status
         </h3>
         <p className="text-sm text-slate-450">Loading...</p>
@@ -55,7 +55,7 @@ export function OrdersByStatusChart({ data, isLoading }) {
   if (!hasData) {
     return (
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
           Orders by Status
         </h3>
         <p className="text-sm text-slate-450">No order data available.</p>
@@ -75,7 +75,7 @@ export function OrdersByStatusChart({ data, isLoading }) {
 
   return (
     <Card className="p-5">
-      <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
         Orders by Status
       </h3>
       <div className="h-56">
@@ -106,8 +106,8 @@ export function OrdersByStatusChart({ data, isLoading }) {
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: COLORS[i % COLORS.length] }}
               />
-              <span className="text-slate-400">{item.name}</span>
-              <span className="font-semibold text-slate-300">{item.value}</span>
+              <span className="text-muted-foreground">{item.name}</span>
+              <span className="font-semibold text-foreground">{item.value}</span>
             </span>
           ))}
         </div>
@@ -123,7 +123,7 @@ export function RevenueChart({ data, isLoading }) {
   if (isLoading) {
     return (
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
           Top Products by Revenue
         </h3>
         <p className="text-sm text-slate-450">Loading...</p>
@@ -134,7 +134,7 @@ export function RevenueChart({ data, isLoading }) {
   if (!hasData) {
     return (
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
           Top Products by Revenue
         </h3>
         <p className="text-sm text-slate-450">No product sales data available.</p>
@@ -150,7 +150,7 @@ export function RevenueChart({ data, isLoading }) {
 
   return (
     <Card className="p-5">
-      <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
         Top Products by Revenue
       </h3>
       <div className="h-64">

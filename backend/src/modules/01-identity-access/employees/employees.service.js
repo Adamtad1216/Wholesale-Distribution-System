@@ -75,22 +75,30 @@ const sanitizeEmployee = (employee) => {
 };
 
 export async function createEmployee(data, createdById, req) {
-  const jobSpecs = await prisma.jobSpecification.findMany({
-    where: {
-      id: { in: data.jobSpecificationIds },
-      isArchived: false,
-    },
-  });
+  const targetJobSpecIds = (data.jobSpecificationIds && data.jobSpecificationIds.length > 0)
+    ? data.jobSpecificationIds
+    : (data.jobSpecificationId ? [data.jobSpecificationId] : []);
 
-  if (jobSpecs.length !== data.jobSpecificationIds.length) {
-    throw new AppError('One or more job specifications not found', 404);
+  if (targetJobSpecIds.length > 0) {
+    const jobSpecs = await prisma.jobSpecification.findMany({
+      where: {
+        id: { in: targetJobSpecIds },
+        isArchived: false,
+      },
+    });
+
+    if (jobSpecs.length !== targetJobSpecIds.length) {
+      throw new AppError('One or more job specifications not found', 404);
+    }
   }
 
-  const branch = await prisma.branch.findFirst({
-    where: { id: data.branchId, isArchived: false },
-  });
-  if (!branch) {
-    throw new AppError('Branch not found', 404);
+  if (data.branchId) {
+    const branch = await prisma.branch.findFirst({
+      where: { id: data.branchId, isArchived: false },
+    });
+    if (!branch) {
+      throw new AppError('Branch not found', 404);
+    }
   }
 
   if (data.email) {
@@ -110,11 +118,11 @@ export async function createEmployee(data, createdById, req) {
     const person = await tx.person.create({
       data: {
         firstName: data.firstName,
-        middleName: data.middleName,
+        middleName: data.middleName || null,
         lastName: data.lastName,
-        phone: data.phone,
-        email: data.email,
-        address: data.address,
+        phone: data.phone || null,
+        email: data.email || null,
+        address: data.address || null,
         status: 'ACTIVE',
         createdById,
         updatedById: createdById,
@@ -126,16 +134,21 @@ export async function createEmployee(data, createdById, req) {
         personId: person.id,
         employeeCode,
         hireDate: new Date(data.hireDate),
-        department: data.department,
+        department: data.department || null,
         status: data.status || 'ACTIVE',
-        commissionRate: data.commissionRate,
-        salesTerritory: data.salesTerritory,
-        driverLicenseNumber: data.driverLicenseNumber,
+        commissionRate: data.commissionRate || null,
+        salesTerritory: data.salesTerritory || null,
+        driverLicenseNumber: data.driverLicenseNumber || null,
         driverLicenseExpiry: data.driverLicenseExpiry ? new Date(data.driverLicenseExpiry) : null,
-        branchId: data.branchId,
+        branchId: data.branchId || null,
         isAvailableForSales: data.isAvailableForSales ?? true,
         createdById,
         updatedById: createdById,
+        jobSpecifications: targetJobSpecIds.length > 0 ? {
+          create: targetJobSpecIds.map((specId) => ({
+            jobSpecificationId: specId,
+          })),
+        } : undefined,
       },
       include: {
         person: true,
@@ -178,6 +191,7 @@ export async function createEmployee(data, createdById, req) {
 
     let user = null;
     if (data.needsUserAccount) {
+      const assignedRoleId = data.roleId || data.roleIds?.[0];
       if (data.username && data.password) {
         const existingUsername = await tx.user.findUnique({
           where: { username: data.username },
@@ -202,11 +216,12 @@ export async function createEmployee(data, createdById, req) {
           },
         });
 
-        if (data.roleId) {
+        if (assignedRoleId) {
           await tx.userRole.create({
             data: {
-              createdById: user.id,
-              roleId: data.roleId,
+              userId: user.id,
+              createdById,
+              roleId: assignedRoleId,
             },
           });
         }
@@ -239,16 +254,8 @@ export async function createEmployee(data, createdById, req) {
       }
     }
 
-    return { employee, user, resetToken, resetTokenExpires };
+    return { employee, user };
   });
-
-  if (result.resetToken && data.email) {
-    await sendResetPasswordEmail(
-      data.email,
-      result.resetToken,
-      `${data.firstName} ${data.lastName}`
-    );
-  }
 
   await logAudit({
     createdById,
