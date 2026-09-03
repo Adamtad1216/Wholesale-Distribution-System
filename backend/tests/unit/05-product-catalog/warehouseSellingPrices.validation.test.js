@@ -4,7 +4,7 @@ import {
   productIdParamSchema,
   createWarehouseSellingPriceSchema,
   updateWarehouseSellingPriceSchema,
-} from '../../../src/modules/03-product-catalog/warehouse-selling-prices/warehouseSellingPrices.validation.js';
+} from '../../../src/modules/05-product-catalog/warehouse-selling-prices/warehouseSellingPrices.validation.js';
 
 describe('Warehouse Selling Prices Validation Schemas (Unit)', () => {
   const validProductId = '123e4567-e89b-12d3-a456-426614174000';

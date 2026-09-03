@@ -18,7 +18,7 @@ import purchaseOrderRoutes from "../modules/03-procurement/purchase-order.routes
 import goodsReceiptRoutes from "../modules/03-procurement/goods-receipt.routes.js";
 import documentRoutes from "../modules/18-documents/document.routes.js";
 import pricingRoutes from "../modules/11-pricing-discounts/pricing.routes.js";
-import catalogRoutes from "../modules/03-product-catalog/catalog.routes.js";
+import catalogRoutes from "../modules/05-product-catalog/catalog.routes.js";
 import inventoryRoutes from "../modules/07-inventory/inventory.routes.js";
 
 import companiesRoutes from "../modules/06-branches-warehouses/companies/companies.routes.js";

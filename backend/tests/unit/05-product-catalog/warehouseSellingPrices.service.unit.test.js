@@ -25,7 +25,7 @@ vi.mock('../../../src/modules/14-notifications/notifications/notifications.servi
 }));
 
 import prisma from '../../../src/config/prisma.js';
-import { createWarehouseSellingPrice } from '../../../src/modules/03-product-catalog/warehouse-selling-prices/warehouseSellingPrices.service.js';
+import { createWarehouseSellingPrice } from '../../../src/modules/05-product-catalog/warehouse-selling-prices/warehouseSellingPrices.service.js';
 
 describe('Warehouse Selling Prices Service - createWarehouseSellingPrice (Unit)', () => {
   const productId = '123e4567-e89b-12d3-a456-426614174000';

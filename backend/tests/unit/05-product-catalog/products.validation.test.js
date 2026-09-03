@@ -5,7 +5,7 @@ import {
   createProductSchema,
   updateProductSchema,
   productImageSchema,
-} from '../../../src/modules/03-product-catalog/products/products.validation.js';
+} from '../../../src/modules/05-product-catalog/products/products.validation.js';
 
 describe('Products Validation Schemas (Unit)', () => {
   const validUUID1 = '123e4567-e89b-12d3-a456-426614174000';

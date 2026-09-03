@@ -30,7 +30,7 @@ import {
   generateProductCode,
   ensureUniqueSku,
   getProducts,
-} from '../../../src/modules/03-product-catalog/products/products.service.js';
+} from '../../../src/modules/05-product-catalog/products/products.service.js';
 
 describe('Products Service Helpers (Unit)', () => {
   it('generateProductCode should generate code starting with PRD-', () => {
