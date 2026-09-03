@@ -303,6 +303,38 @@ const ALL_PERMISSIONS = [
   },
 ];
 
+async function ensureCustomerPermissions() {
+  const customerRole = await prisma.role.upsert({
+    where: { name: "CUSTOMER" },
+    update: { description: "Customer portal user" },
+    create: { name: "CUSTOMER", description: "Customer portal user" },
+  });
+
+  if (!customerRole) return;
+
+  const allPermissions = await prisma.permission.findMany();
+  const customerPermissions = [
+    "customers:read",
+    "warehouses:read",
+    "products:read",
+    "sales_orders:create",
+  ];
+
+  for (const permName of customerPermissions) {
+    const perm = allPermissions.find((p) => p.name === permName);
+    if (!perm) continue;
+    const existing = await prisma.rolePermission.findFirst({
+      where: { roleId: customerRole.id, permissionId: perm.id },
+    });
+    if (!existing) {
+      await prisma.rolePermission.create({
+        data: { roleId: customerRole.id, permissionId: perm.id },
+      });
+      console.log(`Granted ${permName} to CUSTOMER role.`);
+    }
+  }
+}
+
 async function ensureDefaultPriceTiers() {
   const tiers = [
     {
@@ -439,7 +471,9 @@ async function ensureDefaultOrganizationAndBranch() {
     },
   });
 
-  console.log(`Seeded organization: ${company.name} and branch: ${branch.name}`);
+  console.log(
+    `Seeded organization: ${company.name} and branch: ${branch.name}`,
+  );
   return { region, company, branch };
 }
 
