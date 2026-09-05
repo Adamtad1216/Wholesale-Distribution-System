@@ -50,7 +50,7 @@ export default function StatsCards({ dashboardData }) {
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
-          <Card hoverEffect className="p-5">
+          <Card key={stat.label} hoverEffect className="p-5">
             <div className="flex items-center justify-between mb-3">
               <div
                 className="w-10 h-10 rounded-lg border flex items-center justify-center bg-[var(--icon-box-bg)] text-[var(--icon-box-text)] border-[var(--icon-box-border)]"

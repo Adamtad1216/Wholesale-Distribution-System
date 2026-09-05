@@ -5,8 +5,12 @@ import {
   getInvoices,
   getInvoiceById
 } from './invoice.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { requirePermission } from '../../middleware/permission.middleware.js';
 
 const router = Router();
+
+router.use(authenticate);
 
 // Routes for Invoice generation
 /**
@@ -32,7 +36,7 @@ const router = Router();
  *       201:
  *         description: Upfront invoice created successfully
  */
-router.post('/from-order', createFromOrder);
+router.post('/from-order', requirePermission('invoices:create'), createFromOrder);
 
 /**
  * @openapi
@@ -57,7 +61,7 @@ router.post('/from-order', createFromOrder);
  *       201:
  *         description: Invoice created based on delivery successfully
  */
-router.post('/from-delivery', createFromDelivery);
+router.post('/from-delivery', requirePermission('invoices:create'), createFromDelivery);
 
 // General Invoice Retrieval
 /**
@@ -70,7 +74,7 @@ router.post('/from-delivery', createFromDelivery);
  *       200:
  *         description: List of all invoices
  */
-router.get('/', getInvoices);
+router.get('/', requirePermission('invoices:read'), getInvoices);
 
 /**
  * @openapi
@@ -89,6 +93,6 @@ router.get('/', getInvoices);
  *       200:
  *         description: Detailed invoice data
  */
-router.get('/:id', getInvoiceById);
+router.get('/:id', requirePermission('invoices:read'), getInvoiceById);
 
 export default router;

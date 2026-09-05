@@ -23,28 +23,36 @@ export default function UserFormView({
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Debounced Top-Down Person Search (Only persons WITHOUT a user account)
+  const fetchAvailablePersons = async (query = '') => {
+    if (isEdit) return;
+    try {
+      setIsSearchingPersons(true);
+      const res = await personsApi.getPersons({
+        search: query.trim(),
+        hasUserAccount: 'false', // 🔴 Strictly excludes persons who already have a user account
+      });
+      const rawList = res?.data || res || [];
+      const personList = Array.isArray(rawList) ? rawList : (rawList.data || []);
+      // Client-side safety filter: strictly exclude any person who already has a user account
+      const unprovisionedPersons = personList.filter((p) => !p.user && !p.userRecord);
+      setPersonResults(unprovisionedPersons);
+      setShowDropdown(unprovisionedPersons.length > 0);
+    } catch (err) {
+      console.error('Failed to search person records:', err);
+    } finally {
+      setIsSearchingPersons(false);
+    }
+  };
+
   useEffect(() => {
-    if (isEdit || !personSearchQuery.trim() || selectedPerson) {
+    if (isEdit || selectedPerson || !personSearchQuery.trim()) {
       setPersonResults([]);
       setShowDropdown(false);
       return;
     }
 
-    const timer = setTimeout(async () => {
-      try {
-        setIsSearchingPersons(true);
-        const res = await personsApi.getPersons({
-          search: personSearchQuery.trim(),
-          hasUserAccount: 'false', // 🔴 Strictly excludes persons who already have a user account
-        });
-        const personList = res?.data || res || [];
-        setPersonResults(Array.isArray(personList) ? personList : []);
-        setShowDropdown(Array.isArray(personList) && personList.length > 0);
-      } catch (err) {
-        console.error('Failed to search person records:', err);
-      } finally {
-        setIsSearchingPersons(false);
-      }
+    const timer = setTimeout(() => {
+      fetchAvailablePersons(personSearchQuery);
     }, 300);
 
     return () => clearTimeout(timer);
@@ -153,6 +161,11 @@ export default function UserFormView({
                 type="text"
                 placeholder="Type name, email, or employee code to search..."
                 value={personSearchQuery}
+                onFocus={() => {
+                  if (personSearchQuery.trim() && !selectedPerson) {
+                    fetchAvailablePersons(personSearchQuery);
+                  }
+                }}
                 onChange={(e) => {
                   setPersonSearchQuery(e.target.value);
                   if (selectedPerson) setSelectedPerson(null);

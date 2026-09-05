@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as paymentTermsController from './payment-terms.controller.js';
 import { authenticate } from '../../middleware/auth.middleware.js';
+import { requirePermission } from '../../middleware/permission.middleware.js';
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.use(authenticate);
  *       200:
  *         description: List of payment terms
  */
-router.get('/', paymentTermsController.getAllPaymentTerms);
+router.get('/', requirePermission('payment-terms:read'), paymentTermsController.getAllPaymentTerms);
 
 /**
  * @swagger
@@ -48,7 +49,7 @@ router.get('/', paymentTermsController.getAllPaymentTerms);
  *       404:
  *         description: Payment term not found
  */
-router.get('/:id', paymentTermsController.getPaymentTermById);
+router.get('/:id', requirePermission('payment-terms:read'), paymentTermsController.getPaymentTermById);
 
 /**
  * @swagger
@@ -83,6 +84,9 @@ router.get('/:id', paymentTermsController.getPaymentTermById);
  *       400:
  *         description: Invalid parameters
  */
-router.post('/', paymentTermsController.createPaymentTerm);
+router.post('/', requirePermission('payment-terms:create'), paymentTermsController.createPaymentTerm);
+
+router.put('/:id', requirePermission('payment-terms:update'), paymentTermsController.updatePaymentTerm);
+router.delete('/:id', requirePermission('payment-terms:delete'), paymentTermsController.deletePaymentTerm);
 
 export default router;

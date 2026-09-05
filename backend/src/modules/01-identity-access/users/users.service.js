@@ -24,7 +24,15 @@ export async function getUsers(filters, _requesterId) {
         },
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -151,8 +159,9 @@ export async function createUser(data, createdById, req) {
 
     await tx.userRole.createMany({
       data: data.roleIds.map((roleId) => ({
-        createdById: userRecord.id,
+        userId: userRecord.id,
         roleId,
+        createdById,
       })),
     });
 

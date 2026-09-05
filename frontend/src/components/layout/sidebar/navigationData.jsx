@@ -57,9 +57,9 @@ export const navigationSections = [
         ),
       },
       {
-        name: 'Payments',
-        href: '/payments',
-        permission: 'payments:read',
+        name: 'Finance',
+        href: '/finance',
+        permission: ['payments:read', 'invoices:read', 'credits:read', 'payment-terms:read'],
         icon: (
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />

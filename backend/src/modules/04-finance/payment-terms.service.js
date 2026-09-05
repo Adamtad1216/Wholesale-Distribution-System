@@ -45,6 +45,41 @@ class PaymentTermsService {
 
     return term;
   }
+
+  /**
+   * Update Payment Term
+   */
+  async updatePaymentTerm(id, data, updatedById) {
+    await this.getPaymentTermById(id); // Ensures it exists and is not archived
+
+    const { name, days, description } = data;
+    
+    return await prisma.paymentTerms.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(days !== undefined && { days: Number(days) }),
+        ...(description !== undefined && { description }),
+        updatedById,
+      },
+    });
+  }
+
+  /**
+   * Soft Delete Payment Term
+   */
+  async deletePaymentTerm(id, updatedById) {
+    await this.getPaymentTermById(id);
+
+    return await prisma.paymentTerms.update({
+      where: { id },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+        updatedById,
+      },
+    });
+  }
 }
 
 export default new PaymentTermsService();

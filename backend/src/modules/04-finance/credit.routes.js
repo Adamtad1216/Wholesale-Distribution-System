@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as creditController from './credit.controller.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
+import { requirePermission } from '../../middleware/permission.middleware.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -36,7 +37,7 @@ router.use(requireAuth);
  *       201:
  *         description: Manual credit issued successfully
  */
-router.post('/manual', creditController.createManualCredit);
+router.post('/manual', requirePermission('credits:create'), creditController.createManualCredit);
 
 /**
  * @swagger
@@ -73,7 +74,7 @@ router.post('/manual', creditController.createManualCredit);
  *       201:
  *         description: Sales Return credit issued successfully
  */
-router.post('/from-return', creditController.createCreditFromReturn);
+router.post('/from-return', requirePermission('credits:create'), creditController.createCreditFromReturn);
 
 /**
  * @swagger
@@ -96,7 +97,7 @@ router.post('/from-return', creditController.createCreditFromReturn);
  *       200:
  *         description: List of credits
  */
-router.get('/', creditController.getAllCredits);
+router.get('/', requirePermission('credits:read'), creditController.getAllCredits);
 
 /**
  * @swagger
@@ -117,7 +118,7 @@ router.get('/', creditController.getAllCredits);
  *       200:
  *         description: Customer store credit summary
  */
-router.get('/customer/:customerId', creditController.getCustomerCredits);
+router.get('/customer/:customerId', requirePermission('credits:read'), creditController.getCustomerCredits);
 
 /**
  * @swagger
@@ -154,7 +155,7 @@ router.get('/customer/:customerId', creditController.getCustomerCredits);
  *       200:
  *         description: Credit successfully applied to invoice balance
  */
-router.post('/:id/apply', creditController.applyCreditToInvoice);
+router.post('/:id/apply', requirePermission('credits:create'), creditController.applyCreditToInvoice);
 
 /**
  * @swagger
@@ -177,7 +178,7 @@ router.post('/:id/apply', creditController.applyCreditToInvoice);
  *       404:
  *         description: Credit not found
  */
-router.get('/:id/history', creditController.getCreditHistory);
+router.get('/:id/history', requirePermission('credits:read'), creditController.getCreditHistory);
 
 /**
  * @swagger
@@ -198,7 +199,7 @@ router.get('/:id/history', creditController.getCreditHistory);
  *       200:
  *         description: Complete customer credit facility summary
  */
-router.get('/customer/:customerId/summary', creditController.getCustomerCreditSummary);
+router.get('/customer/:customerId/summary', requirePermission('credits:read'), creditController.getCustomerCreditSummary);
 
 /**
  * @swagger
@@ -233,6 +234,6 @@ router.get('/customer/:customerId/summary', creditController.getCustomerCreditSu
  *       400:
  *         description: Purchase exceeds credit limit
  */
-router.post('/customer/:customerId/validate-limit', creditController.validateCreditLimit);
+router.post('/customer/:customerId/validate-limit', requirePermission('credits:read'), creditController.validateCreditLimit);
 
 export default router;

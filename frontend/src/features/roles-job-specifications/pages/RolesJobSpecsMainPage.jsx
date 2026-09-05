@@ -10,6 +10,8 @@ import Button from '../../../components/ui/Button';
 import RolesPage from './roles/RolesPage';
 import RoleFormView from './roles/RoleFormView';
 import RoleDetailsView from './roles/RoleDetailsView';
+import AssignedUsersPage from './roles/AssignedUsersPage';
+import RoleUserAssignmentView from './roles/RoleUserAssignmentView';
 import JobSpecificationsPage from './job-specifications/JobSpecificationsPage';
 import JobSpecFormView from './job-specifications/JobSpecFormView';
 
@@ -124,6 +126,11 @@ export default function RolesJobSpecsMainPage() {
   const handleViewRole = (role) => {
     setSelectedRoleForView(role);
     setViewMode('ROLE_DETAILS');
+  };
+
+  const handleOpenAssignUsers = (role) => {
+    setSelectedRoleForView(role);
+    setViewMode('ASSIGN_USERS_VIEW');
   };
 
   const handleOpenRoleForm = (role = null) => {
@@ -260,6 +267,22 @@ export default function RolesJobSpecsMainPage() {
         handleOpenRoleForm={handleOpenRoleForm}
         handleRoleDelete={handleRoleDelete}
         handleBackToList={handleBackToList}
+        handleOpenAssignUsers={handleOpenAssignUsers}
+      />
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════
+  // RENDER FULL PAGE VIEW: ASSIGN USERS VIEW
+  // ═════════════════════════════════════════════════════════════════
+  if (viewMode === 'ASSIGN_USERS_VIEW') {
+    return (
+      <RoleUserAssignmentView
+        role={selectedRoleForView}
+        roles={roles}
+        onRoleChange={setSelectedRoleForView}
+        handleBackToList={handleBackToList}
+        onSuccess={fetchData}
       />
     );
   }
@@ -368,10 +391,24 @@ export default function RolesJobSpecsMainPage() {
           </svg>
           Job Specifications ({jobSpecs.length})
         </button>
+
+        <button
+          onClick={() => setActiveTab('ASSIGNED_USERS')}
+          className={`pb-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
+            activeTab === 'ASSIGNED_USERS'
+              ? 'border-violet-500 text-violet-400'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          Assigned Users
+        </button>
       </div>
 
       {/* Tab Content View */}
-      {activeTab === 'ROLES' ? (
+      {activeTab === 'ROLES' && (
         <RolesPage
           roles={roles}
           loading={loading}
@@ -381,7 +418,9 @@ export default function RolesJobSpecsMainPage() {
           handleRoleDelete={handleRoleDelete}
           handleViewRole={handleViewRole}
         />
-      ) : (
+      )}
+      
+      {activeTab === 'JOB_SPECS' && (
         <JobSpecificationsPage
           jobSpecs={jobSpecs}
           loading={loading}
@@ -389,6 +428,15 @@ export default function RolesJobSpecsMainPage() {
           canDeleteJobSpec={canDeleteJobSpec}
           handleOpenJobSpecForm={handleOpenJobSpecForm}
           handleJobSpecDelete={handleJobSpecDelete}
+        />
+      )}
+
+      {activeTab === 'ASSIGNED_USERS' && (
+        <AssignedUsersPage 
+          roles={roles}
+          canUpdateRole={canUpdateRole}
+          refreshData={fetchData}
+          handleOpenAssignUsers={handleOpenAssignUsers}
         />
       )}
     </div>

@@ -90,7 +90,7 @@ class PaymentService {
       if (existingOrder) {
         validOrderId = existingOrder.id;
         if (!finalAmount || finalAmount <= 0) {
-          finalAmount = Number(existingOrder.totalAmount);
+          finalAmount = Number(existingOrder.total);
         }
       } else {
         throw new Error(`Order '${orderId}' not found in database`);
@@ -110,7 +110,7 @@ class PaymentService {
         orderId: validOrderId,
         amount: finalAmount,
         currency,
-        status: 'PENDING',
+        status: 'PROCESSING',
         method: provider.toLowerCase() === 'bank_transfer' ? 'OTHER' : 'ONLINE_GATEWAY',
         timing: 'BEFORE_ORDER',
         provider: normalizedProvider,
@@ -139,7 +139,7 @@ class PaymentService {
           provider: normalizedProvider,
           providerReference: initResult.checkoutUrl || finalTxRef,
           amount: finalAmount,
-          status: 'PENDING',
+          status: 'PROCESSING',
           requestData: { email, firstName, lastName, customization },
           responseData: JSON.parse(JSON.stringify(initResult))
         }
@@ -151,7 +151,7 @@ class PaymentService {
         action: 'PAYMENT_INITIALIZED',
         performedById: processedById,
         oldStatus: null,
-        newStatus: 'PENDING',
+        newStatus: 'PROCESSING',
         metadata: { provider: normalizedProvider, txRef: finalTxRef, checkoutUrl: initResult.checkoutUrl }
       });
     }
@@ -172,12 +172,27 @@ class PaymentService {
     }
 
     const actorId = processedById || performedById || null;
-    const adapter = this.getAdapter(provider);
-    const verification = await adapter.verifyPayment(txRef);
 
     const existingPayment = await prisma.payment.findUnique({
       where: { transactionRef: txRef }
     });
+
+    if (existingPayment && ['MANUAL', 'BANK_TRANSFER', 'CASH', 'OTHER'].includes(existingPayment.provider?.toUpperCase())) {
+      const statusMap = { SUCCESSFUL: 'SUCCESS', FAILED: 'FAILED', PENDING: 'PROCESSING', PROCESSING: 'PROCESSING' };
+      return {
+        status: statusMap[existingPayment.status] || 'PROCESSING',
+        txRef: existingPayment.transactionRef,
+        amount: existingPayment.amount,
+        currency: existingPayment.currency,
+        provider: existingPayment.provider,
+        paymentId: existingPayment.id,
+        raw: { message: 'Manual payment status from database' }
+      };
+    }
+
+    const normalizedProvider = (existingPayment?.provider || provider).toLowerCase();
+    const adapter = this.getAdapter(normalizedProvider);
+    const verification = await adapter.verifyPayment(txRef);
 
     if (existingPayment) {
       const oldStatus = existingPayment.status;
@@ -492,13 +507,18 @@ class PaymentService {
     return await prisma.payment.findUnique({
       where: { id: paymentId },
       include: {
-        salesOrder: true,
+        salesOrder: {
+          include: { invoices: { select: { id: true, invoiceNumber: true } } }
+        },
+        allocations: {
+          include: { invoice: { select: { id: true, invoiceNumber: true } } }
+        },
         attempts: { orderBy: { createdAt: 'desc' } },
         proofs: { orderBy: { createdAt: 'desc' } },
         refunds: { orderBy: { createdAt: 'desc' } },
         webhooks: { orderBy: { createdAt: 'desc' } },
         auditLogs: { orderBy: { createdAt: 'desc' } },
-        processedBy: { select: { id: true, name: true, email: true } }
+        processedBy: { select: { id: true, username: true } }
       }
     });
   }
@@ -624,6 +644,26 @@ class PaymentService {
 
     await prisma.paymentMethodOption.delete({ where: { id } });
     return { id, message: `Payment method option ${existing.name} deleted successfully` };
+  }
+
+  /**
+   * Log an audit event for a payment transaction
+   */
+  async logAudit({ paymentId, action, performedById, oldStatus, newStatus, metadata }) {
+    try {
+      return await prisma.paymentAuditLog.create({
+        data: {
+          paymentId,
+          action,
+          performedById,
+          oldStatus,
+          newStatus,
+          metadata: metadata || {}
+        }
+      });
+    } catch (err) {
+      console.error('[Payment Audit Error]', err.message);
+    }
   }
 }
 

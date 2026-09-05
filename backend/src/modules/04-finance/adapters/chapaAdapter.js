@@ -12,6 +12,8 @@ class ChapaAdapter extends BasePaymentAdapter {
    */
   async _request(endpoint, method = 'GET', body = null) {
     const apiKey = this.secretKey || process.env.CHAPA_SECRET_KEY;
+    console.log('--- DEBUG: CHAPA API KEY LOADED ---', apiKey);
+    
     if (!apiKey) {
       throw new Error('Chapa Secret Key is missing. Please configure CHAPA_SECRET_KEY in your environment.');
     }
@@ -90,11 +92,14 @@ class ChapaAdapter extends BasePaymentAdapter {
       callback_url: callbackUrl,
       return_url: fallbackReturnUrl,
       customization: {
-        title: (customization.title || 'Restaurant Pay').substring(0, 16),
-        description: customization.description || 'Order payment via Chapa',
-        logo: customization.logo || ''
+        title: (customization.title || 'Wholesale Pay').substring(0, 16),
+        description: customization.description || 'Order payment via Chapa'
       }
     };
+
+    if (customization.logo) {
+      chapaPayload.customization.logo = customization.logo;
+    }
 
     const result = await this._request('/transaction/initialize', 'POST', chapaPayload);
 

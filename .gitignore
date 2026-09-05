@@ -144,3 +144,5 @@ vite.config.ts.timestamp-*
 
 # Custom
 mydocs/
+backend/scripts/*
+!backend/scripts/.gitkeep

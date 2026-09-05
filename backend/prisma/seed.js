@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
@@ -258,6 +258,24 @@ const ALL_PERMISSIONS = [
     description: "Delete permissions",
   },
 
+  // Finance Module
+  { name: "invoices:create", module: "finance", action: "create", description: "Create invoices" },
+  { name: "invoices:read", module: "finance", action: "read", description: "Read invoices" },
+  { name: "invoices:update", module: "finance", action: "update", description: "Update invoices" },
+  { name: "invoices:delete", module: "finance", action: "delete", description: "Delete invoices" },
+  { name: "payments:create", module: "finance", action: "create", description: "Create payments" },
+  { name: "payments:read", module: "finance", action: "read", description: "Read payments" },
+  { name: "payments:update", module: "finance", action: "update", description: "Update payments" },
+  { name: "payments:delete", module: "finance", action: "delete", description: "Delete payments" },
+  { name: "credits:create", module: "finance", action: "create", description: "Create credits" },
+  { name: "credits:read", module: "finance", action: "read", description: "Read credits" },
+  { name: "credits:update", module: "finance", action: "update", description: "Update credits" },
+  { name: "credits:delete", module: "finance", action: "delete", description: "Delete credits" },
+  { name: "payment-terms:create", module: "finance", action: "create", description: "Create payment terms" },
+  { name: "payment-terms:read", module: "finance", action: "read", description: "Read payment terms" },
+  { name: "payment-terms:update", module: "finance", action: "update", description: "Update payment terms" },
+  { name: "payment-terms:delete", module: "finance", action: "delete", description: "Delete payment terms" },
+
   // Reporting & Dashboards
   {
     name: "REPORT_VIEW_DASHBOARD",
@@ -318,6 +336,8 @@ async function ensureCustomerPermissions() {
     "warehouses:read",
     "products:read",
     "sales_orders:create",
+    "invoices:read",
+    "payments:read"
   ];
 
   for (const permName of customerPermissions) {

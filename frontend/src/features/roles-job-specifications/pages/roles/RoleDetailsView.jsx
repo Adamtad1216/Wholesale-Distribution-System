@@ -12,11 +12,36 @@ export default function RoleDetailsView({
   handleOpenRoleForm,
   handleRoleDelete,
   handleBackToList,
+  handleOpenAssignUsers,
 }) {
   const [role, setRole] = useState(initialRole || null);
   const [loading, setLoading] = useState(!initialRole);
   const [activeSubTab, setActiveSubTab] = useState('PERMISSIONS'); // 'PERMISSIONS' | 'USERS'
   const [search, setSearch] = useState('');
+
+  const fetchRoleDetails = async () => {
+    if (!roleId) return;
+    try {
+      setLoading(true);
+      const res = await rolesApi.getRoleById(roleId);
+      const data = res?.data || res;
+      setRole(data);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to load role details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshRoleSilently = async () => {
+    if (!roleId) return;
+    try {
+      const res = await rolesApi.getRoleById(roleId);
+      setRole(res?.data || res);
+    } catch (err) {
+      // silent fail
+    }
+  };
 
   useEffect(() => {
     if (initialRole) {
@@ -25,20 +50,6 @@ export default function RoleDetailsView({
   }, [initialRole]);
 
   useEffect(() => {
-    const fetchRoleDetails = async () => {
-      if (!roleId) return;
-      try {
-        setLoading(true);
-        const res = await rolesApi.getRoleById(roleId);
-        const data = res?.data || res;
-        setRole(data);
-      } catch (err) {
-        toast.error(err?.message || 'Failed to load role details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchRoleDetails();
   }, [roleId]);
 
@@ -275,11 +286,22 @@ export default function RoleDetailsView({
 
       {/* Sub-Tab 2: USERS */}
       {activeSubTab === 'USERS' && (
-        <Card className="border border-border bg-card900 backdrop-blur-xl rounded-2xl overflow-hidden">
-          {filteredUsers.length === 0 ? (
-            <div className="p-12 text-center text-muted-foreground text-sm">
-              No users are currently assigned to this role.
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-card900 p-4 border border-border rounded-xl">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Manage Assigned Users</h3>
+              <p className="text-xs text-muted-foreground mt-1">Assign or remove users from the {role.name} role.</p>
             </div>
+            {canUpdateRole && (
+              <Button onClick={() => handleOpenAssignUsers(role)} size="sm" icon={<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>}>Assign Users</Button>
+            )}
+          </div>
+
+          <Card className="border border-border bg-card900 backdrop-blur-xl rounded-2xl overflow-hidden">
+            {filteredUsers.length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground text-sm">
+                No users are currently assigned to this role.
+              </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -325,7 +347,9 @@ export default function RoleDetailsView({
             </div>
           )}
         </Card>
+        </div>
       )}
     </div>
   );
 }
+

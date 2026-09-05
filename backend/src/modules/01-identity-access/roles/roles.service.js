@@ -184,3 +184,63 @@ export const removePermission = async (roleId, permissionId, userId) => {
     },
   });
 };
+
+export const assignUser = async (roleId, targetUserId, currentUserId) => {
+  const role = await getRoleById(roleId);
+  const user = await prisma.user.findUnique({ where: { id: targetUserId } });
+  
+  if (!user || user.isArchived) {
+    throw new Error('User not found');
+  }
+
+  const existingMapping = await prisma.userRole.findUnique({
+    where: {
+      userId_roleId: {
+        userId: targetUserId,
+        roleId,
+      },
+    },
+  });
+
+  if (existingMapping) {
+    if (existingMapping.isArchived) {
+      return prisma.userRole.update({
+        where: { userId_roleId: { userId: targetUserId, roleId } },
+        data: { isArchived: false, updatedById: currentUserId },
+      });
+    }
+    throw new Error('User is already assigned to this role');
+  }
+
+  return prisma.userRole.create({
+    data: {
+      userId: targetUserId,
+      roleId,
+      createdById: currentUserId,
+    },
+  });
+};
+
+export const removeUser = async (roleId, targetUserId, currentUserId) => {
+  const existingMapping = await prisma.userRole.findUnique({
+    where: {
+      userId_roleId: {
+        userId: targetUserId,
+        roleId,
+      },
+    },
+  });
+
+  if (!existingMapping || existingMapping.isArchived) {
+    throw new Error('User is not assigned to this role');
+  }
+
+  return prisma.userRole.update({
+    where: { userId_roleId: { userId: targetUserId, roleId } },
+    data: {
+      isArchived: true,
+      archivedAt: new Date(),
+      updatedById: currentUserId,
+    },
+  });
+};

@@ -287,10 +287,12 @@ export async function login(data, req) {
         orderBy: { createdAt: 'desc' },
       },
       userRoles: {
+        where: { isArchived: false },
         include: {
           role: {
             include: {
               rolePermissions: {
+                where: { isArchived: false },
                 include: {
                   permission: true,
                 },
@@ -376,12 +378,13 @@ export async function login(data, req) {
     throw new AppError('Invalid username or password', 401);
   }
 
-  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const activeUserRoles = (user.userRoles || []).filter((ur) => !ur.isArchived && !ur.role?.isArchived);
+  const roles = activeUserRoles.map((ur) => ur.role?.name).filter(Boolean);
   const permissionsSet = new Set();
 
-  user.userRoles?.forEach((ur) => {
-    ur.role?.rolePermissions?.forEach((rp) => {
-      if (rp.permission?.name) {
+  activeUserRoles.forEach((ur) => {
+    (ur.role?.rolePermissions || []).forEach((rp) => {
+      if (!rp.isArchived && rp.permission && !rp.permission.isArchived && rp.permission.name) {
         permissionsSet.add(rp.permission.name);
       }
     });
@@ -552,10 +555,12 @@ export async function getMe(userId) {
         orderBy: { createdAt: 'desc' },
       },
       userRoles: {
+        where: { isArchived: false },
         include: {
           role: {
             include: {
               rolePermissions: {
+                where: { isArchived: false },
                 include: {
                   permission: true,
                 },
@@ -571,12 +576,13 @@ export async function getMe(userId) {
     throw new AppError('User not found', 404);
   }
 
-  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const activeUserRoles = (user.userRoles || []).filter((ur) => !ur.isArchived && !ur.role?.isArchived);
+  const roles = activeUserRoles.map((ur) => ur.role?.name).filter(Boolean);
   const permissionsSet = new Set();
 
-  user.userRoles?.forEach((ur) => {
-    ur.role?.rolePermissions?.forEach((rp) => {
-      if (rp.permission?.name) {
+  activeUserRoles.forEach((ur) => {
+    (ur.role?.rolePermissions || []).forEach((rp) => {
+      if (!rp.isArchived && rp.permission && !rp.permission.isArchived && rp.permission.name) {
         permissionsSet.add(rp.permission.name);
       }
     });

@@ -1,6 +1,14 @@
 import express from 'express';
 const router = express.Router();
 import paymentController from './payment.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
+import { requirePermission } from '../../middleware/permission.middleware.js';
+import { uploadMiddleware } from '../../middleware/upload.middleware.js';
+
+// Public file stream route for proof files (renders directly in <img> tags and browser tabs)
+router.get('/proof/:proofId/file', (req, res) => paymentController.getProofFile(req, res));
+
+router.use(authenticate);
 
 /**
  * @openapi
@@ -39,8 +47,11 @@ import paymentController from './payment.controller.js';
  *       201:
  *         description: Payment provider created successfully
  */
-router.get('/providers', (req, res) => paymentController.getProviders(req, res));
-router.post('/providers', (req, res) => paymentController.createProvider(req, res));
+router.get('/providers', requirePermission('payments:read'), (req, res) => paymentController.getProviders(req, res));
+router.post('/providers', requirePermission('payments:create'), (req, res) => paymentController.createProvider(req, res));
+
+// List all payments
+router.get('/', requirePermission('payments:read'), (req, res) => paymentController.getPayments(req, res));
 
 /**
  * @openapi
@@ -89,8 +100,8 @@ router.post('/providers', (req, res) => paymentController.createProvider(req, re
  *       200:
  *         description: Provider deleted successfully
  */
-router.put('/providers/:id', (req, res) => paymentController.updateProvider(req, res));
-router.delete('/providers/:id', (req, res) => paymentController.deleteProvider(req, res));
+router.put('/providers/:id', requirePermission('payments:update'), (req, res) => paymentController.updateProvider(req, res));
+router.delete('/providers/:id', requirePermission('payments:delete'), (req, res) => paymentController.deleteProvider(req, res));
 
 /**
  * @openapi
@@ -130,7 +141,7 @@ router.delete('/providers/:id', (req, res) => paymentController.deleteProvider(r
  *       201:
  *         description: Payment method option created successfully
  */
-router.post('/providers/:providerId/methods', (req, res) => paymentController.createMethodOption(req, res));
+router.post('/providers/:providerId/methods', requirePermission('payments:create'), (req, res) => paymentController.createMethodOption(req, res));
 
 /**
  * @openapi
@@ -179,8 +190,8 @@ router.post('/providers/:providerId/methods', (req, res) => paymentController.cr
  *       200:
  *         description: Option deleted successfully
  */
-router.put('/methods/:id', (req, res) => paymentController.updateMethodOption(req, res));
-router.delete('/methods/:id', (req, res) => paymentController.deleteMethodOption(req, res));
+router.put('/methods/:id', requirePermission('payments:update'), (req, res) => paymentController.updateMethodOption(req, res));
+router.delete('/methods/:id', requirePermission('payments:delete'), (req, res) => paymentController.deleteMethodOption(req, res));
 
 /**
  * @openapi
@@ -247,7 +258,7 @@ router.delete('/methods/:id', (req, res) => paymentController.deleteMethodOption
  *       404:
  *         description: Order not found
  */
-router.post('/initialize', (req, res) => paymentController.initialize(req, res));
+router.post('/initialize', requirePermission('payments:create'), (req, res) => paymentController.initialize(req, res));
 
 /**
  * @openapi
@@ -271,7 +282,7 @@ router.post('/initialize', (req, res) => paymentController.initialize(req, res))
  *       200:
  *         description: Payment status verification
  */
-router.get('/verify/:txRef', (req, res) => paymentController.verify(req, res));
+router.get('/verify/:txRef', requirePermission('payments:read'), (req, res) => paymentController.verify(req, res));
 
 /**
  * @openapi
@@ -318,7 +329,7 @@ router.post('/webhook', (req, res) => paymentController.webhook(req, res));
  *       201:
  *         description: Payment proof receipt uploaded successfully
  */
-router.post('/:id/proof', (req, res) => paymentController.uploadProof(req, res));
+router.post('/:id/proof', requirePermission('payments:create'), uploadMiddleware.single('file'), (req, res) => paymentController.uploadProof(req, res));
 
 /**
  * @openapi
@@ -352,7 +363,7 @@ router.post('/:id/proof', (req, res) => paymentController.uploadProof(req, res))
  *       200:
  *         description: Proof verification status updated
  */
-router.patch('/proof/:proofId/verify', (req, res) => paymentController.verifyProof(req, res));
+router.patch('/proof/:proofId/verify', requirePermission('payments:update'), (req, res) => paymentController.verifyProof(req, res));
 
 /**
  * @openapi
@@ -386,7 +397,7 @@ router.patch('/proof/:proofId/verify', (req, res) => paymentController.verifyPro
  *       200:
  *         description: Refund record created and payment status updated
  */
-router.post('/:id/refund', (req, res) => paymentController.processRefund(req, res));
+router.post('/:id/refund', requirePermission('payments:create'), (req, res) => paymentController.processRefund(req, res));
 
 /**
  * @openapi
@@ -405,6 +416,7 @@ router.post('/:id/refund', (req, res) => paymentController.processRefund(req, re
  *       200:
  *         description: Detailed payment entity history
  */
-router.get('/:id/history', (req, res) => paymentController.getHistory(req, res));
+router.get('/:id/history', requirePermission('payments:read'), (req, res) => paymentController.getHistory(req, res));
+router.patch('/:id/approve', requirePermission('payments:update'), (req, res) => paymentController.approvePayment(req, res));
 
 export default router;

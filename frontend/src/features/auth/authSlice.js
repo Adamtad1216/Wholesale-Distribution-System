@@ -125,11 +125,11 @@ const authSlice = createSlice({
       const payload = action.payload?.data || action.payload;
       state.user = payload.user || payload;
       state.role = payload.role || state.role;
-      state.permissions = payload.permissions || state.permissions || [];
-      state.customer = payload.customer || state.customer;
-      if (payload.permissions) {
+      if (Array.isArray(payload.permissions)) {
+        state.permissions = payload.permissions;
         localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(payload.permissions));
       }
+      state.customer = payload.customer || state.customer;
       if (payload.role) {
         localStorage.setItem(ROLE_KEY, payload.role);
       }

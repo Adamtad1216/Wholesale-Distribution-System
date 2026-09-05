@@ -31,7 +31,9 @@ import EmployeesPage from './features/employees/pages/EmployeesPage';
 import BranchesPage from './features/branches/pages/branches/BranchesPage';
 import Customers from './features/customers/pages/Customers';
 import Documents from './features/documents/pages/Documents';
-import Payments from './features/payments/pages/payments/Payments';
+import Checkout from './features/payments/pages/checkout/Checkout';
+import Receipt from './features/payments/pages/receipt/Receipt';
+import FinanceDashboard from './features/finance/pages/FinanceDashboard';
 import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
 import MySalesOrders from './features/sales-orders/pages/MySalesOrders';
 import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
@@ -110,13 +112,15 @@ function AppRoutes() {
           <Route path="/documents" element={<Documents />} />
         </Route>
 
-        <Route element={<PermissionRoute permission="payments:read" />}>
-          <Route path="/payments" element={<Payments />} />
+        <Route element={<PermissionRoute permission={['payments:read', 'invoices:read', 'credits:read', 'payment-terms:read']} />}>
+          <Route path="/finance" element={<FinanceDashboard />} />
         </Route>
 
         <Route path="/sales-orders/new" element={<NewSalesOrder />} />
         <Route path="/sales-orders" element={<MySalesOrders />} />
         <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
+        <Route path="/checkout/:id" element={<Checkout />} />
+        <Route path="/receipt" element={<Receipt />} />
 
         {/* Default redirect inside the shell */}
         <Route index element={<Navigate to="/dashboard" replace />} />
