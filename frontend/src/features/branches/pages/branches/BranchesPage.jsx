@@ -4,6 +4,7 @@ import { branchesApi } from '../../branchesApi';
 import { usePermission } from '../../../../hooks/usePermission';
 import Button from '../../../../components/ui/Button';
 import Card from '../../../../components/ui/Card';
+import Modal from '../../../../components/ui/Modal';
 
 export default function BranchesPage() {
   const [branches, setBranches] = useState([]);
@@ -195,74 +196,74 @@ export default function BranchesPage() {
       )}
 
       {/* Branch Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/70 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-foreground ">
-              {editingBranch ? 'Edit Branch' : 'Add Branch'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Branch Code</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. BR-ADDIS"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Branch Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Addis Ababa Main Branch"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Address</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Phone</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
-                />
-              </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingBranch ? 'Edit Branch' : 'Add Branch'}
+        subtitle="Configure branch info and contact details."
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Branch Code</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. BR-ADDIS"
+              value={formData.code}
+              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none font-mono"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Branch Name</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Addis Ababa Main Branch"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Address</label>
+            <input
+              type="text"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Phone</label>
+            <input
+              type="text"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
+            />
+          </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border ">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                >
-                  Save
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+            >
+              Save
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

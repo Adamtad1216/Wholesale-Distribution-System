@@ -23,7 +23,12 @@ export const financeApi = {
   },
   
   // Credit
-  getCreditPolicies: () => api.get('/credits/policies'),
+  getAllCredits: (params) => api.get('/credits', { params }),
+  getCustomerCredits: (customerId) => api.get(`/credits/customer/${customerId}`),
+  getCustomerCreditSummary: (customerId) => api.get(`/credits/customer/${customerId}/summary`),
+  getCreditHistory: (id) => api.get(`/credits/${id}/history`),
+  createManualCredit: (data) => api.post('/credits/manual', data),
+  applyCreditToInvoice: (id, data) => api.post(`/credits/${id}/apply`, data),
   
   // Payment Terms
   getPaymentTerms: () => api.get('/payment-terms'),

@@ -3,6 +3,7 @@ import Invoice from './Invoice';
 import PaymentTermsTab from '../components/PaymentTermsTab';
 import PaymentsTab from '../components/PaymentsTab';
 import PaymentApprovalTab from '../components/PaymentApprovalTab';
+import CreditTab from '../components/CreditTab';
 import { usePermission } from '../../../hooks/usePermission';
 
 export default function FinanceDashboard() {
@@ -68,11 +69,7 @@ export default function FinanceDashboard() {
         {activeTab === 'invoices' && <Invoice />}
         {activeTab === 'payments' && <PaymentsTab />}
         {activeTab === 'payment-approval' && <PaymentApprovalTab />}
-        {activeTab === 'credit' && (
-          <div className="card p-8 text-center text-muted-foreground animate-fade-in border-border/40">
-            Customer credit limit and policy management coming soon.
-          </div>
-        )}
+        {activeTab === 'credit' && <CreditTab />}
         {activeTab === 'payment-terms' && <PaymentTermsTab />}
       </div>
     </div>

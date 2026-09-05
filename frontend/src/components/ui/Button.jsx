@@ -99,11 +99,11 @@ export default function Button({
       {loading ? (
         <Spinner sizeClass={ICON_SIZE[size]} />
       ) : icon ? (
-        <span className={`shrink-0 ${ICON_SIZE[size]}`}>{icon}</span>
+        <span className={`shrink-0 inline-flex items-center justify-center [&>svg]:w-full [&>svg]:h-full ${ICON_SIZE[size]}`}>{icon}</span>
       ) : null}
-      {children && <span>{children}</span>}
+      {children && <span className="leading-none">{children}</span>}
       {!loading && iconRight && (
-        <span className={`shrink-0 ${ICON_SIZE[size]}`}>{iconRight}</span>
+        <span className={`shrink-0 inline-flex items-center justify-center [&>svg]:w-full [&>svg]:h-full ${ICON_SIZE[size]}`}>{iconRight}</span>
       )}
     </button>
   );

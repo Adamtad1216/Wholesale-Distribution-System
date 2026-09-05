@@ -99,7 +99,13 @@ class CreditService {
     return await prisma.credit.findMany({
       where,
       include: {
-        customer: true,
+        customer: {
+          include: {
+            person: true,
+            organization: true,
+            paymentTerms: true
+          }
+        },
         salesReturn: true
       },
       orderBy: {
@@ -199,7 +205,12 @@ class CreditService {
     const credit = await prisma.credit.findUnique({
       where: { id: creditId },
       include: {
-        customer: true,
+        customer: {
+          include: {
+            person: true,
+            organization: true
+          }
+        },
         createdBy: {
           select: { id: true, username: true }
         },
