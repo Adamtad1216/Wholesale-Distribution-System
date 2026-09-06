@@ -37,19 +37,45 @@ export default function DocumentFilterToolbar({
           />
         </div>
 
-        {/* Status & View Layout Filters */}
-        <div className="flex items-center gap-3">
+        {/* Category, Status & View Layout Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Category Dropdown */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}
+            className="px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
+          >
+            <option value="ALL" className="bg-[#0f172a] text-slate-100">
+              All Categories ({totalDocsCount})
+            </option>
+            {docTypes.map((type) => {
+              const count = rawDocs.filter(
+                (d) => d.documentTypeId === type.id || d.documentType?.code === type.code || d.documentType?.id === type.id
+              ).length;
+
+              return (
+                <option key={type.id || type.code} value={type.id || type.code} className="bg-[#0f172a] text-slate-100">
+                  {type.name} ({count})
+                </option>
+              );
+            })}
+          </select>
+
+          {/* Status Dropdown */}
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500 cursor-pointer"
+            style={{ backgroundColor: '#0f172a', color: '#f8fafc' }}
+            className="px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer"
           >
-            <option value="ALL">All Statuses</option>
-            <option value="APPROVED">Verified / Approved</option>
-            <option value="PENDING_REVIEW">Pending Review</option>
-            <option value="REJECTED">Rejected</option>
+            <option value="ALL" className="bg-[#0f172a] text-slate-100">All Statuses</option>
+            <option value="APPROVED" className="bg-[#0f172a] text-slate-100">Verified / Approved</option>
+            <option value="PENDING_REVIEW" className="bg-[#0f172a] text-slate-100">Pending Review</option>
+            <option value="REJECTED" className="bg-[#0f172a] text-slate-100">Rejected</option>
           </select>
 
+          {/* Grid / List Toggle */}
           <div className="flex bg-muted800 p-1 rounded-xl border border-border">
             <button
               type="button"
@@ -75,41 +101,6 @@ export default function DocumentFilterToolbar({
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Category Filter Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-t border-border pt-3">
-        <button
-          type="button"
-          onClick={() => setSelectedCategory('ALL')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
-            selectedCategory === 'ALL'
-              ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-              : 'bg-muted800 border-border text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          All Categories ({totalDocsCount})
-        </button>
-        {docTypes.map((type) => {
-          const count = rawDocs.filter(
-            (d) => d.documentTypeId === type.id || d.documentType?.code === type.code || d.documentType?.id === type.id
-          ).length;
-
-          return (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => setSelectedCategory(type.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
-                selectedCategory === type.id
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                  : 'bg-muted800 border-border text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {type.name} ({count})
-            </button>
-          );
-        })}
       </div>
     </Card>
   );

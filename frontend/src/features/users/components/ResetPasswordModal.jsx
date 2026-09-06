@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
+import { toast } from 'react-hot-toast';
 
 export default function ResetPasswordModal({ user, onClose, onReset }) {
   const [newPassword, setNewPassword] = useState('');
@@ -9,7 +10,7 @@ export default function ResetPasswordModal({ user, onClose, onReset }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newPassword || newPassword.length < 8) {
-      alert('Password must be at least 8 characters long.');
+      toast.error('Password must be at least 8 characters long.');
       return;
     }
     setSubmitting(true);

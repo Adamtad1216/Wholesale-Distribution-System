@@ -34,6 +34,17 @@ import Documents from './features/documents/pages/Documents';
 import Checkout from './features/payments/pages/checkout/Checkout';
 import Receipt from './features/payments/pages/receipt/Receipt';
 import FinanceDashboard from './features/finance/pages/FinanceDashboard';
+import PaymentOptionsPage from './features/finance/components/payment-tab/PaymentOptionsPage';
+import ProcurementDashboard from './features/procurement/pages/procurement-dashboard/ProcurementDashboard';
+import PurchaseOrderCartPage from './features/procurement/pages/purchase-order-cart/PurchaseOrderCartPage';
+import PurchaseOrderDetailPage from './features/procurement/pages/purchase-order-detail/PurchaseOrderDetailPage';
+import RecordGoodsReceiptPage from './features/procurement/pages/record-goods-receipt/RecordGoodsReceiptPage';
+import GoodsReceiptDetailPage from './features/procurement/pages/goods-receipt-detail/GoodsReceiptDetailPage';
+import SettleSupplierPaymentPage from './features/procurement/pages/settle-supplier-payment/SettleSupplierPaymentPage';
+import TransferReceiptPage from './features/procurement/pages/transfer-receipt/TransferReceiptPage';
+import SuppliersPage from './features/suppliers/pages/suppliers-list/SuppliersPage';
+import SupplierDetailPage from './features/suppliers/pages/supplier-detail/SupplierDetailPage';
+import NewSupplierPage from './features/suppliers/pages/new-supplier/NewSupplierPage';
 import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
 import MySalesOrders from './features/sales-orders/pages/MySalesOrders';
 import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
@@ -112,10 +123,26 @@ function AppRoutes() {
           <Route path="/documents" element={<Documents />} />
         </Route>
 
-        <Route element={<PermissionRoute permission={['payments:read', 'invoices:read', 'credits:read', 'payment-terms:read']} />}>
+        <Route element={<PermissionRoute permission={['payments:read', 'payment:view_all', 'payment:view_own', 'invoices:read', 'invoice:view_all', 'invoice:view_own', 'credits:read', 'payment-terms:read']} />}>
           <Route path="/finance" element={<FinanceDashboard />} />
         </Route>
 
+        <Route element={<PermissionRoute permission={['payment-options:manage', 'payment-option:manage', 'payment-options:read', 'payment-option:read', 'payments:update', 'payment:view_all']} />}>
+          <Route path="/finance/payment-options" element={<PaymentOptionsPage />} />
+        </Route>
+
+        <Route path="/procurement" element={<ProcurementDashboard />} />
+        <Route path="/procurement/cart" element={<PurchaseOrderCartPage />} />
+        <Route path="/procurement/orders/:id" element={<PurchaseOrderDetailPage />} />
+        <Route path="/procurement/receipts/new" element={<RecordGoodsReceiptPage />} />
+        <Route path="/procurement/receipts/:id" element={<GoodsReceiptDetailPage />} />
+        <Route path="/procurement/receipts/:id/settle" element={<SettleSupplierPaymentPage />} />
+        <Route path="/procurement/receipts/:id/transfer-receipt" element={<TransferReceiptPage />} />
+        <Route path="/procurement/transfer-receipt" element={<TransferReceiptPage />} />
+        <Route path="/suppliers" element={<SuppliersPage />} />
+        <Route path="/suppliers/new" element={<NewSupplierPage />} />
+        <Route path="/suppliers/:id/edit" element={<NewSupplierPage />} />
+        <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="/sales-orders/new" element={<NewSalesOrder />} />
         <Route path="/sales-orders" element={<MySalesOrders />} />
         <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />

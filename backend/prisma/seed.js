@@ -261,10 +261,14 @@ const ALL_PERMISSIONS = [
   // Finance Module
   { name: "invoices:create", module: "finance", action: "create", description: "Create invoices" },
   { name: "invoices:read", module: "finance", action: "read", description: "Read invoices" },
+  { name: "invoice:view_all", module: "finance", action: "view_all", description: "View all invoices across the system" },
+  { name: "invoice:view_own", module: "finance", action: "view_own", description: "View own invoices" },
   { name: "invoices:update", module: "finance", action: "update", description: "Update invoices" },
   { name: "invoices:delete", module: "finance", action: "delete", description: "Delete invoices" },
   { name: "payments:create", module: "finance", action: "create", description: "Create payments" },
   { name: "payments:read", module: "finance", action: "read", description: "Read payments" },
+  { name: "payment:view_all", module: "finance", action: "view_all", description: "View all payments and disbursement transactions" },
+  { name: "payment:view_own", module: "finance", action: "view_own", description: "View own payment transactions" },
   { name: "payments:update", module: "finance", action: "update", description: "Update payments" },
   { name: "payments:delete", module: "finance", action: "delete", description: "Delete payments" },
   { name: "credits:create", module: "finance", action: "create", description: "Create credits" },
@@ -275,6 +279,13 @@ const ALL_PERMISSIONS = [
   { name: "payment-terms:read", module: "finance", action: "read", description: "Read payment terms" },
   { name: "payment-terms:update", module: "finance", action: "update", description: "Update payment terms" },
   { name: "payment-terms:delete", module: "finance", action: "delete", description: "Delete payment terms" },
+  { name: "payment-options:read", module: "finance", action: "read", description: "View payment options and providers" },
+  { name: "payment-options:create", module: "finance", action: "create", description: "Create payment options and providers" },
+  { name: "payment-options:update", module: "finance", action: "update", description: "Update payment options and providers" },
+  { name: "payment-options:delete", module: "finance", action: "delete", description: "Delete payment options and providers" },
+  { name: "payment-options:manage", module: "finance", action: "manage", description: "Manage payment options and providers" },
+  { name: "payment-option:manage", module: "finance", action: "manage", description: "Manage payment options" },
+  { name: "payment-option:read", module: "finance", action: "read", description: "Read payment options" },
 
   // Reporting & Dashboards
   {
@@ -337,7 +348,9 @@ async function ensureCustomerPermissions() {
     "products:read",
     "sales_orders:create",
     "invoices:read",
-    "payments:read"
+    "invoice:view_own",
+    "payments:read",
+    "payment:view_own"
   ];
 
   for (const permName of customerPermissions) {

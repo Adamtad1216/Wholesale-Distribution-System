@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import { personsApi } from '../personsApi';
@@ -14,6 +15,18 @@ export default function UserFormView({
   rolesList = [],
 }) {
   const isEdit = Boolean(editingUser);
+
+  const currentUser = useSelector((state) => state.auth?.user);
+  const currentRole = useSelector((state) => state.auth?.role);
+
+  const isSelf = Boolean(
+    currentUser && editingUser && String(currentUser.id) === String(editingUser.id)
+  );
+  const isSelfSuperAdmin = Boolean(
+    isSelf &&
+    (currentRole === 'SUPER_ADMIN' ||
+     currentUser?.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN' || r === 'SUPER_ADMIN'))
+  );
 
   // Top-Down Person Search State for Provisioning Mode
   const [personSearchQuery, setPersonSearchQuery] = useState('');
@@ -99,8 +112,15 @@ export default function UserFormView({
   };
 
   const toggleRoleSelection = (roleId) => {
+    const roleObj = rolesList.find((r) => r.id === roleId);
+    const isTargetSuperAdminRole = roleObj?.name === 'SUPER_ADMIN' || roleObj?.code === 'SUPER_ADMIN';
+
     const currentRoles = formData.roleIds || [];
     if (currentRoles.includes(roleId)) {
+      if (isSelfSuperAdmin && isTargetSuperAdminRole) {
+        toast.error('A Super Admin cannot revoke their own Super Admin role');
+        return;
+      }
       setFormData({
         ...formData,
         roleIds: currentRoles.filter((id) => id !== roleId),
@@ -272,12 +292,28 @@ export default function UserFormView({
                 </label>
                 <select
                   value={formData.isActive ? 'ACTIVE' : 'INACTIVE'}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'ACTIVE' })}
-                  className="w-full px-4 py-3 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500 font-bold"
+                  onChange={(e) => {
+                    if (isSelfSuperAdmin && e.target.value === 'INACTIVE') {
+                      toast.error('A Super Admin cannot deactivate their own account');
+                      return;
+                    }
+                    setFormData({ ...formData, isActive: e.target.value === 'ACTIVE' });
+                  }}
+                  disabled={isSelfSuperAdmin}
+                  className={`w-full px-4 py-3 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500 font-bold ${
+                    isSelfSuperAdmin ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                 >
                   <option value="ACTIVE">ACTIVE (Can log in)</option>
-                  <option value="INACTIVE">INACTIVE (Access blocked)</option>
+                  {!isSelfSuperAdmin && (
+                    <option value="INACTIVE">INACTIVE (Access blocked)</option>
+                  )}
                 </select>
+                {isSelfSuperAdmin && (
+                  <p className="text-[11px] text-amber-400 mt-1">
+                    Security Policy: You cannot deactivate your own Super Admin account.
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -390,6 +426,9 @@ export default function UserFormView({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {rolesList.map((role) => {
                 const isSelected = (formData.roleIds || []).includes(role.id);
+                const isTargetSuperAdminRole = role.name === 'SUPER_ADMIN' || role.code === 'SUPER_ADMIN';
+                const isLockedSuperAdmin = isSelfSuperAdmin && isTargetSuperAdminRole;
+
                 return (
                   <div
                     key={role.id}
@@ -398,16 +437,26 @@ export default function UserFormView({
                       isSelected
                         ? 'bg-indigo-600/10 border-indigo-500 text-foreground'
                         : 'bg-muted800/40 border-border text-muted-foreground hover:bg-muted800 hover:text-foreground'
-                    }`}
+                    } ${isLockedSuperAdmin ? 'ring-1 ring-amber-500/40' : ''}`}
                   >
                     <input
                       type="checkbox"
                       checked={isSelected}
+                      disabled={isLockedSuperAdmin}
                       onChange={() => {}}
-                      className="mt-0.5 rounded border-border text-indigo-600 focus:ring-indigo-500"
+                      className={`mt-0.5 rounded border-border text-indigo-600 focus:ring-indigo-500 ${
+                        isLockedSuperAdmin ? 'opacity-70 cursor-not-allowed' : ''
+                      }`}
                     />
                     <div>
-                      <div className="text-xs font-bold text-foreground">{role.name}</div>
+                      <div className="text-xs font-bold text-foreground flex items-center gap-2">
+                        <span>{role.name}</span>
+                        {isLockedSuperAdmin && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">
+                            Self (Locked)
+                          </span>
+                        )}
+                      </div>
                       {role.description && (
                         <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
                           {role.description}

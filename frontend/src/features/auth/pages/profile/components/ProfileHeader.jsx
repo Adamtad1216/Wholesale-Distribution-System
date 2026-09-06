@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import Card from '../../../../../components/ui/Card';
+import { toast } from 'react-hot-toast';
 
 export default function ProfileHeader({ user, role, personData, joinedDate, getInitials, onAvatarUpload }) {
   const fileInputRef = useRef(null);
@@ -15,7 +16,7 @@ export default function ProfileHeader({ user, role, personData, joinedDate, getI
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size should be less than 5MB');
+        toast.error('Image size should be less than 5MB');
         return;
       }
       if (onAvatarUpload) {

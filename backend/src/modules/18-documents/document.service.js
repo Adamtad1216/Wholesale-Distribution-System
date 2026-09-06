@@ -24,14 +24,19 @@ class DocumentService {
   }
 
   async getDocumentTypes() {
-    return await prisma.documentType.findMany({
-      include: {
-        _count: {
-          select: { documents: true }
-        }
-      },
-      orderBy: { name: 'asc' }
-    });
+    if (!prisma.documentType) return [];
+    try {
+      return await prisma.documentType.findMany({
+        include: {
+          _count: {
+            select: { documents: true }
+          }
+        },
+        orderBy: { name: 'asc' }
+      });
+    } catch (e) {
+      return [];
+    }
   }
 
   async getDocuments(filters = {}) {
@@ -42,7 +47,9 @@ class DocumentService {
     if (status) where.status = status;
     if (documentTypeId) where.documentTypeId = documentTypeId;
 
-    const generalDocs = await prisma.document.findMany({
+    if (!prisma.document) return [];
+
+    return await prisma.document.findMany({
       where,
       include: {
         documentType: true,
@@ -57,85 +64,6 @@ class DocumentService {
       },
       orderBy: { createdAt: 'desc' }
     });
-
-    let extraSystemFiles = [];
-
-    if (!documentTypeId && !entityId) {
-      // Payment proofs
-      try {
-        const paymentProofs = await prisma.paymentProof.findMany({
-          take: 50,
-          orderBy: { createdAt: 'desc' },
-          include: { payment: { select: { paymentNumber: true } } }
-        });
-        paymentProofs.forEach(p => {
-          extraSystemFiles.push({
-            id: p.id,
-            fileName: p.fileName || `Payment Slip (${p.payment?.paymentNumber || 'Receipt'})`,
-            fileUrl: p.fileUrl,
-            entityType: 'PAYMENT_PROOF',
-            entityId: p.paymentId,
-            notes: `Payment proof attachment for payment ${p.payment?.paymentNumber || ''}`,
-            status: p.status || 'VERIFIED',
-            createdAt: p.createdAt,
-            documentType: { id: 'payment-proof-type', name: 'Payment Receipts', code: 'PAYMENT_PROOF' },
-            isSystemAttachment: true,
-          });
-        });
-      } catch (e) {}
-
-      // Delivery proofs
-      try {
-        const deliveryProofs = await prisma.deliveryProof.findMany({
-          take: 50,
-          orderBy: { createdAt: 'desc' },
-          include: { delivery: { select: { deliveryNumber: true } } }
-        });
-        deliveryProofs.forEach(d => {
-          if (d.fileUrl) {
-            extraSystemFiles.push({
-              id: d.id,
-              fileName: `Delivery Proof (${d.delivery?.deliveryNumber || 'POD'})`,
-              fileUrl: d.fileUrl,
-              entityType: 'DELIVERY_PROOF',
-              entityId: d.deliveryId,
-              notes: d.notes || (d.recipientName ? `Recipient: ${d.recipientName}` : 'Proof of delivery document'),
-              status: 'VERIFIED',
-              createdAt: d.createdAt,
-              documentType: { id: 'delivery-proof-type', name: 'Delivery Proofs & POD', code: 'DELIVERY_PROOF' },
-              isSystemAttachment: true,
-            });
-          }
-        });
-      } catch (e) {}
-
-      // Product images
-      try {
-        const productImages = await prisma.productImage.findMany({
-          take: 50,
-          orderBy: { createdAt: 'desc' },
-          include: { product: { select: { name: true, sku: true } } }
-        });
-        productImages.forEach(img => {
-          if (img.imageUrl) {
-            extraSystemFiles.push({
-              id: img.id,
-              fileName: `${img.product?.name || 'Product'} - Photo`,
-              fileUrl: img.imageUrl,
-              entityType: 'PRODUCT_IMAGE',
-              entityId: img.productId,
-              notes: `Product catalog image (SKU: ${img.product?.sku || 'N/A'})`,
-              status: 'VERIFIED',
-              createdAt: img.createdAt,
-              documentType: { id: 'product-media-type', name: 'Product Catalog Media', code: 'PRODUCT_MEDIA' },
-              isSystemAttachment: true,
-            });
-          }
-        });
-      } catch (e) {}
-    }
-
-    return [...generalDocs, ...extraSystemFiles];
   }
 
   async deleteDocument(id) {

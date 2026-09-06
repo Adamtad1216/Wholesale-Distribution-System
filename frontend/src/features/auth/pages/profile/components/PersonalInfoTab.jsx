@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import Card from '../../../../../components/ui/Card';
 import Button from '../../../../../components/ui/Button';
+import { toast } from 'react-hot-toast';
 
 export default function PersonalInfoTab({ personData, setPersonData, onSubmit, saving, onAvatarUpload }) {
   const fileInputRef = useRef(null);
@@ -13,7 +14,7 @@ export default function PersonalInfoTab({ personData, setPersonData, onSubmit, s
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image size should be less than 5MB');
+        toast.error('Image size should be less than 5MB');
         return;
       }
       if (onAvatarUpload) {

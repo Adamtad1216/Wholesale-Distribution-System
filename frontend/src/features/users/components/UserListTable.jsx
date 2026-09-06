@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Table, { TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../components/ui/Table';
@@ -12,6 +13,9 @@ export default function UserListTable({
   handleDelete,
   handleViewDetail,
 }) {
+  const currentUser = useSelector((state) => state.auth?.user);
+  const currentRole = useSelector((state) => state.auth?.role);
+
   if (loading) {
     return (
       <Card className="p-12 text-center border border-border">
@@ -56,6 +60,12 @@ export default function UserListTable({
               : [u.role?.name || u.roleName || 'System User'];
 
             const isActive = u.isActive !== false && u.status !== 'INACTIVE' && u.status !== 'SUSPENDED';
+            const isSelf = Boolean(currentUser && String(currentUser.id) === String(u.id));
+            const isSelfSuperAdmin = isSelf && (
+              currentRole === 'SUPER_ADMIN' ||
+              u.userRoles?.some((ur) => ur.role?.name === 'SUPER_ADMIN') ||
+              currentUser?.roles?.some((r) => r.name === 'SUPER_ADMIN' || r === 'SUPER_ADMIN')
+            );
             return (
               <TableRow key={u.id} className="hover:bg-muted800/30 transition">
                 <TableCell className="py-4">
@@ -120,7 +130,7 @@ export default function UserListTable({
                       </Button>
                     )}
 
-                    {canDelete && (
+                    {canDelete && !isSelfSuperAdmin && (
                       <Button
                         onClick={() => handleDelete(u.id, u.username)}
                         variant="danger"

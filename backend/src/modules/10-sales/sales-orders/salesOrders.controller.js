@@ -5,7 +5,7 @@ import {
   previewSalesOrderSchema,
   createSalesOrderSchema,
 } from "./salesOrders.validation.js";
-import { previewSalesOrder, createSalesOrder } from "./salesOrders.service.js";
+import { previewSalesOrder, createSalesOrder, getSalesOrdersList, getSalesOrderById } from "./salesOrders.service.js";
 
 async function resolveCustomerFromUser(requestingUser) {
   const customer = await prisma.customer.findFirst({
@@ -91,7 +91,8 @@ export async function addSalesOrder(req, res, next) {
 
 export async function getSalesOrders(req, res, next) {
   try {
-    next(new AppError("Not implemented", 501));
+    const result = await getSalesOrdersList(req.query || {});
+    sendSuccess(res, result.items, 200, { pagination: result.pagination });
   } catch (err) {
     next(err);
   }
@@ -99,7 +100,8 @@ export async function getSalesOrders(req, res, next) {
 
 export async function getSalesOrder(req, res, next) {
   try {
-    next(new AppError("Not implemented", 501));
+    const order = await getSalesOrderById(req.params.id);
+    sendSuccess(res, order);
   } catch (err) {
     next(err);
   }

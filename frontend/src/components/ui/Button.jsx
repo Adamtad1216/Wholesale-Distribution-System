@@ -67,6 +67,7 @@ export default function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
+  isLoading = false,
   disabled = false,
   fullWidth = false,
   icon,
@@ -77,7 +78,8 @@ export default function Button({
   children,
   ...rest
 }) {
-  const isDisabled = disabled || loading;
+  const isButtonLoading = Boolean(loading || isLoading);
+  const isDisabled = disabled || isButtonLoading;
 
   return (
     <button
@@ -96,13 +98,13 @@ export default function Button({
         .join(' ')}
       {...rest}
     >
-      {loading ? (
+      {isButtonLoading ? (
         <Spinner sizeClass={ICON_SIZE[size]} />
       ) : icon ? (
         <span className={`shrink-0 inline-flex items-center justify-center [&>svg]:w-full [&>svg]:h-full ${ICON_SIZE[size]}`}>{icon}</span>
       ) : null}
-      {children && <span className="leading-none">{children}</span>}
-      {!loading && iconRight && (
+      {children && <span className="leading-none inline-flex items-center gap-1.5">{children}</span>}
+      {!isButtonLoading && iconRight && (
         <span className={`shrink-0 inline-flex items-center justify-center [&>svg]:w-full [&>svg]:h-full ${ICON_SIZE[size]}`}>{iconRight}</span>
       )}
     </button>

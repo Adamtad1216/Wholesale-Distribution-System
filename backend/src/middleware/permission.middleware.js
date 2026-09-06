@@ -11,7 +11,11 @@ export const requirePermission = (permission) => {
       ur.role.rolePermissions.map((rp) => rp.permission.name)
     );
 
-    if (!permissions.includes(permission) && !permissions.includes('*')) {
+    const required = Array.isArray(permission) ? permission : [permission];
+    const hasPermission =
+      permissions.includes('*') || required.some((p) => permissions.includes(p));
+
+    if (!hasPermission) {
       return res.status(403).json({
         status: 'error',
         message: 'Insufficient permissions',
@@ -21,3 +25,5 @@ export const requirePermission = (permission) => {
     next();
   };
 };
+
+export const requireAnyPermission = requirePermission;

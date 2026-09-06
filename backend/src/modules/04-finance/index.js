@@ -1,7 +1,7 @@
-import paymentRoutes from './payment.routes.js';
-import paymentService from './payment.service.js';
-import BasePaymentAdapter from './adapters/baseAdapter.js';
-import ChapaAdapter from './adapters/chapaAdapter.js';
+import paymentRoutes from './payment/payment.routes.js';
+import paymentService from './payment/payment.service.js';
+import BasePaymentAdapter from './payment/adapters/baseAdapter.js';
+import ChapaAdapter from './payment/adapters/chapaAdapter.js';
 
 /**
  * Reusable Modular Payment System

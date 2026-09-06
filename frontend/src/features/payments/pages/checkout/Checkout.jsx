@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { financeApi } from '../../../finance/financeApi';
 import './Checkout.css';
 
@@ -125,7 +126,7 @@ export default function Checkout() {
 
   const handleCheckout = async () => {
     if (isFullyCovered) {
-      alert('Order completed using account credit!');
+      toast.success('Order completed using account credit!');
       return;
     }
 
@@ -145,12 +146,12 @@ export default function Checkout() {
         if (response.data && response.data.checkoutUrl) {
           window.location.href = response.data.checkoutUrl;
         } else {
-          alert('Failed to get checkout URL from provider');
+          toast.error('Failed to get checkout URL from provider');
           setIsSubmitting(false);
         }
       } catch (error) {
         console.error('Payment initialization failed:', error);
-        alert('Failed to initialize payment');
+        toast.error('Failed to initialize payment');
         setIsSubmitting(false);
       }
     } else {
@@ -182,7 +183,7 @@ export default function Checkout() {
         navigate(`/receipt?tx_ref=${txRef}&manual=true`);
       } catch (err) {
         console.error('Manual payment submission failed:', err);
-        alert(err.response?.data?.message || 'Failed to submit manual payment.');
+        toast.error(err.response?.data?.message || 'Failed to submit manual payment.');
       } finally {
         setIsSubmitting(false);
       }

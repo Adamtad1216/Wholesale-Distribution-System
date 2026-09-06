@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { documentsApi } from '../documentsApi';
 
 export function useDocumentManager() {
@@ -73,7 +74,7 @@ export function useDocumentManager() {
   const handleCategoryFormSubmit = (e) => {
     e.preventDefault();
     if (!categoryFormData.name) {
-      alert('Please enter category name.');
+      toast.error('Please enter category name.');
       return;
     }
     createCategoryMutation.mutate(categoryFormData);

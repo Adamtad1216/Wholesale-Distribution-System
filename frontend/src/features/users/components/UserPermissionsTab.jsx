@@ -90,7 +90,7 @@ export default function UserPermissionsTab({ userRoles = [] }) {
             <span>🛡️</span> Assigned Security Roles ({userRoles.length})
           </h3>
           {hasWildcardAccess && (
-            <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold rounded-lg flex items-center gap-1.5">
+            <span className="px-3 py-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm">
               <span>⚡</span> Super Admin Wildcard Access Active
             </span>
           )}
@@ -130,12 +130,16 @@ export default function UserPermissionsTab({ userRoles = [] }) {
 
       {/* Wildcard Access Notice Banner */}
       {hasWildcardAccess && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-3">
-          <span className="text-lg">⚡</span>
-          <div>
-            <p className="font-bold text-amber-200">Unrestricted System Permission Granted</p>
-            <p className="text-[11px] text-amber-300/80">
-              Because this account possesses a Super Admin role with wildcard (<code className="bg-amber-950/50 px-1 py-0.5 rounded font-mono">*</code>) authorization, all permission keys across all system modules are automatically granted.
+        <div className="p-4 rounded-xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 text-xs flex items-start sm:items-center gap-3.5 shadow-sm">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center justify-center shrink-0 font-bold text-base shadow-inner">
+            ⚡
+          </div>
+          <div className="space-y-0.5">
+            <p className="font-bold text-amber-800 dark:text-amber-300 text-sm tracking-tight">
+              Unrestricted System Permission Granted
+            </p>
+            <p className="text-xs text-amber-900/85 dark:text-amber-200/90 leading-relaxed">
+              Because this account possesses a Super Admin role with wildcard (<code className="bg-amber-500/20 dark:bg-amber-900/60 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-bold text-amber-950 dark:text-amber-200">*</code>) authorization, all permission keys across all system modules are automatically granted.
             </p>
           </div>
         </div>

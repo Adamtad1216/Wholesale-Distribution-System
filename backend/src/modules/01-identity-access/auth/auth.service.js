@@ -278,8 +278,15 @@ function generateCustomerCode() {
 }
 
 export async function login(data, req) {
-  const user = await prisma.user.findUnique({
-    where: { username: data.username },
+  const identifier = (data.username || data.email || '').trim();
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { username: { equals: identifier, mode: 'insensitive' } },
+        { person: { email: { equals: identifier, mode: 'insensitive' } } }
+      ]
+    },
     include: {
       person: true,
       auditLogs: {

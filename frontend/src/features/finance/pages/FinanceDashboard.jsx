@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import Invoice from './Invoice';
-import PaymentTermsTab from '../components/PaymentTermsTab';
-import PaymentsTab from '../components/PaymentsTab';
-import PaymentApprovalTab from '../components/PaymentApprovalTab';
-import CreditTab from '../components/CreditTab';
+import Invoice from '../components/invoices-tab/Invoice';
+import PaymentTermsTab from '../components/payment-term-tab/PaymentTermsTab';
+import PaymentsTab from '../components/payment-tab/PaymentsTab';
+import PaymentApprovalTab from '../components/payment-approval-tab/PaymentApprovalTab';
+import CreditTab from '../components/credit-tab/CreditTab';
 import { usePermission } from '../../../hooks/usePermission';
 
 export default function FinanceDashboard() {
-  const { can: canReadInvoices } = usePermission('invoices:read');
-  const { can: canReadPayments } = usePermission('payments:read');
+  const { can: canReadInvoices } = usePermission(['invoice:view_all', 'invoice:view_own', 'invoices:read']);
+  const { can: canReadPayments } = usePermission(['payment:view_all', 'payment:view_own', 'payments:read']);
+  const { can: canApprovePayments } = usePermission(['payments:update', 'payment:view_all']);
   const { can: canReadCredits } = usePermission('credits:read');
   const { can: canReadPaymentTerms } = usePermission('payment-terms:read');
 
   const availableTabs = [];
   if (canReadInvoices) availableTabs.push({ id: 'invoices', label: 'Invoices' });
   if (canReadPayments) availableTabs.push({ id: 'payments', label: 'Payments' });
-  if (canReadPayments) availableTabs.push({ id: 'payment-approval', label: 'Payment Approval' });
+  if (canApprovePayments) availableTabs.push({ id: 'payment-approval', label: 'Payment Approval' });
   if (canReadCredits) availableTabs.push({ id: 'credit', label: 'Credit' });
   if (canReadPaymentTerms) availableTabs.push({ id: 'payment-terms', label: 'Payment Terms' });
 

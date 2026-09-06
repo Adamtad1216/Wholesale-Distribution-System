@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
@@ -18,6 +19,22 @@ export default function EmployeeFormView({
 }) {
   const isEdit = viewMode === 'EDIT';
   const navigate = useNavigate();
+
+  const currentUser = useSelector((state) => state.auth?.user);
+  const currentRole = useSelector((state) => state.auth?.role);
+
+  const isSelf = Boolean(
+    currentUser &&
+    editingEmployee &&
+    (String(editingEmployee.person?.user?.id) === String(currentUser.id) ||
+     String(editingEmployee.personId) === String(currentUser.personId || currentUser.person?.id))
+  );
+
+  const isSelfSuperAdmin = Boolean(
+    isSelf &&
+    (currentRole === 'SUPER_ADMIN' ||
+     currentUser?.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN' || r === 'SUPER_ADMIN'))
+  );
 
   const handleNavigateToCreateJobSpec = () => {
     navigate('/roles', {
@@ -153,9 +170,18 @@ export default function EmployeeFormView({
                 className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
               >
                 <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
-                <option value="SUSPENDED">SUSPENDED</option>
+                <option value="INACTIVE" disabled={isSelfSuperAdmin}>
+                  {isSelfSuperAdmin ? 'INACTIVE (Disabled: Cannot deactivate own profile)' : 'INACTIVE'}
+                </option>
+                <option value="SUSPENDED" disabled={isSelfSuperAdmin}>
+                  {isSelfSuperAdmin ? 'SUSPENDED (Disabled: Cannot suspend own profile)' : 'SUSPENDED'}
+                </option>
               </select>
+              {isSelfSuperAdmin && (
+                <p className="text-[11px] text-amber-500 mt-1">
+                  🔒 As a Super Admin, your own employment status must remain ACTIVE.
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -250,18 +276,29 @@ export default function EmployeeFormView({
             </div>
 
             {/* Checkbox Toggle */}
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.needsUserAccount}
-                onChange={(e) => setFormData({ ...formData, needsUserAccount: e.target.checked })}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-muted800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
-              <span className="ml-3 text-xs font-semibold text-foreground">
-                {formData.needsUserAccount ? 'System Account Enabled' : 'No System Account Needed'}
-              </span>
-            </label>
+            <div className="flex flex-col gap-1">
+              <label className={`relative inline-flex items-center ${isSelfSuperAdmin ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}>
+                <input
+                  type="checkbox"
+                  disabled={isSelfSuperAdmin}
+                  checked={formData.needsUserAccount}
+                  onChange={(e) => {
+                    if (isSelfSuperAdmin) return;
+                    setFormData({ ...formData, needsUserAccount: e.target.checked });
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-muted800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                <span className="ml-3 text-xs font-semibold text-foreground">
+                  {formData.needsUserAccount ? 'System Account Enabled' : 'No System Account Needed'}
+                </span>
+              </label>
+              {isSelfSuperAdmin && (
+                <p className="text-[11px] text-amber-500 mt-0.5">
+                  🔒 Super Admin accounts cannot be detached from employee profile.
+                </p>
+              )}
+            </div>
           </div>
 
           {formData.needsUserAccount && (

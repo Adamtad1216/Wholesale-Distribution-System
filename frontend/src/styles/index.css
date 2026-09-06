@@ -807,6 +807,7 @@ select,
 textarea {
   background-color: var(--color-input) !important;
   border-color: var(--color-border) !important;
+  color: var(--color-foreground) !important;
 }
 
 input:focus,
@@ -815,8 +816,28 @@ textarea:focus {
   border-color: var(--color-primary) !important;
 }
 
+/* Native select dropdown popup — browsers mostly only respect bg + color on the select itself */
+select {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+select option {
+  background-color: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+.light select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
 .light input,
-.light select,
 .light textarea,
 .light .bg-slate-800\/50,
 .light .bg-slate-800\/40,
@@ -824,12 +845,6 @@ textarea:focus {
   background-color: #ffffff !important;
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
-}
-
-select option,
-option {
-  background-color: var(--color-popover);
-  color: var(--color-popover-foreground);
 }
 
 .light input:focus,

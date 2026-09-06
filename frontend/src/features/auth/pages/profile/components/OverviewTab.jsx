@@ -50,6 +50,16 @@ export default function OverviewTab({ personData, user, role, customer, onEditPr
           icon: 'M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z M12 2v2m0 16v2',
           color: 'ui-icon-box-emerald',
         },
+        {
+          label: 'Payment Terms',
+          value: (
+            <span className="text-xs font-semibold text-indigo-400">
+              {customer.paymentTerms?.name || customer.organization?.paymentTerms?.name || 'COD (0 Days)'}
+            </span>
+          ),
+          icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+          color: 'ui-icon-box-indigo',
+        },
       ]
     : [];
 
@@ -114,7 +124,7 @@ export default function OverviewTab({ personData, user, role, customer, onEditPr
               </div>
               <h2 className="text-base font-semibold">Customer Information</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
               {customerTiles.map(({ label, value, icon, color }) => (
                 <Card noPadding key={label} className="flex items-center gap-3.5 p-3">
                   <div className="w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 bg-[var(--icon-box-bg)] text-[var(--icon-box-text)] border-[var(--icon-box-border)]">
