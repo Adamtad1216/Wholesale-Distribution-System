@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
@@ -477,6 +477,234 @@ async function ensureDefaultOrganizationAndBranch() {
   return { region, company, branch };
 }
 
+async function ensureSalesManagerRole() {
+  const TARGET_WAREHOUSE_CODE = "WH-TEST-001";
+  const SM_USERNAME = "salesmanager";
+  const SM_EMAIL = "salesmanager@wholesaledistribution.com";
+  const SM_PASSWORD = "Password@123";
+
+  // 1. Ensure Target Warehouse exists
+  let warehouse = await prisma.warehouse.findFirst({
+    where: { OR: [{ code: TARGET_WAREHOUSE_CODE }, { name: "Central Warehouse" }], isArchived: false },
+  });
+
+  if (!warehouse) {
+    let region = await prisma.region.findFirst({ where: { code: "AA" } });
+    if (!region) {
+      region = await prisma.region.create({
+        data: { code: "AA", name: "Addis Ababa", description: "Capital Region", isActive: true },
+      });
+    }
+
+    let branch = await prisma.branch.findFirst({ where: { isArchived: false } });
+    if (!branch) {
+      let company = await prisma.company.findFirst({ where: { isArchived: false } });
+      if (!company) {
+        company = await prisma.company.create({
+          data: { name: "Main Wholesale PLC", tradeLicenseNumber: "TL-SM-001", regionId: region.id, status: "ACTIVE" },
+        });
+      }
+      branch = await prisma.branch.create({
+        data: { branchCode: "BR-SM-01", name: "Main Distribution Branch", companyId: company.id, regionId: region.id, status: "ACTIVE" },
+      });
+    }
+
+    warehouse = await prisma.warehouse.create({
+      data: {
+        code: TARGET_WAREHOUSE_CODE,
+        name: "Central Warehouse",
+        branchId: branch.id,
+        regionId: region.id,
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  // Ensure 3 additional warehouses exist for distribution operations
+  const additionalWarehouses = [
+    { code: "WH-EAST-002", name: "Eastern Distribution Center", city: "Bole" },
+    { code: "WH-NORTH-003", name: "Northern Logistics Hub", city: "Gullele" },
+    { code: "WH-WEST-004", name: "Western Regional Depot", city: "Kolfe Keranio" },
+  ];
+
+  for (const wh of additionalWarehouses) {
+    const exists = await prisma.warehouse.findFirst({ where: { code: wh.code } });
+    if (!exists && warehouse?.branchId) {
+      await prisma.warehouse.create({
+        data: {
+          code: wh.code,
+          name: wh.name,
+          city: wh.city,
+          branchId: warehouse.branchId,
+          regionId: warehouse.regionId,
+          status: "ACTIVE",
+        },
+      });
+    }
+  }
+
+  // 2. Ensure Permissions exist
+  const salesManagerPermNames = [
+    "products:create",
+    "products:read",
+    "products:update",
+    "warehouse-selling-prices:create",
+    "warehouse-selling-prices:read",
+    "warehouse-selling-prices:update",
+    "warehouses:read",
+    "brands:read",
+    "sales_orders:create",
+    "sales_orders:read",
+    "sales_orders:update",
+    "customers:read",
+    "customers:create",
+    "REPORT_VIEW_DASHBOARD",
+    "REPORT_VIEW_SALES",
+    "REPORT_VIEW_PRODUCTS",
+    "REPORT_VIEW_WAREHOUSE",
+  ];
+
+  for (const permName of salesManagerPermNames) {
+    await prisma.permission.upsert({
+      where: { name: permName },
+      update: {},
+      create: {
+        name: permName,
+        module: permName.split(":")[0] || "general",
+        action: permName.split(":")[1] || "access",
+        description: `Permission ${permName}`,
+      },
+    });
+  }
+
+  // 3. Upsert SALES_MANAGER Role
+  const salesManagerRole = await prisma.role.upsert({
+    where: { name: "SALES_MANAGER" },
+    update: { description: "Sales Manager for warehouse product catalog and pricing" },
+    create: {
+      name: "SALES_MANAGER",
+      description: "Sales Manager for warehouse product catalog and pricing",
+    },
+  });
+
+  // Explicitly remove read permissions for Unit, Category, and Company from SALES_MANAGER role
+  const revokedPerms = await prisma.permission.findMany({
+    where: { name: { in: ["categories:read", "units:read", "companies:read"] } },
+  });
+  if (revokedPerms.length > 0) {
+    await prisma.rolePermission.deleteMany({
+      where: {
+        roleId: salesManagerRole.id,
+        permissionId: { in: revokedPerms.map((p) => p.id) },
+      },
+    });
+  }
+
+  const permissionsToAssign = await prisma.permission.findMany({
+    where: { name: { in: salesManagerPermNames } },
+  });
+
+  for (const perm of permissionsToAssign) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: salesManagerRole.id, permissionId: perm.id } },
+      update: { isArchived: false },
+      create: { roleId: salesManagerRole.id, permissionId: perm.id },
+    });
+  }
+
+  // 4. Ensure ADMIN role has ALL permissions (making it possible for admins too)
+  const adminRole = await prisma.role.upsert({
+    where: { name: "ADMIN" },
+    update: { description: "System Administrator with full access" },
+    create: { name: "ADMIN", description: "System Administrator with full access" },
+  });
+
+  const allSystemPermissions = await prisma.permission.findMany();
+  for (const perm of allSystemPermissions) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: adminRole.id, permissionId: perm.id } },
+      update: { isArchived: false },
+      create: { roleId: adminRole.id, permissionId: perm.id },
+    });
+  }
+
+  // 5. Create Person & Employee for Sales Manager
+  let person = await prisma.person.findFirst({
+    where: { email: SM_EMAIL },
+  });
+
+  if (!person) {
+    person = await prisma.person.create({
+      data: {
+        firstName: "Warehouse",
+        lastName: "SalesManager",
+        email: SM_EMAIL,
+        phone: "+251 91 122 3344",
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  let employee = await prisma.employee.findFirst({
+    where: { personId: person.id },
+  });
+
+  if (!employee) {
+    employee = await prisma.employee.create({
+      data: {
+        personId: person.id,
+        employeeCode: "EMP-SM-001",
+        hireDate: new Date(),
+        department: "Sales",
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  // Link employee as the manager of the specific warehouse
+  await prisma.warehouse.update({
+    where: { id: warehouse.id },
+    data: { managerId: employee.id },
+  });
+
+  // 6. Create or Update User for Sales Manager
+  const passwordHash = await bcrypt.hash(SM_PASSWORD, 12);
+  let user = await prisma.user.findFirst({
+    where: { OR: [{ username: SM_USERNAME }, { personId: person.id }] },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        personId: person.id,
+        username: SM_USERNAME,
+        passwordHash,
+        isActive: true,
+        accountStatus: "ACTIVE",
+        invitationAcceptedAt: new Date(),
+      },
+    });
+  } else {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        personId: person.id,
+        passwordHash,
+        isActive: true,
+        accountStatus: "ACTIVE",
+      },
+    });
+  }
+
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: user.id, roleId: salesManagerRole.id } },
+    update: { isArchived: false },
+    create: { userId: user.id, roleId: salesManagerRole.id },
+  });
+
+  console.log(`Seeded Sales Manager (${SM_USERNAME}) for warehouse: ${warehouse.name} (${warehouse.code})`);
+}
+
 async function main() {
   console.log("Starting seed...");
 
@@ -506,8 +734,9 @@ async function main() {
       `Admin user already exists: ${existingAdmin.username} (${existingAdmin.id})`,
     );
     await ensureAdminPermissions(existingAdmin.id);
-    console.log("Seed completed (idempotent).");
+    await ensureSalesManagerRole();
     await ensureCustomerPermissions();
+    console.log("Seed completed (idempotent).");
     return;
   }
 
