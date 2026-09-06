@@ -80,7 +80,7 @@ router.use(authenticate);
 router.get(
   "/",
   validate(branchQuerySchema),
-  requirePermission("branches:read"),
+  requirePermission(["branches:read", "companies:read", "warehouses:read"]),
   listBranches,
 );
 
@@ -215,7 +215,11 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/:id", requirePermission("branches:read"), getBranch);
+router.get(
+  "/:id",
+  requirePermission(["branches:read", "companies:read", "warehouses:read"]),
+  getBranch,
+);
 
 /**
  * @swagger

@@ -1,268 +1,497 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { branchesApi } from '../../branchesApi';
 import { usePermission } from '../../../../hooks/usePermission';
-import Button from '../../../../components/ui/Button';
-import Card from '../../../../components/ui/Card';
+import ConfirmDeleteModal from '../../../../components/ui/ConfirmDeleteModal';
+
+import BranchesHeader from '../../components/BranchesHeader';
+import BranchesStats from '../../components/BranchesStats';
+import BranchesFilters from '../../components/BranchesFilters';
+import BranchesTable from '../../components/BranchesTable';
+import BranchesGrid from '../../components/BranchesGrid';
+import BranchDetailModal from '../../components/BranchDetailModal';
+import BranchFormModal from '../../components/BranchFormModal';
+
+import WarehousesTable from '../../components/WarehousesTable';
+import WarehousesGrid from '../../components/WarehousesGrid';
+import WarehouseDetailModal from '../../components/WarehouseDetailModal';
+import WarehouseFormModal from '../../components/WarehouseFormModal';
+
+import RegionsTab from '../../components/RegionsTab';
+import RegionFormModal from '../../components/RegionFormModal';
 
 export default function BranchesPage() {
+  const [activeTab, setActiveTab] = useState('branches'); // 'branches' | 'warehouses' | 'regions'
   const [branches, setBranches] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [employees, setEmployees] = useState([]);
+
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Filters & Views
   const [search, setSearch] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [regionId, setRegionId] = useState('');
+  const [status, setStatus] = useState('');
+  const [viewMode, setViewMode] = useState('table');
+
+  // Modals state
+  const [isBranchFormOpen, setIsBranchFormOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
+  const [viewingBranch, setViewingBranch] = useState(null);
 
-  const [formData, setFormData] = useState({
-    code: '',
-    name: '',
-    address: '',
-    phone: '',
-    status: 'ACTIVE',
-  });
+  const [isWarehouseFormOpen, setIsWarehouseFormOpen] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState(null);
+  const [viewingWarehouse, setViewingWarehouse] = useState(null);
 
-  const { can: canCreate } = usePermission('branches:create');
-  const { can: canUpdate } = usePermission('branches:update');
-  const { can: canDelete } = usePermission('branches:delete');
+  const [isRegionFormOpen, setIsRegionFormOpen] = useState(false);
+  const [editingRegion, setEditingRegion] = useState(null);
 
-  const fetchBranches = async () => {
+  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'branch' | 'warehouse' | 'region', item: object }
+
+  // Permissions
+  const { can: canReadBranch } = usePermission('branches:read');
+  const { can: canCreateBranch } = usePermission('branches:create');
+  const { can: canUpdateBranch } = usePermission('branches:update');
+  const { can: canDeleteBranch } = usePermission('branches:delete');
+
+  const { can: canReadWarehouse } = usePermission('warehouses:read');
+  const { can: canCreateWarehouse } = usePermission('warehouses:create');
+  const { can: canUpdateWarehouse } = usePermission('warehouses:update');
+  const { can: canDeleteWarehouse } = usePermission('warehouses:delete');
+
+  const { can: canReadRegion } = usePermission(['regions:read', 'branches:read']);
+  const { can: canCreateRegion } = usePermission(['regions:create', 'branches:create']);
+  const { can: canUpdateRegion } = usePermission(['regions:update', 'branches:update']);
+  const { can: canDeleteRegion } = usePermission(['regions:delete', 'branches:delete']);
+
+  // Fetch Lookups (Companies, Regions, Employees)
+  const fetchLookups = useCallback(async () => {
     try {
-      setLoading(true);
-      const res = await branchesApi.getBranches({ search });
-      const data = res?.data || res || [];
-      setBranches(Array.isArray(data) ? data : data.items || []);
+      const [regRes, compRes, empRes] = await Promise.allSettled([
+        branchesApi.getRegions({ limit: 100 }),
+        branchesApi.getCompanies({ limit: 100 }),
+        branchesApi.getEmployees({ limit: 200 }),
+      ]);
+
+      if (regRes.status === 'fulfilled') {
+        const d = regRes.value?.data || regRes.value || [];
+        setRegions(Array.isArray(d) ? d : d.regions || d.items || []);
+      }
+      if (compRes.status === 'fulfilled') {
+        const d = compRes.value?.data || compRes.value || [];
+        setCompanies(Array.isArray(d) ? d : d.companies || d.items || []);
+      }
+      if (empRes.status === 'fulfilled') {
+        const d = empRes.value?.data || empRes.value || [];
+        setEmployees(Array.isArray(d) ? d : d.employees || d.items || []);
+      }
+    } catch {
+      // Non-blocking lookup failure
+    }
+  }, []);
+
+  // Fetch Main Data
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = { limit: 100 };
+      const [bRes, wRes] = await Promise.allSettled([
+        branchesApi.getBranches(params),
+        branchesApi.getWarehouses(params),
+      ]);
+
+      if (bRes.status === 'fulfilled') {
+        const d = bRes.value?.data || bRes.value || [];
+        setBranches(Array.isArray(d) ? d : d.branches || d.items || []);
+      }
+      if (wRes.status === 'fulfilled') {
+        const d = wRes.value?.data || wRes.value || [];
+        setWarehouses(Array.isArray(d) ? d : d.warehouses || d.items || []);
+      }
     } catch (err) {
-      toast.error(err?.message || 'Failed to fetch branches');
+      toast.error(err?.message || 'Failed to fetch facilities');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchBranches();
-  }, [search]);
+    fetchLookups();
+    fetchData();
+  }, [fetchLookups, fetchData]);
 
-  const handleOpenModal = (branch = null) => {
-    if (branch) {
-      setEditingBranch(branch);
-      setFormData({
-        code: branch.code || '',
-        name: branch.name || '',
-        address: branch.address || '',
-        phone: branch.phone || '',
-        status: branch.status || 'ACTIVE',
-      });
-    } else {
-      setEditingBranch(null);
-      setFormData({ code: '', name: '', address: '', phone: '', status: 'ACTIVE' });
-    }
-    setIsModalOpen(true);
+  // Filtered lists
+  const filteredBranches = useMemo(() => {
+    return branches.filter((b) => {
+      const q = search.trim().toLowerCase();
+      const matchSearch =
+        !q ||
+        b.name?.toLowerCase().includes(q) ||
+        b.branchCode?.toLowerCase().includes(q) ||
+        b.code?.toLowerCase().includes(q) ||
+        b.city?.toLowerCase().includes(q);
+
+      const matchRegion = !regionId || b.regionId === regionId;
+      const matchStatus = !status || b.status === status;
+
+      return matchSearch && matchRegion && matchStatus;
+    });
+  }, [branches, search, regionId, status]);
+
+  const filteredWarehouses = useMemo(() => {
+    return warehouses.filter((w) => {
+      const q = search.trim().toLowerCase();
+      const matchSearch =
+        !q ||
+        w.name?.toLowerCase().includes(q) ||
+        w.code?.toLowerCase().includes(q) ||
+        w.location?.toLowerCase().includes(q) ||
+        w.city?.toLowerCase().includes(q);
+
+      const matchRegion = !regionId || w.regionId === regionId;
+      const matchStatus = !status || w.status === status;
+
+      return matchSearch && matchRegion && matchStatus;
+    });
+  }, [warehouses, search, regionId, status]);
+
+  const filteredRegions = useMemo(() => {
+    return regions.filter((r) => {
+      const q = search.trim().toLowerCase();
+      return (
+        !q ||
+        r.name?.toLowerCase().includes(q) ||
+        r.code?.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q)
+      );
+    });
+  }, [regions, search]);
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setRegionId('');
+    setStatus('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Branch CRUD Handlers
+  const handleSaveBranch = async (data) => {
+    setSubmitting(true);
     try {
       if (editingBranch) {
-        await branchesApi.updateBranch(editingBranch.id, formData);
+        await branchesApi.updateBranch(editingBranch.id, data);
         toast.success('Branch updated successfully');
       } else {
-        await branchesApi.createBranch(formData);
-        toast.success('Branch created successfully');
+        await branchesApi.createBranch(data);
+        toast.success('Branch registered successfully');
       }
-      setIsModalOpen(false);
-      fetchBranches();
+      setIsBranchFormOpen(false);
+      setEditingBranch(null);
+      fetchData();
     } catch (err) {
       toast.error(err?.message || 'Failed to save branch');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this branch?')) return;
+  // Warehouse CRUD Handlers
+  const handleSaveWarehouse = async (data) => {
+    setSubmitting(true);
     try {
-      await branchesApi.deleteBranch(id);
-      toast.success('Branch deleted successfully');
-      fetchBranches();
+      if (editingWarehouse) {
+        await branchesApi.updateWarehouse(editingWarehouse.id, data);
+        toast.success('Warehouse updated successfully');
+      } else {
+        await branchesApi.createWarehouse(data);
+        toast.success('Warehouse created successfully');
+      }
+      setIsWarehouseFormOpen(false);
+      setEditingWarehouse(null);
+      fetchData();
     } catch (err) {
-      toast.error(err?.message || 'Failed to delete branch');
+      toast.error(err?.message || 'Failed to save warehouse');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Region CRUD Handlers
+  const handleSaveRegion = async (data) => {
+    setSubmitting(true);
+    try {
+      if (editingRegion) {
+        await branchesApi.updateRegion(editingRegion.id, data);
+        toast.success('Region updated successfully');
+      } else {
+        await branchesApi.createRegion(data);
+        toast.success('Region added successfully');
+      }
+      setIsRegionFormOpen(false);
+      setEditingRegion(null);
+      fetchLookups();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to save region');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Confirm Delete Handler
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setSubmitting(true);
+    try {
+      if (deleteTarget.type === 'branch') {
+        await branchesApi.deleteBranch(deleteTarget.item.id);
+        toast.success(`Branch "${deleteTarget.item.name}" deleted`);
+        fetchData();
+      } else if (deleteTarget.type === 'warehouse') {
+        await branchesApi.deleteWarehouse(deleteTarget.item.id);
+        toast.success(`Warehouse "${deleteTarget.item.name}" deleted`);
+        fetchData();
+      } else if (deleteTarget.type === 'region') {
+        await branchesApi.deleteRegion(deleteTarget.item.id);
+        toast.success(`Region "${deleteTarget.item.name}" deleted`);
+        fetchLookups();
+      }
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete record');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground  tracking-tight">Branches & Warehouses</h1>
-          <p className="text-sm text-muted-foreground">Manage regional branch offices and inventory hubs</p>
-        </div>
-        {canCreate && (
-          <Button
-            variant="primary"
-            onClick={() => handleOpenModal()}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-            }
-          >
-            Add Branch
-          </Button>
+      <BranchesHeader
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          handleResetFilters();
+        }}
+        counts={{
+          branches: branches.length,
+          warehouses: warehouses.length,
+          regions: regions.length,
+        }}
+        canCreateBranch={canCreateBranch}
+        canCreateWarehouse={canCreateWarehouse}
+        canCreateRegion={canCreateRegion}
+        onOpenCreateModal={() => {
+          if (activeTab === 'branches') {
+            setEditingBranch(null);
+            setIsBranchFormOpen(true);
+          } else if (activeTab === 'warehouses') {
+            setEditingWarehouse(null);
+            setIsWarehouseFormOpen(true);
+          } else if (activeTab === 'regions') {
+            setEditingRegion(null);
+            setIsRegionFormOpen(true);
+          }
+        }}
+      />
+
+      {/* KPI Stats */}
+      <BranchesStats
+        branches={branches}
+        warehouses={warehouses}
+        regions={regions}
+        loading={loading}
+      />
+
+      {/* Filters Toolbar */}
+      <BranchesFilters
+        search={search}
+        onSearchChange={setSearch}
+        regionId={regionId}
+        onRegionChange={setRegionId}
+        status={status}
+        onStatusChange={setStatus}
+        regions={regions}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onReset={handleResetFilters}
+        placeholder={
+          activeTab === 'branches'
+            ? 'Search branches by code, name, city...'
+            : activeTab === 'warehouses'
+            ? 'Search warehouses by code, name, location...'
+            : 'Search regions by code or name...'
+        }
+      />
+
+      {/* Main Tab Content */}
+      <div className="space-y-4">
+        {/* TAB 1: BRANCHES */}
+        {activeTab === 'branches' && (
+          <div>
+            {viewMode === 'table' ? (
+              <BranchesTable
+                branches={filteredBranches}
+                loading={loading}
+                onView={(b) => setViewingBranch(b)}
+                onEdit={(b) => {
+                  setEditingBranch(b);
+                  setIsBranchFormOpen(true);
+                }}
+                onDelete={(b) => setDeleteTarget({ type: 'branch', item: b })}
+                canUpdate={canUpdateBranch}
+                canDelete={canDeleteBranch}
+              />
+            ) : (
+              <BranchesGrid
+                branches={filteredBranches}
+                loading={loading}
+                onView={(b) => setViewingBranch(b)}
+                onEdit={(b) => {
+                  setEditingBranch(b);
+                  setIsBranchFormOpen(true);
+                }}
+                onDelete={(b) => setDeleteTarget({ type: 'branch', item: b })}
+                canUpdate={canUpdateBranch}
+                canDelete={canDeleteBranch}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: WAREHOUSES */}
+        {activeTab === 'warehouses' && (
+          <div>
+            {viewMode === 'table' ? (
+              <WarehousesTable
+                warehouses={filteredWarehouses}
+                loading={loading}
+                onView={(w) => setViewingWarehouse(w)}
+                onEdit={(w) => {
+                  setEditingWarehouse(w);
+                  setIsWarehouseFormOpen(true);
+                }}
+                onDelete={(w) => setDeleteTarget({ type: 'warehouse', item: w })}
+                canUpdate={canUpdateWarehouse}
+                canDelete={canDeleteWarehouse}
+              />
+            ) : (
+              <WarehousesGrid
+                warehouses={filteredWarehouses}
+                loading={loading}
+                onView={(w) => setViewingWarehouse(w)}
+                onEdit={(w) => {
+                  setEditingWarehouse(w);
+                  setIsWarehouseFormOpen(true);
+                }}
+                onDelete={(w) => setDeleteTarget({ type: 'warehouse', item: w })}
+                canUpdate={canUpdateWarehouse}
+                canDelete={canDeleteWarehouse}
+              />
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: REGIONS */}
+        {activeTab === 'regions' && (
+          <RegionsTab
+            regions={filteredRegions}
+            loading={loading}
+            onEdit={(r) => {
+              setEditingRegion(r);
+              setIsRegionFormOpen(true);
+            }}
+            onDelete={(r) => setDeleteTarget({ type: 'region', item: r })}
+            onOpenCreateModal={() => {
+              setEditingRegion(null);
+              setIsRegionFormOpen(true);
+            }}
+            canCreate={canCreateRegion}
+            canUpdate={canUpdateRegion}
+            canDelete={canDeleteRegion}
+          />
         )}
       </div>
 
-      {/* Filter / Search Bar */}
-      <Card noPadding className="p-4 flex items-center gap-4">
-        <div className="relative flex-1">
-          <svg className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search branches by code, name, or address..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none placeholder:text-muted-foreground"
-          />
-        </div>
-      </Card>
+      {/* Modals */}
+      <BranchDetailModal
+        isOpen={Boolean(viewingBranch)}
+        onClose={() => setViewingBranch(null)}
+        branch={viewingBranch}
+        onEdit={(b) => {
+          setViewingBranch(null);
+          setEditingBranch(b);
+          setIsBranchFormOpen(true);
+        }}
+        canUpdate={canUpdateBranch}
+      />
 
-      {/* Branches Grid */}
-      {loading ? (
-        <div className="p-12 text-center text-muted-foreground text-sm">Loading branches...</div>
-      ) : branches.length === 0 ? (
-        <div className="p-12 text-center text-muted-foreground text-sm">No branches found.</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {branches.map((b) => (
-            <Card
-              key={b.id}
-              hoverEffect
-              className="flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="px-3 py-1 rounded-full text-xs font-mono font-bold badge-indigo">
-                    {b.code}
-                  </span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    b.status === 'ACTIVE'
-                      ? 'badge-slate'
-                      : 'badge-module'
-                  }`}>
-                    {b.status || 'ACTIVE'}
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-foreground ">{b.name}</h3>
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {b.address || 'No address specified'}
-                </p>
-                {b.phone && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    {b.phone}
-                  </p>
-                )}
-              </div>
+      <BranchFormModal
+        isOpen={isBranchFormOpen}
+        onClose={() => {
+          setIsBranchFormOpen(false);
+          setEditingBranch(null);
+        }}
+        onSave={handleSaveBranch}
+        branch={editingBranch}
+        companies={companies}
+        regions={regions}
+        employees={employees}
+        submitting={submitting}
+      />
 
-              <div className="flex items-center justify-end gap-2 pt-6 mt-4 border-t border-border ">
-                {canUpdate && (
-                  <Button
-                    variant="secondary"
-                    size="xs"
-                    onClick={() => handleOpenModal(b)}
-                  >
-                    Edit
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button
-                    variant="danger"
-                    size="xs"
-                    onClick={() => handleDelete(b.id)}
-                  >
-                    Delete
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <WarehouseDetailModal
+        isOpen={Boolean(viewingWarehouse)}
+        onClose={() => setViewingWarehouse(null)}
+        warehouse={viewingWarehouse}
+        onEdit={(w) => {
+          setViewingWarehouse(null);
+          setEditingWarehouse(w);
+          setIsWarehouseFormOpen(true);
+        }}
+        canUpdate={canUpdateWarehouse}
+      />
 
-      {/* Branch Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/70 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md space-y-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-foreground ">
-              {editingBranch ? 'Edit Branch' : 'Add Branch'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Branch Code</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. BR-ADDIS"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none font-mono"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Branch Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Addis Ababa Main Branch"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Address</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Phone</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none"
-                />
-              </div>
+      <WarehouseFormModal
+        isOpen={isWarehouseFormOpen}
+        onClose={() => {
+          setIsWarehouseFormOpen(false);
+          setEditingWarehouse(null);
+        }}
+        onSave={handleSaveWarehouse}
+        warehouse={editingWarehouse}
+        branches={branches}
+        regions={regions}
+        employees={employees}
+        submitting={submitting}
+      />
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border ">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                >
-                  Save
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+      <RegionFormModal
+        isOpen={isRegionFormOpen}
+        onClose={() => {
+          setIsRegionFormOpen(false);
+          setEditingRegion(null);
+        }}
+        onSave={handleSaveRegion}
+        region={editingRegion}
+        submitting={submitting}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title={`Delete ${
+          deleteTarget?.type === 'branch'
+            ? 'Branch'
+            : deleteTarget?.type === 'warehouse'
+            ? 'Warehouse'
+            : 'Region'
+        }`}
+        message={`Are you sure you want to delete "${deleteTarget?.item?.name}"? This action cannot be undone.`}
+        submitting={submitting}
+      />
     </div>
   );
 }

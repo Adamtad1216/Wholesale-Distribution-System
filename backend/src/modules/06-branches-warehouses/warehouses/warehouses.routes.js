@@ -80,7 +80,7 @@ router.use(authenticate);
 router.get(
   "/",
   validate(warehouseQuerySchema),
-  requirePermission("warehouses:read"),
+  requirePermission(["warehouses:read", "products:read", "warehouse-selling-prices:read"]),
   listWarehouses,
 );
 
