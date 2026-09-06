@@ -30,20 +30,31 @@ const updateWarehouseSellingPriceItemSchema = z.object({
   status: z.string().optional(),
 });
 
+export const productImageSchema = z.object({
+  imageUrl: z
+    .string()
+    .min(1, 'Image URL cannot be empty')
+    .refine(
+      (val) =>
+        val.startsWith('http://') ||
+        val.startsWith('https://') ||
+        val.startsWith('data:image/') ||
+        val.startsWith('/') ||
+        val.startsWith('blob:'),
+      { message: 'Invalid image format. Must be an HTTP/HTTPS URL, relative path, or data URI.' }
+    ),
+  isPrimary: z.boolean().default(false),
+});
+
 export const createProductSchema = z.object({
   sku: z.string().min(1).max(100).optional(),
   name: z.string().min(1, 'Product name is required').max(255),
   categoryId: z.string().uuid('Invalid category ID format'),
   brandId: z.string().uuid('Invalid brand ID format').optional().nullable(),
   unitId: z.string().uuid('Invalid unit ID format'),
-  images: z
-    .array(
-      z.object({
-        imageUrl: z.string().url('Invalid image URL format'),
-        isPrimary: z.boolean().default(false),
-      })
-    )
-    .optional(),
+  sellingPrice: z.coerce.number().min(0).optional(),
+  wholesalePrice: z.coerce.number().min(0).optional(),
+  images: z.array(productImageSchema).optional(),
   warehouseSellingPrices: z.array(createWarehouseSellingPriceItemSchema).optional(),
 });
 
@@ -54,10 +65,8 @@ export const updateProductSchema = z.object({
   brandId: z.string().uuid('Invalid brand ID format').optional().nullable(),
   unitId: z.string().uuid('Invalid unit ID format').optional(),
   status: z.string().optional(),
+  sellingPrice: z.coerce.number().min(0).optional(),
+  wholesalePrice: z.coerce.number().min(0).optional(),
+  images: z.array(productImageSchema).optional(),
   warehouseSellingPrices: z.array(updateWarehouseSellingPriceItemSchema).optional(),
-});
-
-export const productImageSchema = z.object({
-  imageUrl: z.string().url('Invalid image URL format'),
-  isPrimary: z.boolean().default(false),
 });

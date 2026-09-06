@@ -65,21 +65,18 @@ export async function createProduct(data, createdById, req) {
     throw new AppError('Product SKU already exists', 409);
   }
 
-  // Validate category exists and is a child leaf category (must have a parent and no sub-categories)
+  // Validate category exists and is a leaf category (allows root category if it has no child subcategories)
   const category = await prisma.category.findFirst({
     where: { id: data.categoryId, isArchived: false },
   });
   if (!category) {
     throw new AppError('Category not found', 404);
   }
-  if (!category.parentId) {
-    throw new AppError('Cannot create product under a root category. Products must belong to a child leaf category.', 400);
-  }
   const childCategories = await prisma.category.count({
     where: { parentId: data.categoryId, isArchived: false },
   });
   if (childCategories > 0) {
-    throw new AppError('Category must be a leaf category (the last child with no sub-categories)', 400);
+    throw new AppError('This category has subcategories. Products must be assigned to one of its child subcategories.', 400);
   }
 
   // Validate unit exists
@@ -128,24 +125,27 @@ export async function createProduct(data, createdById, req) {
         brandId: data.brandId || null,
         unitId: data.unitId,
         status: data.status || 'ACTIVE',
+        sellingPrice: data.sellingPrice !== undefined ? data.sellingPrice : 0,
+        wholesalePrice: data.wholesalePrice !== undefined ? data.wholesalePrice : 0,
         createdById,
         updatedById: null,
       },
     });
 
     if (data.images && data.images.length > 0) {
+      const hasPrimary = data.images.some((img) => img.isPrimary);
       await tx.productImage.createMany({
-        data: data.images.map((img) => ({
+        data: data.images.map((img, idx) => ({
           productId: newProduct.id,
           imageUrl: img.imageUrl,
-          isPrimary: Boolean(img.isPrimary),
+          isPrimary: hasPrimary ? Boolean(img.isPrimary) : idx === 0,
           createdById,
           updatedById: null,
         })),
       });
     }
 
-    if (data.warehouseSellingPrices && data.warehouseSellingPrices.length > 0) {
+    if (Array.isArray(data.warehouseSellingPrices) && data.warehouseSellingPrices.length > 0) {
       for (const sp of data.warehouseSellingPrices) {
         // Clean up any previously archived price for this pair to avoid unique collision
         await tx.warehouseSellingPrice.deleteMany({
@@ -166,15 +166,15 @@ export async function createProduct(data, createdById, req) {
           create: {
             productId: newProduct.id,
             warehouseId: sp.warehouseId,
-            sellingPrice: sp.sellingPrice,
-            wholesalePrice: sp.wholesalePrice,
+            sellingPrice: Number(sp.sellingPrice),
+            wholesalePrice: Number(sp.wholesalePrice),
             status: sp.status || 'ACTIVE',
             createdById,
             updatedById: null,
           },
           update: {
-            sellingPrice: sp.sellingPrice,
-            wholesalePrice: sp.wholesalePrice,
+            sellingPrice: Number(sp.sellingPrice),
+            wholesalePrice: Number(sp.wholesalePrice),
             status: sp.status || 'ACTIVE',
             isArchived: false,
             archivedAt: null,
@@ -487,7 +487,7 @@ export async function updateProduct(id, data, createdById, req) {
     }
   }
 
-  // Validate category is a child leaf category if being updated
+  // Validate category is a leaf category if being updated (allows root category if it has no child subcategories)
   if (data.categoryId && data.categoryId !== existingProduct.categoryId) {
     const category = await prisma.category.findFirst({
       where: { id: data.categoryId, isArchived: false },
@@ -495,14 +495,11 @@ export async function updateProduct(id, data, createdById, req) {
     if (!category) {
       throw new AppError('Category not found', 404);
     }
-    if (!category.parentId) {
-      throw new AppError('Cannot assign product to a root category. Products must belong to a child leaf category.', 400);
-    }
     const childCategories = await prisma.category.count({
       where: { parentId: data.categoryId, isArchived: false },
     });
     if (childCategories > 0) {
-      throw new AppError('Category must be a leaf category (the last child with no sub-categories)', 400);
+      throw new AppError('This category has subcategories. Products must be assigned to one of its child subcategories.', 400);
     }
   }
 
@@ -548,12 +545,30 @@ export async function updateProduct(id, data, createdById, req) {
         brandId: data.brandId,
         unitId: data.unitId,
         status: data.status,
+        sellingPrice: data.sellingPrice !== undefined ? data.sellingPrice : undefined,
+        wholesalePrice: data.wholesalePrice !== undefined ? data.wholesalePrice : undefined,
         updatedById: createdById,
         updatedAt: new Date(),
       },
     });
 
-    if (data.warehouseSellingPrices && data.warehouseSellingPrices.length > 0) {
+    if (data.warehouseSellingPrices !== undefined) {
+      const activeWhIds = (data.warehouseSellingPrices || []).map((sp) => sp.warehouseId);
+
+      // Archive warehouse selling prices that are no longer assigned or were left without prices
+      await tx.warehouseSellingPrice.updateMany({
+        where: {
+          productId: id,
+          warehouseId: { notIn: activeWhIds },
+          isArchived: false,
+        },
+        data: {
+          isArchived: true,
+          archivedAt: new Date(),
+          updatedById: createdById,
+        },
+      });
+
       for (const sp of data.warehouseSellingPrices) {
         await tx.warehouseSellingPrice.upsert({
           where: {
@@ -565,21 +580,40 @@ export async function updateProduct(id, data, createdById, req) {
           create: {
             productId: id,
             warehouseId: sp.warehouseId,
-            sellingPrice: sp.sellingPrice,
-            wholesalePrice: sp.wholesalePrice,
+            sellingPrice: Number(sp.sellingPrice),
+            wholesalePrice: Number(sp.wholesalePrice),
             status: sp.status || 'ACTIVE',
             createdById,
             updatedById: null,
           },
           update: {
-            sellingPrice: sp.sellingPrice,
-            wholesalePrice: sp.wholesalePrice,
+            sellingPrice: Number(sp.sellingPrice),
+            wholesalePrice: Number(sp.wholesalePrice),
             status: sp.status || 'ACTIVE',
             isArchived: false,
             archivedAt: null,
             updatedById: createdById,
             updatedAt: new Date(),
           },
+        });
+      }
+    }
+
+    if (data.images !== undefined) {
+      await tx.productImage.deleteMany({
+        where: { productId: id },
+      });
+
+      if (data.images && data.images.length > 0) {
+        const hasPrimary = data.images.some((img) => img.isPrimary);
+        await tx.productImage.createMany({
+          data: data.images.map((img, idx) => ({
+            productId: id,
+            imageUrl: img.imageUrl,
+            isPrimary: hasPrimary ? Boolean(img.isPrimary) : idx === 0,
+            createdById,
+            updatedById: createdById,
+          })),
         });
       }
     }
@@ -794,7 +828,22 @@ async function buildProductWhere(filters, user = null) {
   }
 
   if (filters.categoryId) {
-    where.categoryId = filters.categoryId;
+    // If category has children, include this category and all its descendant categories
+    const childCategories = await prisma.category.findMany({
+      where: { parentId: filters.categoryId, isArchived: false },
+      select: { id: true },
+    });
+    if (childCategories.length > 0) {
+      const childIds = childCategories.map((c) => c.id);
+      const grandChildren = await prisma.category.findMany({
+        where: { parentId: { in: childIds }, isArchived: false },
+        select: { id: true },
+      });
+      const allCategoryIds = [filters.categoryId, ...childIds, ...grandChildren.map((g) => g.id)];
+      where.categoryId = { in: allCategoryIds };
+    } else {
+      where.categoryId = filters.categoryId;
+    }
   }
 
   if (filters.brandId) {
