@@ -206,7 +206,11 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/:id", requirePermission("companies:read"), getCompany);
+router.get(
+  "/:id",
+  requirePermission("companies:read"),
+  getCompany,
+);
 
 /**
  * @swagger

@@ -5,8 +5,16 @@ import { getPaginationParams, buildPaginationMeta } from "../../../utils/paginat
 
 const sanitizeCompany = (company) => {
   if (!company) return company;
+  const branchList = Array.isArray(company.branches) ? company.branches : [];
+  const branchCount =
+    typeof company._count?.branches === 'number'
+      ? company._count.branches
+      : branchList.length;
+
   return {
     ...company,
+    branchCount,
+    branches: branchList,
     region: company.region
       ? {
           id: company.region.id,
@@ -115,6 +123,31 @@ export async function getCompanies(filters) {
     prisma.company.findMany({
       where,
       include: {
+        region: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        branches: {
+          where: { isArchived: false },
+          select: {
+            id: true,
+            name: true,
+            branchCode: true,
+            status: true,
+            city: true,
+            isHeadOffice: true,
+          },
+        },
+        _count: {
+          select: {
+            branches: {
+              where: { isArchived: false },
+            },
+          },
+        },
         createdBy: {
           include: {
             person: {
@@ -164,7 +197,26 @@ export async function getCompanyById(id) {
           code: true,
         },
       },
-      branches: true,
+      branches: {
+        where: { isArchived: false },
+        select: {
+          id: true,
+          name: true,
+          branchCode: true,
+          status: true,
+          city: true,
+          isHeadOffice: true,
+          phone: true,
+          email: true,
+        },
+      },
+      _count: {
+        select: {
+          branches: {
+            where: { isArchived: false },
+          },
+        },
+      },
       createdBy: {
         include: {
           person: {
@@ -355,6 +407,10 @@ function buildCompanyWhere(filters) {
 
   if (filters.status) {
     where.status = filters.status;
+  }
+
+  if (filters.regionId) {
+    where.regionId = filters.regionId;
   }
 
   if (filters.search) {
