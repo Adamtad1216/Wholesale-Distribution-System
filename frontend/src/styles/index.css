@@ -749,6 +749,47 @@ button *,
 }
 
 /* ============================================================
+   CARD & POPOVER SOLID BACKGROUNDS (Fixes transparency in Tailwind v4)
+   ============================================================ */
+.bg-card {
+  background-color: var(--color-card) !important;
+}
+
+.bg-popover {
+  background-color: var(--color-popover) !important;
+}
+
+.light .bg-card,
+.light .bg-popover {
+  background-color: #ffffff !important;
+}
+
+/* SearchableSelect Menu & Options - Guaranteed Solid Background and Contrast */
+.searchable-select-menu {
+  background-color: var(--color-popover) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-foreground) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.light .searchable-select-menu {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.searchable-select-option:not(.selected):hover {
+  background-color: var(--color-muted) !important;
+  color: var(--color-foreground) !important;
+}
+
+.light .searchable-select-option:not(.selected):hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* ============================================================
    BORDERS — light mode
    ============================================================ */
 

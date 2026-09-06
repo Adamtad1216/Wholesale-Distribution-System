@@ -29,7 +29,13 @@ import RolesJobSpecsMainPage from './features/roles-job-specifications/pages/Rol
 import PermissionsPage from './features/permissions/pages/permissions/PermissionsPage';
 import EmployeesPage from './features/employees/pages/EmployeesPage';
 import BranchesPage from './features/branches/pages/branches/BranchesPage';
+import CompaniesPage from './features/companies/pages/CompaniesPage';
 import Customers from './features/customers/pages/Customers';
+import ProductsPage from './features/products/pages/ProductsPage';
+import ProductFormPage from './features/products/pages/ProductFormPage';
+import CategoriesPage from './features/products/pages/CategoriesPage';
+import BrandsPage from './features/products/pages/BrandsPage';
+import UnitsPage from './features/products/pages/UnitsPage';
 import Documents from './features/documents/pages/Documents';
 import Payments from './features/payments/pages/payments/Payments';
 import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
@@ -97,13 +103,38 @@ function AppRoutes() {
           <Route path="/employees" element={<EmployeesPage />} />
         </Route>
 
+        {/* Module 06: Facilities & Corporate Structure */}
         <Route element={<PermissionRoute permission="branches:read" />}>
           <Route path="/branches" element={<BranchesPage />} />
+        </Route>
+        <Route element={<PermissionRoute permission="companies:read" />}>
+          <Route path="/companies" element={<CompaniesPage />} />
         </Route>
 
         {/* Other module routes */}
         <Route element={<PermissionRoute permission="customers:read" />}>
           <Route path="/customers" element={<Customers />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="products:read" />}>
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/products/new" element={<ProductFormPage />} />
+          <Route path="/products/:id/edit" element={<ProductFormPage />} />
+          <Route path="/product-catalog" element={<ProductsPage />} />
+          <Route path="/product-catalog/new" element={<ProductFormPage />} />
+          <Route path="/product-catalog/:id/edit" element={<ProductFormPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="categories:read" />}>
+          <Route path="/categories" element={<CategoriesPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="units:read" />}>
+          <Route path="/units" element={<UnitsPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="brands:read" />}>
+          <Route path="/brands" element={<BrandsPage />} />
         </Route>
 
         <Route element={<PermissionRoute permission="documents:read" />}>
@@ -120,7 +151,6 @@ function AppRoutes() {
 
         {/* Default redirect inside the shell */}
         <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="" element={<Navigate to="/dashboard" replace />} />
       </Route>
 
       {/* ── Global Fallbacks ──────────────────────────────────── */}
