@@ -5,19 +5,42 @@ import {
   recordStatusChange,
   getSalesOrderWithHistory,
 } from "./salesOrders.status.service.js";
+import invoiceService from "../../04-finance/invoice.service.js";
 
-function getSalesRepRole(userRoles) {
-  return userRoles.find(
-    (ur) => ur.role.name === "SALES_REPRESENTATIVE" || ur.role.name === "ADMIN"
-  )?.role.name;
+function extractRoleNames(userOrRoles) {
+  if (!userOrRoles) return [];
+  if (typeof userOrRoles === "string") return [userOrRoles.toUpperCase()];
+  if (Array.isArray(userOrRoles)) {
+    return userOrRoles
+      .map((ur) => {
+        if (typeof ur === "string") return ur.toUpperCase();
+        if (ur?.role?.name) return ur.role.name.toUpperCase();
+        if (ur?.name) return ur.name.toUpperCase();
+        return "";
+      })
+      .filter(Boolean);
+  }
+  if (typeof userOrRoles === "object") {
+    if (userOrRoles.userRoles) return extractRoleNames(userOrRoles.userRoles);
+    if (userOrRoles.roles) return extractRoleNames(userOrRoles.roles);
+    if (userOrRoles.role) return extractRoleNames(userOrRoles.role);
+  }
+  return [];
 }
 
-function ensureSalesRepOrAdmin(userRoles) {
-  const role = getSalesRepRole(userRoles);
-  if (!role) {
-    throw new AppError("Only sales representatives and admins can perform this action", 403);
+function ensureSalesRepOrAdmin(userRoles = []) {
+  const roleNames = extractRoleNames(userRoles);
+  const isSuperAdmin = roleNames.includes("SUPER_ADMIN") || roleNames.includes("ADMIN");
+  const isSalesRep =
+    roleNames.includes("SALES_REPRESENTATIVE") ||
+    roleNames.includes("SALES_REP") ||
+    roleNames.includes("SALES_REPRESENTATIVE_ROLE");
+
+  if (!isSuperAdmin && !isSalesRep) {
+    throw new AppError("Only a Sales Representative or Administrator can review sales orders", 403);
   }
-  return role;
+
+  return isSuperAdmin ? "ADMIN" : "SALES_REPRESENTATIVE";
 }
 
 const salesOrderInclude = {
@@ -25,6 +48,7 @@ const salesOrderInclude = {
     include: {
       person: true,
       organization: true,
+      paymentTerms: true,
     },
   },
   salesRep: {
@@ -32,12 +56,24 @@ const salesOrderInclude = {
       person: true,
     },
   },
-  warehouse: true,
+  warehouse: {
+    include: {
+      manager: {
+        include: {
+          person: true,
+        },
+      },
+    },
+  },
   items: {
     include: {
       product: true,
     },
   },
+  invoices: {
+    orderBy: { createdAt: "desc" },
+  },
+  reservations: true,
   statusHistory: {
     include: {
       changedBy: true,
@@ -67,7 +103,26 @@ export async function approveSalesOrder(salesOrderId, userId, userRoles) {
 
   await recordStatusChange(salesOrderId, currentStatus, "SALES_REP_APPROVED", "APPROVED", null, userId);
 
-  return updated;
+  // Check customer's payment term and auto-create commercial invoice if one does not exist
+  try {
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { salesOrderId },
+    });
+    if (!existingInvoice) {
+      await invoiceService.createInvoiceFromOrder(salesOrderId, userId);
+    }
+  } catch (err) {
+    // Log warning if invoice already exists or failed gracefully
+    console.warn("Invoice auto-creation note:", err?.message);
+  }
+
+  // Return fresh order including the newly generated invoice
+  const freshOrder = await prisma.salesOrder.findUnique({
+    where: { id: salesOrderId },
+    include: salesOrderInclude,
+  });
+
+  return freshOrder || updated;
 }
 
 export async function rejectSalesOrder(salesOrderId, userId, userRoles, reason) {

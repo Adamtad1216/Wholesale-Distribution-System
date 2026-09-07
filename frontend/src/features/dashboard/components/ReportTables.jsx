@@ -2,7 +2,7 @@ import Card from '../../../components/ui/Card';
 import { Warehouse } from 'lucide-react';
 
 const fullStatusColors = {
-  DRAFT: 'bg-muted500 text-muted-foreground border-border',
+  DRAFT: 'bg-secondary text-muted-foreground border-border',
   PENDING_REVIEW: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   ADJUSTMENT_REQUIRED: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   APPROVED: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -21,7 +21,7 @@ const fullStatusColors = {
 };
 
 function getBadgeClass(status) {
-  return fullStatusColors[status] || 'bg-muted500 text-muted-foreground border-border';
+  return fullStatusColors[status] || 'bg-secondary text-muted-foreground border-border';
 }
 
 function getStatusLabel(status) {
@@ -64,7 +64,7 @@ export function StatusBreakdownTable({ data, isLoading }) {
             </thead>
             <tbody className="divide-y divide-border">
               {items.map((item) => (
-                <tr key={item.status} className="hover:bg-muted800 transition">
+                <tr key={item.status} className="hover:bg-muted/30 transition">
                   <td className="py-3 pr-4">
                     <StatusBadge status={item.status} />
                   </td>
@@ -115,7 +115,7 @@ export function TopCustomersTable({ data, isLoading, error }) {
             </thead>
             <tbody className="divide-y divide-border">
               {customers.map((customer) => (
-                <tr key={customer.customer?.id || customer.id} className="hover:bg-muted800 transition">
+                <tr key={customer.customer?.id || customer.id} className="hover:bg-muted/30 transition">
                   <td className="py-3 pr-4">
                     <span className="font-semibold">
                       {customer.customer?.name || customer.name || 'N/A'}
@@ -202,7 +202,7 @@ export function WarehouseCard({ data, isLoading }) {
               </span>
               <span className="text-foreground">{completionRate}% complete</span>
             </div>
-            <div className="w-full h-2 bg-muted800 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
               <div
                 className="h-full bg-emerald-500 transition-all duration-500"
                 style={{ width: `${completionRate}%` }}

@@ -3,6 +3,11 @@ import { AppError } from "../../../utils/errors.js";
 import { logAudit } from "../../../middleware/audit.middleware.js"; // eslint-disable-line no-unused-vars
 
 const STATUS_TRANSITIONS = {
+  DRAFT: {
+    CUSTOMER: ["PENDING_REVIEW", "CANCELLED"],
+    SALES_REPRESENTATIVE: ["PENDING_REVIEW", "SALES_REP_APPROVED", "REJECTED", "CANCELLED"],
+    ADMIN: ["PENDING_REVIEW", "SALES_REP_APPROVED", "REJECTED", "CANCELLED"],
+  },
   PENDING_REVIEW: {
     SALES_REPRESENTATIVE: ["SALES_REP_APPROVED", "REJECTED", "ADJUSTMENT_REQUIRED"],
     ADMIN: [
@@ -50,7 +55,7 @@ const STATUS_TRANSITIONS = {
     ],
   },
   WAREHOUSE_PREPARATION_SCHEDULED: {
-    STORE_KEEPER: ["PREPARING"],
+    STORE_KEEPER: ["PREPARING", "READY_FOR_DELIVERY", "DELIVERY_SCHEDULED"],
     ADMIN: [
       "PREPARING",
       "READY_FOR_DELIVERY",
@@ -62,8 +67,8 @@ const STATUS_TRANSITIONS = {
     ],
   },
   PREPARING: {
-    STORE_KEEPER: ["READY_FOR_DELIVERY"],
-    WAREHOUSE_MANAGER: ["READY_FOR_DELIVERY"],
+    STORE_KEEPER: ["READY_FOR_DELIVERY", "DELIVERY_SCHEDULED"],
+    WAREHOUSE_MANAGER: ["READY_FOR_DELIVERY", "DELIVERY_SCHEDULED"],
     ADMIN: [
       "READY_FOR_DELIVERY",
       "DELIVERY_SCHEDULED",
@@ -74,6 +79,7 @@ const STATUS_TRANSITIONS = {
     ],
   },
   READY_FOR_DELIVERY: {
+    STORE_KEEPER: ["DELIVERY_SCHEDULED"],
     WAREHOUSE_MANAGER: ["DELIVERY_SCHEDULED"],
     ADMIN: [
       "DELIVERY_SCHEDULED",
@@ -93,7 +99,8 @@ const STATUS_TRANSITIONS = {
     ],
   },
   OUT_FOR_DELIVERY: {
-    DRIVER: ["DELIVERED"],
+    DRIVER: ["DELIVERED", "COMPLETED"],
+    CUSTOMER: ["DELIVERED", "COMPLETED"],
     ADMIN: [
       "DELIVERED",
       "COMPLETED",
@@ -101,6 +108,8 @@ const STATUS_TRANSITIONS = {
     ],
   },
   DELIVERED: {
+    DRIVER: ["COMPLETED"],
+    CUSTOMER: ["COMPLETED"],
     ADMIN: ["COMPLETED", "CANCELLED"],
   },
 };
@@ -137,33 +146,93 @@ export async function getSalesOrderWithHistory(salesOrderId) {
   const salesOrder = await prisma.salesOrder.findUnique({
     where: { id: salesOrderId },
     include: {
+      deliveryAddress: true,
       customer: {
         include: {
           person: true,
           organization: true,
+          paymentTerms: true,
+          addresses: true,
         },
+      },
+      invoices: {
+        orderBy: { createdAt: "desc" },
+      },
+      reservations: {
+        include: { product: true },
       },
       salesRep: {
         include: {
           person: true,
+          branch: { select: { id: true, name: true, branchCode: true } },
         },
       },
-      warehouse: true,
+      warehouse: {
+        include: {
+          manager: {
+            include: {
+              person: true,
+            },
+          },
+        },
+      },
+      priceTier: true,
       items: {
         include: {
-          product: true,
+          product: {
+            include: {
+              unit: true,
+              category: true,
+            },
+          },
         },
       },
       statusHistory: {
         include: {
-          changedBy: true,
+          changedBy: {
+            include: {
+              person: true,
+            },
+          },
         },
         orderBy: {
           changedAt: "desc",
         },
       },
+      preparationTasks: {
+        include: {
+          storeKeeper: {
+            include: {
+              person: true,
+            },
+          },
+          items: {
+            include: {
+              product: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
+      deliveries: {
+        include: {
+          driver: {
+            include: {
+              person: true,
+            },
+          },
+          vehicle: true,
+          proofs: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
   });
+
 
   if (!salesOrder) {
     throw new AppError("Sales order not found", 404);

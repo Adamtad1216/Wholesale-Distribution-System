@@ -21,23 +21,23 @@ export default function StatsCards({ dashboardData }) {
     },
     {
       label: 'Total Revenue',
-      value: `$${dashboardData?.revenue?.totalOrderValue ?? 0}`,
+      value: `${Number(dashboardData?.revenue?.totalOrderValue ?? 0).toLocaleString()} ETB`,
       icon: TrendingUp,
       color: 'bg-emerald-500',
       trend: '+8.1%',
       trendUp: true,
     },
     {
-      label: 'Customers',
-      value: dashboardData?.customers?.total ?? 0,
+      label: 'Total Customers',
+      value: Number(dashboardData?.customers?.total ?? 0).toLocaleString(),
       icon: Users,
       color: 'bg-blue-500',
       trend: '+3%',
       trendUp: true,
     },
     {
-      label: 'Products',
-      value: dashboardData?.products?.total ?? 0,
+      label: 'Catalog Products',
+      value: Number(dashboardData?.products?.total ?? 0).toLocaleString(),
       icon: Package,
       color: 'bg-indigo-500',
       trend: '-1%',
@@ -46,23 +46,21 @@ export default function StatsCards({ dashboardData }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
-          <Card hoverEffect className="p-5">
+          <Card key={stat.label} noPadding className="p-5 border border-border bg-card shadow-sm rounded-2xl hover:border-violet-500/40 transition-all duration-200">
             <div className="flex items-center justify-between mb-3">
-              <div
-                className="w-10 h-10 rounded-lg border flex items-center justify-center bg-[var(--icon-box-bg)] text-[var(--icon-box-text)] border-[var(--icon-box-border)]"
-              >
+              <div className="w-10 h-10 rounded-xl border flex items-center justify-center bg-[var(--icon-box-bg)] text-[var(--icon-box-text)] border-[var(--icon-box-border)]">
                 <Icon className="w-5 h-5" />
               </div>
-              <span className={`text-xs font-semibold ${stat.trendUp ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${stat.trendUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
                 {stat.trend}
               </span>
             </div>
-            <p className="text-2xl font-bold text-foreground  mb-0.5">{stat.value}</p>
-            <p className="text-xs text-slate-450">{stat.label}</p>
+            <p className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight mb-1">{stat.value}</p>
+            <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
           </Card>
         );
       })}

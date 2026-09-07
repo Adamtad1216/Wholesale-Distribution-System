@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../../../middleware/auth.middleware.js";
 import { requirePermission } from "../../../middleware/permission.middleware.js";
 import { validate } from "../../../middleware/validation.middleware.js";
-import { sendSuccess } from "../../../utils/api-response.js";
+import { sendSuccess, sendPaginatedSuccess } from "../../../utils/api-response.js";
 import {
   getAssignedDeliveries,
   getDeliveryDetails,
@@ -88,7 +88,7 @@ router.get(
   async (req, res, next) => {
     try {
       const result = await getAssignedDeliveries(req.query, req.user);
-      sendSuccess(res, result);
+      sendPaginatedSuccess(res, result.data, result.meta);
     } catch (err) {
       next(err);
     }
@@ -218,7 +218,7 @@ router.post(
   requirePermission("deliveries:update"),
   async (req, res, next) => {
     try {
-      const result = await startDelivery(req.params.id, req.user.id);
+      const result = await startDelivery(req.params.id, req.user);
       sendSuccess(res, result);
     } catch (err) {
       next(err);
@@ -303,7 +303,7 @@ router.post(
   requirePermission("deliveries:update"),
   async (req, res, next) => {
     try {
-      const result = await completeDelivery(req.params.id, req.body.proof, req.user.id);
+      const result = await completeDelivery(req.params.id, req.body.proof, req.user);
       sendSuccess(res, result);
     } catch (err) {
       next(err);

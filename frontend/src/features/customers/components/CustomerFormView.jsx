@@ -45,7 +45,7 @@ export default function CustomerFormView({
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Account Type Selector (Creation only) */}
         {!isEdit && (
-          <Card className="p-6 border border-border bg-card900 backdrop-blur-xl rounded-2xl space-y-4">
+          <Card className="p-6 border border-border bg-card shadow-sm rounded-2xl space-y-4">
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Select Account Entity Type</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
@@ -124,7 +124,7 @@ export default function CustomerFormView({
         )}
 
         {/* Section 1: Financial & Terms Configuration */}
-        <Card className="p-6 border border-border bg-card900 backdrop-blur-xl rounded-2xl space-y-6">
+        <Card className="p-6 border border-border bg-card shadow-sm rounded-2xl space-y-6">
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider border-b border-border pb-3">
             1. Commercial & Payment Terms
           </h3>
@@ -139,7 +139,7 @@ export default function CustomerFormView({
                 step="500"
                 value={formData.creditLimit}
                 onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
               />
             </div>
 
@@ -148,7 +148,7 @@ export default function CustomerFormView({
               <select
                 value={formData.paymentTermsId}
                 onChange={(e) => setFormData({ ...formData, paymentTermsId: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
               >
                 <option value="">Default (COD 0 Days)</option>
                 {paymentTerms.map((t) => (
@@ -189,7 +189,7 @@ export default function CustomerFormView({
         </Card>
 
         {/* Section 2: Entity & Contact Details */}
-        <Card className="p-6 border border-border bg-card900 backdrop-blur-xl rounded-2xl space-y-6">
+        <Card className="p-6 border border-border bg-card shadow-sm rounded-2xl space-y-6">
           <h3 className="text-sm font-bold text-foreground uppercase tracking-wider border-b border-border pb-3">
             2. {formData.customerType === 'ORGANIZATION' ? 'Organization Information' : 'Individual Profile Information'}
           </h3>
@@ -208,7 +208,7 @@ export default function CustomerFormView({
                       ...formData,
                       organization: { ...formData.organization, name: e.target.value }
                     })}
-                    className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
@@ -222,7 +222,7 @@ export default function CustomerFormView({
                       ...formData,
                       organization: { ...formData.organization, registrationNumber: e.target.value }
                     })}
-                    className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
@@ -236,7 +236,7 @@ export default function CustomerFormView({
                       ...formData,
                       organization: { ...formData.organization, taxNumber: e.target.value }
                     })}
-                    className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
@@ -250,7 +250,7 @@ export default function CustomerFormView({
                       ...formData,
                       organization: { ...formData.organization, email: e.target.value }
                     })}
-                    className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
@@ -264,7 +264,7 @@ export default function CustomerFormView({
                       ...formData,
                       organization: { ...formData.organization, phone: e.target.value }
                     })}
-                    className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
@@ -278,13 +278,13 @@ export default function CustomerFormView({
                       ...formData,
                       organization: { ...formData.organization, address: e.target.value }
                     })}
-                    className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
 
               {!isEdit && (
-                <div className="p-5 bg-muted800 border border-border rounded-xl space-y-4">
+                <div className="p-5 bg-background border border-border rounded-xl space-y-4">
                   <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">Primary Corporate Contact Person</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -298,7 +298,7 @@ export default function CustomerFormView({
                           newContacts[0] = { ...newContacts[0], firstName: e.target.value };
                           setFormData({ ...formData, organization: { ...formData.organization, contacts: newContacts } });
                         }}
-                        className="w-full px-3 py-2 bg-muted800 border border-border rounded-xl text-foreground text-xs focus:outline-none"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground text-xs focus:outline-none"
                       />
                     </div>
 
@@ -313,7 +313,7 @@ export default function CustomerFormView({
                           newContacts[0] = { ...newContacts[0], lastName: e.target.value };
                           setFormData({ ...formData, organization: { ...formData.organization, contacts: newContacts } });
                         }}
-                        className="w-full px-3 py-2 bg-muted800 border border-border rounded-xl text-foreground text-xs focus:outline-none"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground text-xs focus:outline-none"
                       />
                     </div>
 
@@ -328,7 +328,7 @@ export default function CustomerFormView({
                           newContacts[0] = { ...newContacts[0], position: e.target.value };
                           setFormData({ ...formData, organization: { ...formData.organization, contacts: newContacts } });
                         }}
-                        className="w-full px-3 py-2 bg-muted800 border border-border rounded-xl text-foreground text-xs focus:outline-none"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground text-xs focus:outline-none"
                       />
                     </div>
 
@@ -343,7 +343,7 @@ export default function CustomerFormView({
                           newContacts[0] = { ...newContacts[0], phone: e.target.value };
                           setFormData({ ...formData, organization: { ...formData.organization, contacts: newContacts } });
                         }}
-                        className="w-full px-3 py-2 bg-muted800 border border-border rounded-xl text-foreground text-xs focus:outline-none"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-xl text-foreground text-xs focus:outline-none"
                       />
                     </div>
                   </div>
@@ -363,7 +363,7 @@ export default function CustomerFormView({
                     ...formData,
                     person: { ...formData.person, firstName: e.target.value }
                   })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -377,7 +377,7 @@ export default function CustomerFormView({
                     ...formData,
                     person: { ...formData.person, middleName: e.target.value }
                   })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -392,7 +392,7 @@ export default function CustomerFormView({
                     ...formData,
                     person: { ...formData.person, lastName: e.target.value }
                   })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -406,7 +406,7 @@ export default function CustomerFormView({
                     ...formData,
                     person: { ...formData.person, phone: e.target.value }
                   })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -420,7 +420,7 @@ export default function CustomerFormView({
                     ...formData,
                     person: { ...formData.person, email: e.target.value }
                   })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -434,7 +434,7 @@ export default function CustomerFormView({
                     ...formData,
                     person: { ...formData.person, address: e.target.value }
                   })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
             </div>
@@ -443,7 +443,7 @@ export default function CustomerFormView({
 
         {/* Section 3: Portal Login Credentials (Creation Only) */}
         {!isEdit && (
-          <Card className="p-6 border border-border bg-card900 backdrop-blur-xl rounded-2xl space-y-4">
+          <Card className="p-6 border border-border bg-card shadow-sm rounded-2xl space-y-4">
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider border-b border-border pb-3">
               3. Customer Portal Login Credentials (Optional)
             </h3>
@@ -459,7 +459,7 @@ export default function CustomerFormView({
                   placeholder="e.g. hika_client"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -470,7 +470,7 @@ export default function CustomerFormView({
                   placeholder="Minimum 8 characters"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-muted800 border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+                  className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
             </div>

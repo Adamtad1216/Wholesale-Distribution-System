@@ -1644,11 +1644,17 @@ model Delivery {
   deliveryAddress   String          @map("delivery_address")
   deliveryLatitude  Decimal?        @map("delivery_latitude") @db.Decimal(10, 7)
   deliveryLongitude Decimal?        @map("delivery_longitude") @db.Decimal(10, 7)
-  scheduledBy       String?         @map("scheduled_by") @db.Uuid
-  notes             String?
-  items             DeliveryItem[]
-  proofs            DeliveryProof[]
-  scheduledByUser   User?           @relation("DeliveryScheduler", fields: [scheduledBy], references: [id])
+  scheduledBy           String?         @map("scheduled_by") @db.Uuid
+  notes                 String?
+  driverConfirmedAt     DateTime?       @map("driver_confirmed_at")
+  driverNotes           String?         @map("driver_notes")
+  customerConfirmedAt   DateTime?       @map("customer_confirmed_at")
+  customerConfirmedBy   String?         @map("customer_confirmed_by") @db.Uuid
+  customerRecipientName String?         @map("customer_recipient_name")
+  customerNotes         String?         @map("customer_notes")
+  items                 DeliveryItem[]
+  proofs                DeliveryProof[]
+  scheduledByUser       User?           @relation("DeliveryScheduler", fields: [scheduledBy], references: [id])
 
   createdBy  User?      @relation("DeliveryCreator", fields: [createdById], references: [id])
   updatedBy  User?      @relation("DeliveryUpdater", fields: [updatedById], references: [id])

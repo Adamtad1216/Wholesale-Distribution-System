@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../../../middleware/auth.middleware.js";
 import { requirePermission } from "../../../middleware/permission.middleware.js";
 import { validate } from "../../../middleware/validation.middleware.js";
-import { sendSuccess } from "../../../utils/api-response.js";
+import { sendSuccess, sendPaginatedSuccess } from "../../../utils/api-response.js";
 import {
   getAssignedTasks,
   getTaskDetails,
@@ -88,7 +88,7 @@ router.get(
   async (req, res, next) => {
     try {
       const result = await getAssignedTasks(req.query, req.user);
-      sendSuccess(res, result);
+      sendPaginatedSuccess(res, result.data, result.meta);
     } catch (err) {
       next(err);
     }

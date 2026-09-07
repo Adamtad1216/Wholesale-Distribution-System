@@ -281,7 +281,31 @@ export async function login(data, req) {
   const user = await prisma.user.findUnique({
     where: { username: data.username },
     include: {
-      person: true,
+      person: {
+        include: {
+          employee: {
+            include: {
+              branch: true,
+              managedWarehouses: true,
+            },
+          },
+          customers: {
+            orderBy: { createdAt: 'desc' },
+            include: {
+              organization: {
+                include: {
+                  contacts: {
+                    include: {
+                      person: true,
+                    },
+                  },
+                },
+              },
+              paymentTerms: true,
+            },
+          },
+        },
+      },
       auditLogs: {
         take: 10,
         orderBy: { createdAt: 'desc' },
@@ -425,6 +449,8 @@ export async function login(data, req) {
     req,
   }).catch(() => {}); // fire-and-forget; audit failures never block login
 
+  const customer = user.person?.customers?.[0] || null;
+
   return {
     user: {
       id: user.id,
@@ -440,6 +466,27 @@ export async function login(data, req) {
     role: primaryRole,
     roles,
     permissions,
+    customer: customer
+      ? {
+          id: customer.id,
+          customerCode: customer.customerCode,
+          customerType: customer.customerType,
+          creditLimit: customer.creditLimit,
+          status: customer.status,
+          paymentTerms: customer.paymentTerms,
+          organization: customer.organization
+            ? {
+                id: customer.organization.id,
+                name: customer.organization.name,
+                registrationNumber: customer.organization.registrationNumber,
+                taxNumber: customer.organization.taxNumber,
+                phone: customer.organization.phone,
+                email: customer.organization.email,
+                address: customer.organization.address,
+              }
+            : null,
+        }
+      : null,
     accessToken,
     refreshToken,
   };
@@ -519,6 +566,12 @@ export async function getMe(userId) {
     include: {
       person: {
         include: {
+          employee: {
+            include: {
+              branch: true,
+              managedWarehouses: true,
+            },
+          },
           customers: {
             orderBy: { createdAt: 'desc' },
             include: {

@@ -14,9 +14,92 @@ import {
 } from "./salesOrders.warehouse.validation.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 
+import prisma from "../../../config/prisma.js";
+import { sendSuccess } from "../../../utils/api-response.js";
+
 const router = Router();
 
 router.use(authenticate);
+
+router.get("/storekeepers", async (req, res, next) => {
+  try {
+    const storekeepers = await prisma.employee.findMany({
+      where: {
+        status: "ACTIVE",
+        isArchived: false,
+        OR: [
+          {
+            person: {
+              user: {
+                userRoles: {
+                  some: {
+                    role: {
+                      name: { in: ["STORE_KEEPER", "STOREKEEPER"] },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            department: { contains: "Store", mode: "insensitive" },
+          },
+        ],
+      },
+      include: { person: true },
+      orderBy: { employeeCode: "asc" },
+    });
+    sendSuccess(res, storekeepers);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/drivers", async (req, res, next) => {
+  try {
+    const drivers = await prisma.employee.findMany({
+      where: {
+        status: "ACTIVE",
+        isArchived: false,
+        OR: [
+          {
+            person: {
+              user: {
+                userRoles: {
+                  some: {
+                    role: {
+                      name: "DRIVER",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          {
+            driverLicenseNumber: { not: null },
+          },
+        ],
+      },
+      include: { person: true },
+      orderBy: { employeeCode: "asc" },
+    });
+    sendSuccess(res, drivers);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/vehicles", async (req, res, next) => {
+  try {
+    const vehicles = await prisma.vehicle.findMany({
+      where: { status: "ACTIVE", isArchived: false },
+      orderBy: { plateNumber: "asc" },
+    });
+    sendSuccess(res, vehicles);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * @swagger

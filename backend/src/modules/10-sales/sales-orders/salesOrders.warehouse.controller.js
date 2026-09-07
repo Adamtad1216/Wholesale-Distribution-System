@@ -1,4 +1,4 @@
-import { sendSuccess } from "../../../utils/api-response.js";
+import { sendSuccess, sendPaginatedSuccess } from "../../../utils/api-response.js";
 import { AppError } from "../../../utils/errors.js";
 import {
   getApprovedOrders as getApprovedOrdersService,
@@ -23,7 +23,7 @@ export async function getApprovedOrders(req, res, next) {
     }
 
     const data = await getApprovedOrdersService(queryResult.data, req.user);
-    sendSuccess(res, data);
+    sendPaginatedSuccess(res, data.data, data.meta);
   } catch (err) {
     next(err);
   }

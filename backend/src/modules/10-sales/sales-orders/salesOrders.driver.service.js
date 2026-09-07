@@ -2,35 +2,57 @@ import prisma from "../../../config/prisma.js";
 import { AppError } from "../../../utils/errors.js";
 import { validateStatusTransition, recordStatusChange } from "./salesOrders.status.service.js";
 
-async function getEmployeeForUser(user) {
-  let personId;
-
+async function resolveUserAndEmployee(user) {
+  let dbUser;
   if (typeof user === "string") {
-    const dbUser = await prisma.user.findUnique({
+    dbUser = await prisma.user.findUnique({
       where: { id: user },
-      select: { personId: true },
+      include: {
+        person: true,
+        userRoles: { include: { role: true } },
+      },
     });
-
-    if (!dbUser) {
-      throw new AppError("User record not found", 404);
-    }
-
-    personId = dbUser.personId;
   } else {
-    personId = user.personId;
+    dbUser = user;
+    if (!dbUser.userRoles) {
+      dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        include: {
+          person: true,
+          userRoles: { include: { role: true } },
+        },
+      });
+    }
   }
 
-  const employee = await prisma.employee.findFirst({
-    where: {
-      personId,
-      isArchived: false,
-    },
-  });
+  if (!dbUser) {
+    throw new AppError("User record not found", 404);
+  }
 
-  if (!employee) {
+  const isPrivileged = dbUser.userRoles?.some((ur) =>
+    ["ADMIN", "SUPER_ADMIN", "WAREHOUSE_MANAGER"].includes(ur.role.name)
+  );
+
+  let employee = null;
+  if (dbUser.personId) {
+    employee = await prisma.employee.findFirst({
+      where: {
+        personId: dbUser.personId,
+        isArchived: false,
+      },
+    });
+  }
+
+  if (!employee && !isPrivileged) {
     throw new AppError("Employee record not found for this user", 404);
   }
 
+  return { user: dbUser, employee, isPrivileged };
+}
+
+async function getEmployeeForUser(user) {
+  const { employee, isPrivileged } = await resolveUserAndEmployee(user);
+  if (!employee && isPrivileged) return null;
   return employee;
 }
 
@@ -53,6 +75,7 @@ const DELIVERY_INCLUDE = {
   },
   vehicle: true,
   customer: true,
+  proofs: true,
 };
 
 export async function getAssignedDeliveries(reqQuery, user) {
@@ -60,12 +83,15 @@ export async function getAssignedDeliveries(reqQuery, user) {
   const limit = parseInt(reqQuery.limit, 10) || 10;
   const { status } = reqQuery;
 
-  const employee = await getEmployeeForUser(user);
+  const { employee, isPrivileged } = await resolveUserAndEmployee(user);
 
   const where = {
-    driverId: employee.id,
     isArchived: false,
   };
+
+  if (!isPrivileged && employee) {
+    where.driverId = employee.id;
+  }
 
   if (status) {
     where.status = status;
@@ -98,13 +124,15 @@ export async function getAssignedDeliveries(reqQuery, user) {
 }
 
 export async function getDeliveryDetails(deliveryId, user) {
-  const employee = await getEmployeeForUser(user);
+  const { employee, isPrivileged } = await resolveUserAndEmployee(user);
+
+  const where = { id: deliveryId };
+  if (!isPrivileged && employee) {
+    where.driverId = employee.id;
+  }
 
   const delivery = await prisma.delivery.findFirst({
-    where: {
-      id: deliveryId,
-      driverId: employee.id,
-    },
+    where,
     include: {
       ...DELIVERY_INCLUDE,
       items: {
@@ -123,14 +151,16 @@ export async function getDeliveryDetails(deliveryId, user) {
   return delivery;
 }
 
-export async function startDelivery(deliveryId, userId) {
-  const employee = await getEmployeeForUser(userId);
+export async function startDelivery(deliveryId, userArg) {
+  const { user: dbUser, employee, isPrivileged } = await resolveUserAndEmployee(userArg);
+
+  const where = { id: deliveryId };
+  if (!isPrivileged && employee) {
+    where.driverId = employee.id;
+  }
 
   const delivery = await prisma.delivery.findFirst({
-    where: {
-      id: deliveryId,
-      driverId: employee.id,
-    },
+    where,
     include: {
       salesOrder: true,
     },
@@ -147,7 +177,8 @@ export async function startDelivery(deliveryId, userId) {
     );
   }
 
-  await validateStatusTransition("DELIVERY_SCHEDULED", "OUT_FOR_DELIVERY", "DRIVER");
+  const actorRole = isPrivileged ? "ADMIN" : "DRIVER";
+  await validateStatusTransition("DELIVERY_SCHEDULED", "OUT_FOR_DELIVERY", actorRole);
 
   const updatedDelivery = await prisma.$transaction(async (tx) => {
     const updated = await tx.delivery.update({
@@ -172,7 +203,7 @@ export async function startDelivery(deliveryId, userId) {
       "OUT_FOR_DELIVERY",
       "OUT_FOR_DELIVERY",
       null,
-      userId
+      dbUser.id
     );
 
     return updated;
@@ -181,16 +212,19 @@ export async function startDelivery(deliveryId, userId) {
   return updatedDelivery;
 }
 
-export async function completeDelivery(deliveryId, proofData, userId) {
-  const employee = await getEmployeeForUser(userId);
+export async function completeDelivery(deliveryId, proofData, userArg) {
+  const { user: dbUser, employee, isPrivileged } = await resolveUserAndEmployee(userArg);
+
+  const where = { id: deliveryId };
+  if (!isPrivileged && employee) {
+    where.driverId = employee.id;
+  }
 
   const delivery = await prisma.delivery.findFirst({
-    where: {
-      id: deliveryId,
-      driverId: employee.id,
-    },
+    where,
     include: {
       salesOrder: true,
+      driver: { include: { person: true } },
     },
   });
 
@@ -198,21 +232,32 @@ export async function completeDelivery(deliveryId, proofData, userId) {
     throw new AppError("Delivery not found or not assigned to you", 404);
   }
 
-  if (delivery.salesOrder.status !== "OUT_FOR_DELIVERY") {
+  if (delivery.driverConfirmedAt) {
+    throw new AppError("Delivery handover has already been confirmed by the driver", 400);
+  }
+
+  const currentStatus = delivery.salesOrder.status;
+  if (!["OUT_FOR_DELIVERY", "DELIVERED"].includes(currentStatus)) {
     throw new AppError(
-      `Sales order status must be OUT_FOR_DELIVERY to complete delivery, but was ${delivery.salesOrder.status}`,
+      `Sales order status must be OUT_FOR_DELIVERY or DELIVERED to confirm handover, but was ${currentStatus}`,
       400
     );
   }
 
-  await validateStatusTransition("OUT_FOR_DELIVERY", "DELIVERED", "DRIVER");
+  const isCustomerAlreadyApproved = Boolean(delivery.customerConfirmedAt);
+  const nextStatus = isCustomerAlreadyApproved ? "COMPLETED" : "DELIVERED";
+  const actorRole = isPrivileged ? "ADMIN" : "DRIVER";
+
+  await validateStatusTransition(currentStatus, nextStatus, actorRole);
 
   const updatedDelivery = await prisma.$transaction(async (tx) => {
     const updated = await tx.delivery.update({
       where: { id: deliveryId },
       data: {
         status: "DELIVERED",
-        deliveryDate: new Date(),
+        driverConfirmedAt: new Date(),
+        driverNotes: proofData?.notes || null,
+        deliveryDate: isCustomerAlreadyApproved ? new Date() : (delivery.deliveryDate || new Date()),
       },
       include: DELIVERY_INCLUDE,
     });
@@ -221,9 +266,10 @@ export async function completeDelivery(deliveryId, proofData, userId) {
       await tx.deliveryProof.create({
         data: {
           deliveryId,
-          proofType: proofData.proofType,
-          recipientName: proofData.recipientName,
-          notes: proofData.notes,
+          proofType: proofData.proofType || "DRIVER_HANDOVER",
+          recipientName: proofData.recipientName || null,
+          notes: proofData.notes || null,
+          createdById: dbUser.id,
         },
       });
     }
@@ -231,17 +277,25 @@ export async function completeDelivery(deliveryId, proofData, userId) {
     await tx.salesOrder.update({
       where: { id: delivery.salesOrderId },
       data: {
-        status: "DELIVERED",
+        status: nextStatus,
       },
     });
 
+    const driverName = delivery.driver?.person
+      ? `${delivery.driver.person.firstName} ${delivery.driver.person.lastName || ""}`.trim()
+      : "Assigned Driver";
+
+    const reason = isCustomerAlreadyApproved
+      ? `Delivery handover dual-confirmed by both Driver (${driverName}) and Customer. Sales order COMPLETED.`
+      : `Driver (${driverName}) confirmed delivery handover. Waiting for Customer confirmation to complete sales order.`;
+
     await recordStatusChange(
       delivery.salesOrderId,
-      "OUT_FOR_DELIVERY",
-      "DELIVERED",
-      "DELIVERED",
-      null,
-      userId
+      currentStatus,
+      nextStatus,
+      isCustomerAlreadyApproved ? "COMPLETED" : "DELIVERED",
+      reason,
+      dbUser.id
     );
 
     return updated;

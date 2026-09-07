@@ -1,4 +1,26 @@
 import invoiceService from './invoice.service.js';
+import prisma from '../../config/prisma.js';
+
+function extractRoleNames(userOrRoles) {
+  if (!userOrRoles) return [];
+  if (typeof userOrRoles === 'string') return [userOrRoles.toUpperCase()];
+  if (Array.isArray(userOrRoles)) {
+    return userOrRoles
+      .map((ur) => {
+        if (typeof ur === 'string') return ur.toUpperCase();
+        if (ur?.role?.name) return ur.role.name.toUpperCase();
+        if (ur?.name) return ur.name.toUpperCase();
+        return '';
+      })
+      .filter(Boolean);
+  }
+  if (typeof userOrRoles === 'object') {
+    if (userOrRoles.userRoles) return extractRoleNames(userOrRoles.userRoles);
+    if (userOrRoles.roles) return extractRoleNames(userOrRoles.roles);
+    if (userOrRoles.role) return extractRoleNames(userOrRoles.role);
+  }
+  return [];
+}
 
 /**
  * Generate invoice upfront before delivery (Pre-payment flow)
@@ -53,6 +75,44 @@ export const getInvoices = async (req, res, next) => {
     if (req.query.customerId) filters.customerId = req.query.customerId;
     if (req.query.salesOrderId) filters.salesOrderId = req.query.salesOrderId;
 
+    if (req.user) {
+      const userRoles = extractRoleNames(req.user?.roles || req.user?.userRoles || req.user?.role);
+      const isStaff = userRoles.some((r) =>
+        ['ADMIN', 'SUPER_ADMIN', 'SALES_REPRESENTATIVE', 'SALES_REP', 'WAREHOUSE_MANAGER', 'ACCOUNTANT', 'FINANCE'].includes(r)
+      );
+
+      if (!isStaff) {
+        // Customer scoping
+        const customer = await prisma.customer.findFirst({
+          where: {
+            isArchived: false,
+            OR: [
+              { personId: req.user.personId },
+              { organization: { contacts: { some: { personId: req.user.personId } } } },
+              { createdById: req.user.id },
+            ],
+          },
+          select: { id: true },
+        });
+
+        if (customer) {
+          filters.customerId = customer.id;
+        } else {
+          // Check sales orders created by this user
+          const userOrders = await prisma.salesOrder.findMany({
+            where: { createdById: req.user.id },
+            select: { id: true },
+          });
+          const orderIds = userOrders.map((o) => o.id);
+          if (orderIds.length > 0) {
+            filters.salesOrderId = { in: orderIds };
+          } else {
+            return res.status(200).json({ success: true, data: [] });
+          }
+        }
+      }
+    }
+
     const invoices = await invoiceService.getInvoices(filters);
     res.status(200).json({ success: true, data: invoices });
   } catch (error) {
@@ -71,3 +131,17 @@ export const getInvoiceById = async (req, res, next) => {
     next(error);
   }
 };
+
+export const skipPayment = async (req, res, next) => {
+  try {
+    const result = await invoiceService.skipPayment(req.params.id, req.user?.id);
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Invoice marked as paid and stock reserved successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

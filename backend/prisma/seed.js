@@ -1,7 +1,8 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+import { seedAllWorkflowRolesAndUsers } from "./seed.sales.js";
 
 const connectionString = process.env.DATABASE_URL;
 const adapter = new PrismaPg({ connectionString });
@@ -130,11 +131,30 @@ const ALL_PERMISSIONS = [
     description: "Read products",
   },
 
+  // Sales Orders
   {
     name: "sales_orders:create",
     module: "sales_orders",
     action: "create",
     description: "Create sales orders",
+  },
+  {
+    name: "sales_orders:read",
+    module: "sales_orders",
+    action: "read",
+    description: "Read sales orders",
+  },
+  {
+    name: "sales_orders:update",
+    module: "sales_orders",
+    action: "update",
+    description: "Update sales orders",
+  },
+  {
+    name: "sales_orders:delete",
+    module: "sales_orders",
+    action: "delete",
+    description: "Delete sales orders",
   },
 
   {
@@ -314,7 +334,6 @@ async function ensureCustomerPermissions() {
 
   const allPermissions = await prisma.permission.findMany();
   const customerPermissions = [
-    "customers:read",
     "warehouses:read",
     "products:read",
     "sales_orders:create",
@@ -331,6 +350,44 @@ async function ensureCustomerPermissions() {
         data: { roleId: customerRole.id, permissionId: perm.id },
       });
       console.log(`Granted ${permName} to CUSTOMER role.`);
+    }
+  }
+}
+
+async function ensureSalesRepresentativePermissions() {
+  const salesRepRole = await prisma.role.upsert({
+    where: { name: "SALES_REPRESENTATIVE" },
+    update: { description: "Sales Representative" },
+    create: { name: "SALES_REPRESENTATIVE", description: "Sales Representative" },
+  });
+
+  if (!salesRepRole) return;
+
+  const allPermissions = await prisma.permission.findMany();
+  const salesRepPermissions = [
+    "sales_orders:create",
+    "sales_orders:read",
+    "sales_orders:update",
+    "sales_orders:delete",
+    "customers:read",
+    "products:read",
+    "warehouses:read",
+    "REPORT_VIEW_SALES",
+    "REPORT_VIEW_SALES_REPS",
+    "REPORT_VIEW_DASHBOARD",
+  ];
+
+  for (const permName of salesRepPermissions) {
+    const perm = allPermissions.find((p) => p.name === permName);
+    if (!perm) continue;
+    const existing = await prisma.rolePermission.findFirst({
+      where: { roleId: salesRepRole.id, permissionId: perm.id },
+    });
+    if (!existing) {
+      await prisma.rolePermission.create({
+        data: { roleId: salesRepRole.id, permissionId: perm.id },
+      });
+      console.log(`Granted ${permName} to SALES_REPRESENTATIVE role.`);
     }
   }
 }
@@ -508,6 +565,8 @@ async function main() {
     await ensureAdminPermissions(existingAdmin.id);
     console.log("Seed completed (idempotent).");
     await ensureCustomerPermissions();
+    await ensureSalesRepresentativePermissions();
+    await seedAllWorkflowRolesAndUsers();
     return;
   }
 
@@ -590,6 +649,8 @@ async function main() {
   });
 
   await ensureCustomerPermissions();
+  await ensureSalesRepresentativePermissions();
+  await seedAllWorkflowRolesAndUsers();
 
   console.log(
     "Seed completed successfully! The admin user is now a Super Admin with all permissions.",

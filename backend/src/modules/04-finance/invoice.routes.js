@@ -3,10 +3,13 @@ import {
   createFromOrder,
   createFromDelivery,
   getInvoices,
-  getInvoiceById
+  getInvoiceById,
+  skipPayment,
 } from './invoice.controller.js';
+import { authenticate } from '../../middleware/auth.middleware.js';
 
 const router = Router();
+router.use(authenticate);
 
 // Routes for Invoice generation
 /**
@@ -91,4 +94,24 @@ router.get('/', getInvoices);
  */
 router.get('/:id', getInvoiceById);
 
+/**
+ * @openapi
+ * /api/v1/invoices/{id}/skip-payment:
+ *   post:
+ *     summary: Fast-track / Skip payment for invoice (sets PAID, reserves stock, readies for warehouse prep)
+ *     tags: [04 - Finance]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Invoice marked as paid and stock reserved
+ */
+router.post('/:id/skip-payment', skipPayment);
+
 export default router;
+

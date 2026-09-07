@@ -38,6 +38,7 @@ export async function getProducts(filters) {
           warehouseStocks: {
             where: { warehouseId },
             select: {
+              warehouseId: true,
               quantity: true,
               reservedQuantity: true,
               availableQuantity: true,

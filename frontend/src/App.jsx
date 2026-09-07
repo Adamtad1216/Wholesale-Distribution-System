@@ -35,6 +35,11 @@ import Payments from './features/payments/pages/payments/Payments';
 import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
 import MySalesOrders from './features/sales-orders/pages/MySalesOrders';
 import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
+import SchedulePreparationPage from './features/sales-orders/pages/SchedulePreparationPage';
+import CustomerCatalog from './features/customer-portal/pages/CustomerCatalog';
+import CustomerInvoices from './features/customer-portal/pages/CustomerInvoices';
+import CustomerCredit from './features/customer-portal/pages/CustomerCredit';
+import DeliveriesPage from './features/deliveries/pages/DeliveriesPage';
 
 /**
  * AppRoutes — inner component mounted inside <Router>.
@@ -101,8 +106,8 @@ function AppRoutes() {
           <Route path="/branches" element={<BranchesPage />} />
         </Route>
 
-        {/* Other module routes */}
-        <Route element={<PermissionRoute permission="customers:read" />}>
+        {/* Other module routes - customer management restricted to staff & sales only */}
+        <Route element={<PermissionRoute permission="customers:read" roles={['ADMIN', 'SUPER_ADMIN', 'SALES_REPRESENTATIVE', 'SALES_REP', 'MANAGER', 'USER']} />}>
           <Route path="/customers" element={<Customers />} />
         </Route>
 
@@ -114,8 +119,16 @@ function AppRoutes() {
           <Route path="/payments" element={<Payments />} />
         </Route>
 
+        <Route element={<PermissionRoute permission="deliveries:read" />}>
+          <Route path="/deliveries" element={<DeliveriesPage />} />
+        </Route>
+
+        <Route path="/catalog" element={<CustomerCatalog />} />
+        <Route path="/invoices" element={<CustomerInvoices />} />
+        <Route path="/account/credit" element={<CustomerCredit />} />
         <Route path="/sales-orders/new" element={<NewSalesOrder />} />
         <Route path="/sales-orders" element={<MySalesOrders />} />
+        <Route path="/sales-orders/:id/schedule-preparation" element={<SchedulePreparationPage />} />
         <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
 
         {/* Default redirect inside the shell */}

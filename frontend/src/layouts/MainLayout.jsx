@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/layout/sidebar';
 import Header from '../components/layout/header';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,7 +23,9 @@ export default function MainLayout() {
 
         {/* Content Section */}
         <main className="main-content flex-1 overflow-y-auto p-6 md:p-8 relative z-10">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

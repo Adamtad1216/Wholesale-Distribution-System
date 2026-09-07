@@ -13,6 +13,7 @@ import {
 } from "./auth.controller.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 import { authenticate } from "../../../middleware/auth.middleware.js";
+import { authRateLimiter } from "../../../middleware/rate-limit.middleware.js";
 import {
   registerSchema,
   loginSchema,
@@ -133,7 +134,7 @@ router.post("/register", validate(registerSchema), registerUser);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/login", validate(loginSchema), loginUser);
+router.post("/login", authRateLimiter, validate(loginSchema), loginUser);
 
 /**
  * @swagger

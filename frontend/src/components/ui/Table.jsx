@@ -6,7 +6,7 @@ import React from 'react';
 
 export default function Table({ children, className = '', containerClassName = '' }) {
   return (
-    <div className={`bg-card900 border border-border backdrop-blur-xl rounded-lg overflow-hidden ui-table-container ${containerClassName}`}>
+    <div className={`bg-card border border-border rounded-xl overflow-hidden ui-table-container shadow-sm ${containerClassName}`}>
       <div className="overflow-x-auto">
         <table className={`w-full text-left text-sm text-foreground ${className}`}>
           {children}
@@ -18,7 +18,7 @@ export default function Table({ children, className = '', containerClassName = '
 
 export function TableHeader({ children, className = '' }) {
   return (
-    <thead className={`bg-muted800 text-muted-foreground uppercase text-xs tracking-wider border-b border-border ui-table-header ${className}`}>
+    <thead className={`bg-muted/40 text-muted-foreground uppercase text-xs tracking-wider border-b border-border ui-table-header ${className}`}>
       {children}
     </thead>
   );
@@ -36,7 +36,7 @@ export function TableRow({ children, className = '', onClick }) {
   return (
     <tr
       onClick={onClick}
-      className={`hover:bg-muted800 transition ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`hover:bg-muted/30 transition-colors ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
       {children}
     </tr>

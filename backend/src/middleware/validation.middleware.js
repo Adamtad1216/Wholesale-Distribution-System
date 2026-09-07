@@ -1,6 +1,19 @@
-export const validate = (schema) => {
+export const validate = (schema, source) => {
   return (req, res, next) => {
-    const result = schema.safeParse(req.body || {});
+    let dataToValidate;
+    if (source === 'params') {
+      dataToValidate = req.params;
+    } else if (source === 'query') {
+      dataToValidate = req.query;
+    } else if (source === 'body') {
+      dataToValidate = req.body || {};
+    } else if (req.method === 'GET' || req.method === 'DELETE') {
+      dataToValidate = { ...req.query, ...req.params };
+    } else {
+      dataToValidate = { ...req.params, ...(req.body || {}) };
+    }
+
+    const result = schema.safeParse(dataToValidate);
     if (!result.success) {
       return res.status(400).json({
         status: 'error',
@@ -8,7 +21,9 @@ export const validate = (schema) => {
         errors: result.error.flatten().fieldErrors,
       });
     }
-    req.body = result.data;
+    if (req.method !== 'GET' && req.method !== 'DELETE') {
+      req.body = result.data;
+    }
     next();
   };
 };

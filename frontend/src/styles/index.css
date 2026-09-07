@@ -443,6 +443,22 @@ body,
   color: var(--sidebar-primary-foreground, #1e3a8a);
 }
 
+/* Sidebar Custom Widgets & Alerts */
+.sidebar-widget-card {
+  background-color: var(--sidebar-accent) !important;
+  border: 1px solid var(--sidebar-border) !important;
+}
+
+.sidebar-alert-card {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.sidebar-profile-card {
+  background-color: var(--sidebar-accent) !important;
+  border: 1px solid var(--sidebar-border) !important;
+}
+
 /* ============================================================
    HEADER — uses CSS variables
    ============================================================ */
@@ -746,6 +762,31 @@ button *,
 /* Tailwind v4 border-border maps via @theme only. This rule fixes it globally. */
 .border-border {
   border-color: var(--color-border) !important;
+}
+
+/* ============================================================
+   BACKGROUND UTILITIES — solid theme colors
+   ============================================================ */
+
+.bg-card {
+  background-color: var(--color-card) !important;
+}
+
+.bg-popover {
+  background-color: var(--color-popover) !important;
+}
+
+.bg-muted {
+  background-color: var(--color-background) !important;
+}
+
+.light .bg-card,
+.light .bg-popover {
+  background-color: #ffffff !important;
+}
+
+.light .bg-muted {
+  background-color: #f1f5f9 !important;
 }
 
 /* ============================================================

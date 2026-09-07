@@ -11,15 +11,26 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
-async function resolveDefaultPriceTierId() {
-  return prisma.priceTier.findFirst({
+async function resolveDefaultPriceTierId(client = prisma) {
+  return client.priceTier.findFirst({
     where: { isDefault: true, status: "ACTIVE" },
     select: { id: true, name: true },
   });
 }
 
-async function resolveCustomerPriceTier(customerId, requestingUser) {
-  const customer = await prisma.customer.findUnique({
+async function resolveCustomerPriceTier(customerId, requestingUser, client = prisma) {
+  if (!customerId) {
+    const def = await resolveDefaultPriceTierId(client);
+    if (def) return def;
+    const firstTier = await client.priceTier.findFirst({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    if (firstTier) return firstTier;
+    throw new AppError("No active price tier configured in the system", 412);
+  }
+
+  const customer = await client.customer.findUnique({
     where: { id: customerId },
     select: {
       id: true,
@@ -31,6 +42,14 @@ async function resolveCustomerPriceTier(customerId, requestingUser) {
   });
 
   if (!customer) {
+    // If customer record not found, fall back to default price tier instead of hard-failing
+    const def = await resolveDefaultPriceTierId(client);
+    if (def) return def;
+    const firstTier = await client.priceTier.findFirst({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    if (firstTier) return firstTier;
     throw new AppError("Customer not found", 404);
   }
 
@@ -38,7 +57,7 @@ async function resolveCustomerPriceTier(customerId, requestingUser) {
     return customer.priceTier;
   }
 
-  const def = await resolveDefaultPriceTierId();
+  const def = await resolveDefaultPriceTierId(client);
   if (def) {
     return def;
   }
@@ -59,10 +78,10 @@ async function resolveCustomerPriceTier(customerId, requestingUser) {
   );
 }
 
-async function findProductPrice(productId, priceTierId, warehouseId) {
+async function findProductPrice(productId, priceTierId, warehouseId, client = prisma) {
   if (!priceTierId || !warehouseId) return null;
   const now = new Date();
-  const rows = await prisma.productPrice.findMany({
+  const rows = await client.productPrice.findMany({
     where: {
       productId,
       priceTierId,
@@ -74,10 +93,10 @@ async function findProductPrice(productId, priceTierId, warehouseId) {
   return valid[0] || null;
 }
 
-async function findBestDiscount({ productId, priceTierId, warehouseId, quantity }) {
+async function findBestDiscount({ productId, priceTierId, warehouseId, quantity }, client = prisma) {
   if (!priceTierId || !warehouseId) return null;
   const now = new Date();
-  const rows = await prisma.discountRule.findMany({
+  const rows = await client.discountRule.findMany({
     where: {
       status: "ACTIVE",
       OR: [{ productId: null }, { productId }],
@@ -104,12 +123,12 @@ function computeDiscountAmount(rule, subtotal) {
   return Math.max(0, Math.min(subtotal, v));
 }
 
-async function getQuotaConsumed(quota, customerId, warehouseId) {
+async function getQuotaConsumed(quota, customerId, warehouseId, client = prisma) {
   if (!quota || !customerId) return 0;
   const start = new Date(quota.startsAt);
   const end = new Date(quota.endsAt);
 
-  const matching = await prisma.salesQuota.findMany({
+  const matching = await client.salesQuota.findMany({
     where: {
       OR: [{ id: quota.id }],
     },
@@ -117,17 +136,17 @@ async function getQuotaConsumed(quota, customerId, warehouseId) {
   });
   if (matching.length === 0) return 0;
 
-  const usages = await prisma.salesQuotaUsage.findMany({
+  const usages = await client.salesQuotaUsage.findMany({
     where: { quotaId: { in: matching.map((m) => m.id) }, customerId },
     select: { quantity: true },
   });
   return usages.reduce((s, u) => s + Number(u.quantity), 0);
 }
 
-async function findActiveQuotas({ customerId, productId, warehouseId, priceTierId }) {
+async function findActiveQuotas({ customerId, productId, warehouseId, priceTierId }, client = prisma) {
   if (!warehouseId) return [];
   const now = new Date();
-  const rows = await prisma.salesQuota.findMany({
+  const rows = await client.salesQuota.findMany({
     where: {
       status: "ACTIVE",
       AND: [
@@ -148,23 +167,21 @@ export async function calculateSalesOrderPricing({
   warehouseId,
   requestingUser,
   enforceQuota = false,
+  client = prisma,
 }) {
   if (!items || items.length === 0) {
     throw new AppError("Items array cannot be empty", 400);
-  }
-  if (!customerId) {
-    throw new AppError("customerId is required for pricing", 400);
   }
 
   let priceTier = null;
   let priceTierId = null;
   if (warehouseId) {
-    priceTier = await resolveCustomerPriceTier(customerId, requestingUser);
+    priceTier = await resolveCustomerPriceTier(customerId, requestingUser, client);
     priceTierId = priceTier.id;
   }
 
   const productIds = [...new Set(items.map((it) => it.productId))];
-  const products = await prisma.product.findMany({
+  const products = await client.product.findMany({
     where: { id: { in: productIds }, isArchived: false, status: "ACTIVE" },
     include: { category: true, brand: true, unit: true },
   });
@@ -199,7 +216,7 @@ export async function calculateSalesOrderPricing({
 
     let productPrice = null;
     if (priceTierId && warehouseId) {
-      productPrice = await findProductPrice(it.productId, priceTierId, warehouseId);
+      productPrice = await findProductPrice(it.productId, priceTierId, warehouseId, client);
     }
 
     if (productPrice) {
@@ -220,7 +237,7 @@ export async function calculateSalesOrderPricing({
         priceTierId,
         warehouseId,
         quantity,
-      });
+      }, client);
       discountAmount = computeDiscountAmount(discount, lineSubtotal);
       discountRuleId = discount?.id ?? null;
     }
@@ -232,10 +249,10 @@ export async function calculateSalesOrderPricing({
         productId: it.productId,
         warehouseId,
         priceTierId,
-      });
+      }, client);
 
       for (const quota of quotas) {
-        const consumed = await getQuotaConsumed(quota, customerId, warehouseId);
+        const consumed = await getQuotaConsumed(quota, customerId, warehouseId, client);
         const max = Number(quota.maxQuantity);
         const projected = consumed + quantity;
         if (projected > max) {
