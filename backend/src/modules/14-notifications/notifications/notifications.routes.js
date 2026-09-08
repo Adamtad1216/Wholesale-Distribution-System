@@ -111,6 +111,7 @@ router.get("/", validate(notificationQuerySchema), listNotifications);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get("/unread-count", getUnread);
+router.get("/unread", getUnread);
 
 /**
  * @swagger

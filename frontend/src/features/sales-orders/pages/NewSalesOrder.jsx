@@ -40,6 +40,9 @@ import {
   Building,
   Mail,
   Phone,
+  Truck,
+  Map as MapIcon,
+  Layers,
 } from 'lucide-react';
 
 import ProductImage from '../../../components/sales-orders/ProductImage';
@@ -88,7 +91,7 @@ function QuotationPreview({
   const getProduct = (productId) => productsData?.find((p) => p.id === productId);
 
   return (
-    <Card id="quotation-preview" className="overflow-hidden border border-border bg-card shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300">
+    <Card id="quotation-preview" className="scroll-mt-6 overflow-hidden border border-border bg-card shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 mb-5 border-b border-border/70">
         <div className="flex items-center gap-3">
@@ -338,6 +341,11 @@ export default function NewSalesOrder() {
   const [warehouseId, setWarehouseId] = useState('');
   const [items, setItems] = useState([]);
   const [requiredDate, setRequiredDate] = useState('');
+  const [fulfillmentType, setFulfillmentType] = useState('DELIVERY'); // 'DELIVERY' | 'SELF_PICKUP'
+  const [pickupPersonName, setPickupPersonName] = useState('');
+  const [pickupPhone, setPickupPhone] = useState('');
+  const [pickupVehiclePlate, setPickupVehiclePlate] = useState('');
+  const [pickupNotes, setPickupNotes] = useState('');
   const [deliveryLat, setDeliveryLat] = useState('');
   const [deliveryLng, setDeliveryLng] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -347,6 +355,7 @@ export default function NewSalesOrder() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [mapCenter, setMapCenter] = useState([9.02, 38.75]);
+  const [mapLayer, setMapLayer] = useState('street'); // 'street' | 'satellite'
   const searchDebounceRef = useRef(null);
   const searchContainerRef = useRef(null);
 
@@ -429,7 +438,8 @@ export default function NewSalesOrder() {
     queryKey: ['warehouses'],
     queryFn: async () => {
       const res = await api.get('/warehouses', { params: { limit: 100, status: 'ACTIVE' } });
-      return res.data?.data || res.data || [];
+      const list = res.data?.data || res.data || [];
+      return Array.isArray(list) ? list : [];
     },
   });
 
@@ -492,6 +502,11 @@ export default function NewSalesOrder() {
       setItems([]);
       setWarehouseId('');
       setRequiredDate('');
+      setFulfillmentType('DELIVERY');
+      setPickupPersonName('');
+      setPickupPhone('');
+      setPickupVehiclePlate('');
+      setPickupNotes('');
       setDeliveryLat('');
       setDeliveryLng('');
       setDeliveryAddress('');
@@ -676,7 +691,19 @@ export default function NewSalesOrder() {
   useEffect(() => {
     if (preview) {
       setTimeout(() => {
-        document.getElementById('quotation-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = document.getElementById('quotation-preview');
+        if (el) {
+          const mainContainer = el.closest('main');
+          if (mainContainer) {
+            const elRect = el.getBoundingClientRect();
+            const containerRect = mainContainer.getBoundingClientRect();
+            const targetScrollTop = mainContainer.scrollTop + (elRect.top - containerRect.top) - 24;
+            mainContainer.scrollTo({
+              top: Math.max(0, targetScrollTop),
+              behavior: 'smooth',
+            });
+          }
+        }
       }, 100);
     }
   }, [preview]);
@@ -700,8 +727,13 @@ export default function NewSalesOrder() {
     const payload = {
       warehouseId,
       requiredDate: requiredDate || undefined,
+      fulfillmentType,
+      pickupPersonName: fulfillmentType === 'SELF_PICKUP' && pickupPersonName?.trim() ? pickupPersonName.trim() : undefined,
+      pickupPhone: fulfillmentType === 'SELF_PICKUP' && pickupPhone?.trim() ? pickupPhone.trim() : undefined,
+      pickupVehiclePlate: fulfillmentType === 'SELF_PICKUP' && pickupVehiclePlate?.trim() ? pickupVehiclePlate.trim() : undefined,
+      pickupNotes: fulfillmentType === 'SELF_PICKUP' && pickupNotes?.trim() ? pickupNotes.trim() : undefined,
       deliveryLocation:
-        deliveryLat || deliveryLng
+        fulfillmentType === 'DELIVERY' && (deliveryLat || deliveryLng)
           ? {
               latitude: Number(deliveryLat) || 0,
               longitude: Number(deliveryLng) || 0,
@@ -1273,8 +1305,8 @@ export default function NewSalesOrder() {
               <Warehouse className="w-4 h-4 text-cyan-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Warehouse & Delivery</h2>
-              <p className="text-xs text-muted-foreground">Select warehouse and set delivery location</p>
+              <h2 className="text-lg font-semibold text-foreground">Warehouse & Fulfillment</h2>
+              <p className="text-xs text-muted-foreground">Select warehouse and choose fulfillment method</p>
             </div>
           </div>
 
@@ -1314,6 +1346,134 @@ export default function NewSalesOrder() {
               />
             </div>
           </div>
+
+          {/* Fulfillment Method Selector */}
+          <div className="mb-5">
+            <label className="block text-xs font-semibold text-foreground mb-2">
+              Fulfillment Method
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
+              <button
+                type="button"
+                onClick={() => setFulfillmentType('DELIVERY')}
+                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                  fulfillmentType === 'DELIVERY'
+                    ? 'border-primary bg-primary/10 text-foreground ring-1 ring-primary'
+                    : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                    fulfillmentType === 'DELIVERY'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold">Standard Delivery</div>
+                  <div className="text-[11px] text-muted-foreground">Fleet dispatch to pinned address</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFulfillmentType('SELF_PICKUP');
+                  setDeliveryLat('');
+                  setDeliveryLng('');
+                  setDeliveryAddress('');
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                  fulfillmentType === 'SELF_PICKUP'
+                    ? 'border-primary bg-primary/10 text-foreground ring-1 ring-primary'
+                    : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                    fulfillmentType === 'SELF_PICKUP'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <Warehouse className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold">Self-Pickup at Warehouse</div>
+                  <div className="text-[11px] text-muted-foreground">Direct collection from warehouse dock</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Conditional: Self-Pickup details */}
+          {fulfillmentType === 'SELF_PICKUP' && (
+            <div className="space-y-4 pt-1">
+              <div className="border border-border/70 rounded-xl p-4 bg-muted/20 space-y-4">
+                <div className="text-xs font-semibold text-foreground">
+                  Pickup & Collector Information (Optional)
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">
+                      Authorized Collector Name
+                    </label>
+                    <input
+                      type="text"
+                      value={pickupPersonName}
+                      onChange={(e) => setPickupPersonName(e.target.value)}
+                      placeholder="e.g. Dawit Haile"
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">
+                      Collector Contact Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={pickupPhone}
+                      onChange={(e) => setPickupPhone(e.target.value)}
+                      placeholder="e.g. +251 911 000000"
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1.5">
+                      Vehicle Plate Number
+                    </label>
+                    <input
+                      type="text"
+                      value={pickupVehiclePlate}
+                      onChange={(e) => setPickupVehiclePlate(e.target.value)}
+                      placeholder="e.g. 3-B12345 AA"
+                      className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1.5">
+                    Pickup Instructions / Remarks
+                  </label>
+                  <input
+                    type="text"
+                    value={pickupNotes}
+                    onChange={(e) => setPickupNotes(e.target.value)}
+                    placeholder="e.g. Bringing light truck for collection around 2:00 PM"
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Conditional: Standard Delivery Map */}
+          {fulfillmentType === 'DELIVERY' && (
+            <>
 
           <div className="mb-4" ref={searchContainerRef}>
             <div className="flex items-center justify-between mb-1.5">
@@ -1403,17 +1563,57 @@ export default function NewSalesOrder() {
             </p>
           </div>
 
-          <div className="h-[500px] w-full rounded-xl overflow-hidden border border-border shadow-inner">
+          <div className="h-[500px] w-full rounded-xl overflow-hidden border border-border shadow-inner relative">
+            {/* Map Layer Switcher (Street Map vs Satellite Imagery) */}
+            <div className="absolute top-3 right-3 z-[1000] flex items-center bg-card/90 backdrop-blur-md rounded-xl p-1 border border-border/80 shadow-lg text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setMapLayer('street')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer text-xs ${
+                  mapLayer === 'street'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                <span>Street Map</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapLayer('satellite')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer text-xs ${
+                  mapLayer === 'satellite'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Satellite</span>
+              </button>
+            </div>
+
             <MapContainer
               center={mapCenter}
               zoom={13}
               className="h-full w-full"
               style={{ background: '#0b1120' }}
             >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+              {mapLayer === 'satellite' ? (
+                <TileLayer
+                  key="satellite-layer"
+                  attribution='Tiles &copy; Google Maps'
+                  url="https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                  subdomains={['0', '1', '2', '3']}
+                  maxZoom={20}
+                />
+              ) : (
+                <TileLayer
+                  key="street-layer"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  maxZoom={19}
+                />
+              )}
               {markerPosition && (
                 <Marker position={markerPosition}>
                   <Popup>
@@ -1458,7 +1658,9 @@ export default function NewSalesOrder() {
               </button>
             </div>
           )}
-        </Card>
+        </>
+      )}
+    </Card>
 
         {warehouseId && (
           <Card>

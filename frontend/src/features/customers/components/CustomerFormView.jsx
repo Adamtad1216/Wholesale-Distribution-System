@@ -9,6 +9,7 @@ export default function CustomerFormView({
   setFormData,
   submitting,
   paymentTerms,
+  priceTiers = [],
   handleSubmit,
   handleBackToList,
   getCustomerDisplayName,
@@ -157,6 +158,25 @@ export default function CustomerFormView({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">Assigned Price Tier</label>
+              <select
+                value={formData.priceTierId || ''}
+                onChange={(e) => setFormData({ ...formData, priceTierId: e.target.value || '' })}
+                className="w-full px-3.5 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm focus:outline-none focus:border-violet-500"
+              >
+                <option value="">System Default Tier</option>
+                {priceTiers.map((pt) => (
+                  <option key={pt.id} value={pt.id}>
+                    {pt.name} {pt.isDefault ? '(Default)' : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Determines catalog pricing brackets and volume discounts applied to this customer.
+              </p>
             </div>
 
             <div className="sm:col-span-3">

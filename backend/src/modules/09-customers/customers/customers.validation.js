@@ -19,6 +19,7 @@ export const createCustomerSchema = z.discriminatedUnion('customerType', [
     customerCode: z.string().min(1).max(50).optional(),
     creditLimit: z.coerce.number().min(0).default(0),
     paymentTermsId: z.string().uuid().optional(),
+    priceTierId: z.string().uuid().optional().nullable(),
     status: z.string().default('ACTIVE'),
     person: z.object({
       firstName: z.string().min(1).max(100),
@@ -36,6 +37,7 @@ export const createCustomerSchema = z.discriminatedUnion('customerType', [
     customerCode: z.string().min(1).max(50).optional(),
     creditLimit: z.coerce.number().min(0).default(0),
     paymentTermsId: z.string().uuid().optional(),
+    priceTierId: z.string().uuid().optional().nullable(),
     status: z.string().default('ACTIVE'),
     organization: z.object({
       name: z.string().min(1).max(255),
@@ -66,6 +68,7 @@ export const updateCustomerSchema = z.object({
   customerType: z.enum(['PERSON', 'ORGANIZATION']).optional(),
   creditLimit: z.coerce.number().min(0).optional(),
   paymentTermsId: z.string().uuid().optional().nullable(),
+  priceTierId: z.string().uuid().optional().nullable(),
   status: z.string().optional(),
   person: z
     .object({

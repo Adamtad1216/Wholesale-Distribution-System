@@ -1,6 +1,7 @@
 import prisma from "../../../config/prisma.js";
 import { AppError } from "../../../utils/errors.js";
 import { logAudit } from "../../../middleware/audit.middleware.js";
+import { getQuotaPeriodBounds } from "../shared/pricing.service.js";
 
 function serialize(q) {
   return {
@@ -242,8 +243,25 @@ export async function getQuotaConsumptionForCustomer({ customerId, productId, wa
 
   const results = [];
   for (const quota of matching) {
+    const periodBounds = getQuotaPeriodBounds(quota.period, now);
+    const quotaStart = quota.startsAt ? new Date(quota.startsAt) : null;
+    const quotaEnd = quota.endsAt ? new Date(quota.endsAt) : null;
+    const windowStart = quotaStart && quotaStart > periodBounds.start ? quotaStart : periodBounds.start;
+    const windowEnd = quotaEnd && quotaEnd < periodBounds.end ? quotaEnd : periodBounds.end;
+
+    const where = {
+      quotaId: quota.id,
+      createdAt: {
+        gte: windowStart,
+        lte: windowEnd,
+      },
+    };
+    if (quota.customerId) {
+      where.customerId = customerId;
+    }
+
     const usages = await prisma.salesQuotaUsage.findMany({
-      where: { quotaId: quota.id, customerId },
+      where,
       select: { quantity: true },
     });
     const consumed = usages.reduce((s, u) => s + Number(u.quantity), 0);

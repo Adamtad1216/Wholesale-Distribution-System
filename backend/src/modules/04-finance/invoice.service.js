@@ -1,5 +1,9 @@
 import prisma from '../../config/prisma.js';
 import logger from '../../utils/logger.js';
+import {
+  sendNotificationToCustomer,
+  sendNotificationToRoles,
+} from '../../utils/notifications.js';
 
 class InvoiceService {
   /**
@@ -82,6 +86,14 @@ class InvoiceService {
         }
       },
       include: { items: true }
+    });
+
+    sendNotificationToCustomer({
+      customerId: order.customerId,
+      title: "Commercial Invoice Issued",
+      message: `Commercial Invoice #${newInvoice.invoiceNumber} has been issued for order #${order.orderNumber}. Amount due: $${Number(newInvoice.total).toFixed(2)}.`,
+      type: "INVOICE_ISSUED",
+      createdById,
     });
 
     return newInvoice;
@@ -210,148 +222,8 @@ class InvoiceService {
         paymentAllocations: { include: { payment: true } }
       }
     });
-  }
-
-  /**
-   * Skip Payment / Fast-Track Payment
-   * 1. Sets invoice to PAID and balance to 0
-   * 2. Reserves stock for each sales order item in warehouse_stocks & creates stock_reservations
-   * 3. Sets sales order to SALES_REP_APPROVED so Warehouse Manager can schedule preparation
-   */
-  async skipPayment(id, userId = null) {
-    const invoice = await prisma.invoice.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        salesOrder: {
-          include: {
-            items: { include: { product: true } },
-            warehouse: true,
-            customer: true,
-          },
-        },
-      },
-    });
-
-    if (!invoice) {
-      throw new Error(`Invoice with ID ${id} not found`);
-    }
-
-    if (invoice.status === 'PAID') {
-      return { invoice, message: 'Invoice is already paid' };
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Mark invoice as PAID
-      const updatedInvoice = await tx.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          status: 'PAID',
-          balance: 0,
-          updatedAt: new Date(),
-        },
-        include: { items: true, customer: true, salesOrder: true },
-      });
-
-      // 2. Create Payment record and allocation for financial consistency
-      await tx.payment.create({
-        data: {
-          customerId: invoice.customerId,
-          orderId: invoice.salesOrderId || undefined,
-          amount: invoice.total,
-          currency: 'ETB',
-          status: 'COMPLETED',
-          method: 'CASH',
-          paidAt: new Date(),
-          paymentDate: new Date(),
-          createdById: userId || null,
-          allocations: {
-            create: {
-              invoiceId: invoice.id,
-              amount: invoice.total,
-              createdById: userId || null,
-            },
-          },
-        },
-      });
-
-      // 3. Stock Reservation: reserve stock for sales order items
-      if (invoice.salesOrderId && invoice.salesOrder) {
-        const order = invoice.salesOrder;
-        const existingReservations = await tx.stockReservation.findMany({
-          where: { salesOrderId: order.id, isArchived: false },
-        });
-
-        // Reserve stock if not already reserved
-        if (existingReservations.length === 0) {
-          for (const item of order.items) {
-            const stock = await tx.warehouseStock.findFirst({
-              where: {
-                warehouseId: order.warehouseId,
-                productId: item.productId,
-                isArchived: false,
-              },
-            });
-
-            // Create StockReservation record
-            await tx.stockReservation.create({
-              data: {
-                salesOrderId: order.id,
-                warehouseId: order.warehouseId,
-                productId: item.productId,
-                quantity: item.quantity,
-                status: 'RESERVED',
-                createdById: userId || null,
-              },
-            });
-
-            // Increment reserved quantity and decrement available stock
-            if (stock) {
-              await tx.warehouseStock.update({
-                where: { id: stock.id },
-                data: {
-                  reservedQuantity: { increment: item.quantity },
-                  availableQuantity: { decrement: item.quantity },
-                  updatedById: userId || null,
-                  updatedAt: new Date(),
-                },
-              });
-            }
-          }
-        }
-
-        // 4. Ensure sales order status is SALES_REP_APPROVED (ready for Warehouse Prep Queue)
-        if (order.status !== 'SALES_REP_APPROVED') {
-          await tx.salesOrder.update({
-            where: { id: order.id },
-            data: {
-              status: 'SALES_REP_APPROVED',
-              updatedAt: new Date(),
-            },
-          });
-
-          await tx.salesOrderStatusHistory.create({
-            data: {
-              salesOrderId: order.id,
-              fromStatus: order.status,
-              toStatus: 'SALES_REP_APPROVED',
-              action: 'INVOICE_PAID',
-              reason: 'Invoice settled via Skip Payment & stock reserved',
-              changedById: userId || null,
-            },
-          });
-        }
-
-        // 5. Log notification for fulfillment team
-        logger.info(`Invoice Paid & Stock Reserved: Invoice ${invoice.invoiceNumber} paid for Order ${order.orderNumber}. Stock has been reserved for warehouse preparation.`);
-      }
-
-      return updatedInvoice;
-    });
-
-    return result;
+    return invoice;
   }
 }
 
 export default new InvoiceService();
-

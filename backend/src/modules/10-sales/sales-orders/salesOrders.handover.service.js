@@ -1,6 +1,13 @@
 import prisma from "../../../config/prisma.js";
 import { AppError } from "../../../utils/errors.js";
 import { validateStatusTransition, recordStatusChange } from "./salesOrders.status.service.js";
+import { hasPermission } from "../../../middleware/permission.middleware.js";
+import {
+  sendNotificationToCustomer,
+  sendNotificationToEmployee,
+  sendNotificationToRoles,
+} from "../../../utils/notifications.js";
+
 
 /**
  * Customer confirms delivery receipt and handover.
@@ -38,9 +45,12 @@ export async function confirmCustomerHandover(salesOrderId, payload = {}, user) 
     throw new AppError("Sales order not found", 404);
   }
 
-  const isPrivileged = user.userRoles?.some((ur) =>
-    ["ADMIN", "SUPER_ADMIN"].includes(ur.role?.name || ur.role)
-  );
+  const isPrivileged =
+    user.userRoles?.some((ur) =>
+      ["ADMIN", "SUPER_ADMIN"].includes(ur.role?.name || ur.role)
+    ) ||
+    hasPermission(user, "deliveries:confirm_any");
+
 
   let userCustomerId = user.customer?.id || user.person?.customer?.id;
   if (!userCustomerId && user.personId) {
@@ -153,6 +163,44 @@ export async function confirmCustomerHandover(salesOrderId, payload = {}, user) 
         : "Receipt confirmed! Order will be marked COMPLETED once Driver also confirms handover.",
     };
   });
+
+  if (updatedResult.isDualConfirmed) {
+    sendNotificationToCustomer({
+      customerId: salesOrder.customerId,
+      title: "Sales Order Completed",
+      message: `Delivery handover for order #${salesOrder.orderNumber} confirmed by both parties. Order completed!`,
+      type: "SALES_ORDER_COMPLETED",
+      createdById: user.id,
+    });
+
+    if (latestDelivery.driverId) {
+      sendNotificationToEmployee({
+        employeeId: latestDelivery.driverId,
+        title: "Delivery Run Completed",
+        message: `Order #${salesOrder.orderNumber} dual-confirmed by customer. Run completed!`,
+        type: "DELIVERY_COMPLETED",
+        createdById: user.id,
+      });
+    }
+
+    sendNotificationToRoles({
+      roleNames: ["WAREHOUSE_MANAGER", "ADMIN", "SUPER_ADMIN"],
+      title: "Order Completed",
+      message: `Order #${salesOrder.orderNumber} delivery dual-confirmed and completed.`,
+      type: "SALES_ORDER_COMPLETED",
+      createdById: user.id,
+    });
+  } else {
+    if (latestDelivery.driverId) {
+      sendNotificationToEmployee({
+        employeeId: latestDelivery.driverId,
+        title: "Customer Confirmed Handover",
+        message: `Customer confirmed receipt of order #${salesOrder.orderNumber}. Please submit your driver sign-off.`,
+        type: "HANDOVER_PENDING",
+        createdById: user.id,
+      });
+    }
+  }
 
   return updatedResult;
 }

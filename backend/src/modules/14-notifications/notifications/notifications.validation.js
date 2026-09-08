@@ -5,6 +5,9 @@ export const notificationQuerySchema = z.object({
   limit: z.coerce.number().int().positive().default(10),
   isRead: z.coerce.boolean().optional(),
   type: z.string().optional(),
+  module: z.string().optional(),
+  scope: z.string().optional(),
+  all: z.coerce.boolean().optional(),
 });
 
 export const notificationIdSchema = z.object({

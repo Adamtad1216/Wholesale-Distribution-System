@@ -2,7 +2,6 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
-import { seedAllWorkflowRolesAndUsers } from "./seed.sales.js";
 
 const connectionString = process.env.DATABASE_URL;
 const adapter = new PrismaPg({ connectionString });
@@ -13,7 +12,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@example.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@123";
 const ADMIN_FULL_NAME = process.env.ADMIN_FULL_NAME || "System Administrator";
 
-const ALL_PERMISSIONS = [
+export const ALL_PERMISSIONS = [
   // Wildcard Permission — Unrestricted System Access
   {
     name: "*",
@@ -100,6 +99,31 @@ const ALL_PERMISSIONS = [
   },
 
   {
+    name: "regions:create",
+    module: "regions",
+    action: "create",
+    description: "Create regions",
+  },
+  {
+    name: "regions:read",
+    module: "regions",
+    action: "read",
+    description: "Read regions",
+  },
+  {
+    name: "regions:update",
+    module: "regions",
+    action: "update",
+    description: "Update regions",
+  },
+  {
+    name: "regions:delete",
+    module: "regions",
+    action: "delete",
+    description: "Delete regions",
+  },
+
+  {
     name: "warehouses:create",
     module: "warehouses",
     action: "create",
@@ -123,15 +147,244 @@ const ALL_PERMISSIONS = [
     action: "delete",
     description: "Delete warehouses",
   },
+  {
+    name: "warehouses:manage_all",
+    module: "warehouses",
+    action: "manage_all",
+    description: "Manage all warehouses without regional or manager scoping",
+  },
 
+  // Product Catalog
+  {
+    name: "products:create",
+    module: "products",
+    action: "create",
+    description: "Create products",
+  },
   {
     name: "products:read",
     module: "products",
     action: "read",
     description: "Read products",
   },
+  {
+    name: "products:update",
+    module: "products",
+    action: "update",
+    description: "Update products",
+  },
+  {
+    name: "products:delete",
+    module: "products",
+    action: "delete",
+    description: "Delete products",
+  },
 
-  // Sales Orders
+  {
+    name: "categories:create",
+    module: "categories",
+    action: "create",
+    description: "Create product categories",
+  },
+  {
+    name: "categories:read",
+    module: "categories",
+    action: "read",
+    description: "Read product categories",
+  },
+  {
+    name: "categories:update",
+    module: "categories",
+    action: "update",
+    description: "Update product categories",
+  },
+  {
+    name: "categories:delete",
+    module: "categories",
+    action: "delete",
+    description: "Delete product categories",
+  },
+
+  {
+    name: "brands:create",
+    module: "brands",
+    action: "create",
+    description: "Create brands",
+  },
+  {
+    name: "brands:read",
+    module: "brands",
+    action: "read",
+    description: "Read brands",
+  },
+  {
+    name: "brands:update",
+    module: "brands",
+    action: "update",
+    description: "Update brands",
+  },
+  {
+    name: "brands:delete",
+    module: "brands",
+    action: "delete",
+    description: "Delete brands",
+  },
+
+  {
+    name: "units:create",
+    module: "units",
+    action: "create",
+    description: "Create units of measure",
+  },
+  {
+    name: "units:read",
+    module: "units",
+    action: "read",
+    description: "Read units of measure",
+  },
+  {
+    name: "units:update",
+    module: "units",
+    action: "update",
+    description: "Update units of measure",
+  },
+  {
+    name: "units:delete",
+    module: "units",
+    action: "delete",
+    description: "Delete units of measure",
+  },
+
+  {
+    name: "warehouse-selling-prices:create",
+    module: "products",
+    action: "create",
+    description: "Create warehouse selling prices",
+  },
+  {
+    name: "warehouse-selling-prices:read",
+    module: "products",
+    action: "read",
+    description: "Read warehouse selling prices",
+  },
+  {
+    name: "warehouse-selling-prices:update",
+    module: "products",
+    action: "update",
+    description: "Update warehouse selling prices",
+  },
+  {
+    name: "warehouse-selling-prices:delete",
+    module: "products",
+    action: "delete",
+    description: "Delete warehouse selling prices",
+  },
+
+  // Inventory Management
+  {
+    name: "inventory:stock:create",
+    module: "inventory",
+    action: "create",
+    description: "Create inventory stock records",
+  },
+  {
+    name: "inventory:stock:read",
+    module: "inventory",
+    action: "read",
+    description: "Read warehouse inventory stock",
+  },
+  {
+    name: "inventory:stock:update",
+    module: "inventory",
+    action: "update",
+    description: "Update warehouse stock levels",
+  },
+  {
+    name: "inventory:stock:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Delete warehouse stock records",
+  },
+  {
+    name: "inventory:adjustments:create",
+    module: "inventory",
+    action: "create",
+    description: "Create inventory stock adjustments",
+  },
+  {
+    name: "inventory:adjustments:read",
+    module: "inventory",
+    action: "read",
+    description: "Read inventory stock adjustments",
+  },
+  {
+    name: "inventory:adjustments:update",
+    module: "inventory",
+    action: "update",
+    description: "Update inventory stock adjustments",
+  },
+  {
+    name: "inventory:adjustments:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Delete inventory stock adjustments",
+  },
+  {
+    name: "inventory:adjustments:approve",
+    module: "inventory",
+    action: "approve",
+    description: "Approve inventory stock adjustments",
+  },
+  {
+    name: "inventory:reservations:create",
+    module: "inventory",
+    action: "create",
+    description: "Create stock reservations",
+  },
+  {
+    name: "inventory:reservations:read",
+    module: "inventory",
+    action: "read",
+    description: "Read stock reservations",
+  },
+  {
+    name: "inventory:reservations:release",
+    module: "inventory",
+    action: "release",
+    description: "Release reserved stock back to inventory",
+  },
+  {
+    name: "inventory:reservations:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Delete or cancel stock reservations",
+  },
+  {
+    name: "inventory:transfers:create",
+    module: "inventory",
+    action: "create",
+    description: "Create inter-warehouse transfers",
+  },
+  {
+    name: "inventory:transfers:read",
+    module: "inventory",
+    action: "read",
+    description: "Read inter-warehouse transfers",
+  },
+  {
+    name: "inventory:transfers:update",
+    module: "inventory",
+    action: "update",
+    description: "Update inter-warehouse transfers",
+  },
+  {
+    name: "inventory:transfers:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Delete inter-warehouse transfers",
+  },
+
+  // Sales Orders & Fulfillment
   {
     name: "sales_orders:create",
     module: "sales_orders",
@@ -142,7 +395,13 @@ const ALL_PERMISSIONS = [
     name: "sales_orders:read",
     module: "sales_orders",
     action: "read",
-    description: "Read sales orders",
+    description: "Read sales orders (scoped)",
+  },
+  {
+    name: "sales_orders:read_all",
+    module: "sales_orders",
+    action: "read_all",
+    description: "Read all sales orders across all customers",
   },
   {
     name: "sales_orders:update",
@@ -156,30 +415,342 @@ const ALL_PERMISSIONS = [
     action: "delete",
     description: "Delete sales orders",
   },
+  {
+    name: "sales_orders:approve",
+    module: "sales_orders",
+    action: "approve",
+    description: "Approve, reject, or request adjustments on sales orders",
+  },
+  {
+    name: "orders:create",
+    module: "sales_orders",
+    action: "create",
+    description: "Create sales orders (alias)",
+  },
+  {
+    name: "orders:read",
+    module: "sales_orders",
+    action: "read",
+    description: "Read sales orders (alias)",
+  },
+  {
+    name: "orders:update",
+    module: "sales_orders",
+    action: "update",
+    description: "Update sales orders (alias)",
+  },
+  {
+    name: "orders:delete",
+    module: "sales_orders",
+    action: "delete",
+    description: "Delete sales orders (alias)",
+  },
+  {
+    name: "orders:approve",
+    module: "sales_orders",
+    action: "approve",
+    description: "Approve sales orders (alias)",
+  },
+
+  // Warehouse Preparation Tasks
+  {
+    name: "preparation_tasks:create",
+    module: "preparation_tasks",
+    action: "create",
+    description: "Schedule and create preparation tasks",
+  },
+  {
+    name: "preparation_tasks:read",
+    module: "preparation_tasks",
+    action: "read",
+    description: "Read preparation tasks",
+  },
+  {
+    name: "preparation_tasks:update",
+    module: "preparation_tasks",
+    action: "update",
+    description: "Update and complete preparation tasks",
+  },
+  {
+    name: "preparation_tasks:manage_all",
+    module: "preparation_tasks",
+    action: "manage_all",
+    description: "Manage all warehouse preparation tasks across all warehouses",
+  },
+
+  // Deliveries
+  {
+    name: "deliveries:create",
+    module: "deliveries",
+    action: "create",
+    description: "Schedule and create deliveries",
+  },
+  {
+    name: "deliveries:read",
+    module: "deliveries",
+    action: "read",
+    description: "Read deliveries",
+  },
+  {
+    name: "deliveries:update",
+    module: "deliveries",
+    action: "update",
+    description: "Start and complete deliveries",
+  },
+  {
+    name: "deliveries:manage_all",
+    module: "deliveries",
+    action: "manage_all",
+    description: "Manage and supervise all fleet deliveries",
+  },
+  {
+    name: "deliveries:confirm_any",
+    module: "deliveries",
+    action: "confirm_any",
+    description: "Confirm delivery handover on behalf of customer or driver",
+  },
+
+  // Fleet & Vehicle Logistics
+  {
+    name: "vehicles:read",
+    module: "vehicles",
+    action: "read",
+    description: "View fleet vehicles and driver assignments",
+  },
+  {
+    name: "vehicles:create",
+    module: "vehicles",
+    action: "create",
+    description: "Register new fleet vehicles",
+  },
+  {
+    name: "vehicles:update",
+    module: "vehicles",
+    action: "update",
+    description: "Update vehicle details and status",
+  },
+  {
+    name: "vehicles:delete",
+    module: "vehicles",
+    action: "delete",
+    description: "Archive or delete fleet vehicles",
+  },
+  {
+    name: "vehicles:assign",
+    module: "vehicles",
+    action: "assign",
+    description: "Assign or unassign vehicles to qualified drivers",
+  },
+
+  // Invoices & Finance
+  {
+    name: "invoices:create",
+    module: "invoices",
+    action: "create",
+    description: "Create commercial invoices",
+  },
+  {
+    name: "invoices:read",
+    module: "invoices",
+    action: "read",
+    description: "Read invoices (scoped)",
+  },
+  {
+    name: "invoices:read_all",
+    module: "invoices",
+    action: "read_all",
+    description: "Read all commercial invoices across all customers",
+  },
+  {
+    name: "invoices:update",
+    module: "invoices",
+    action: "update",
+    description: "Update commercial invoices",
+  },
+  {
+    name: "invoices:delete",
+    module: "invoices",
+    action: "delete",
+    description: "Cancel or void invoices",
+  },
+  {
+    name: "payments:create",
+    module: "payments",
+    action: "create",
+    description: "Record invoice payments",
+  },
+  {
+    name: "payments:read",
+    module: "payments",
+    action: "read",
+    description: "Read payment records",
+  },
+  {
+    name: "payments:update",
+    module: "payments",
+    action: "update",
+    description: "Update payment records",
+  },
+  {
+    name: "payments:delete",
+    module: "payments",
+    action: "delete",
+    description: "Void payment records",
+  },
+  {
+    name: "payment_terms:create",
+    module: "finance",
+    action: "create",
+    description: "Create payment terms",
+  },
+  {
+    name: "payment_terms:read",
+    module: "finance",
+    action: "read",
+    description: "Read payment terms",
+  },
+  {
+    name: "payment_terms:update",
+    module: "finance",
+    action: "update",
+    description: "Update payment terms",
+  },
+  {
+    name: "payment_terms:delete",
+    module: "finance",
+    action: "delete",
+    description: "Delete payment terms",
+  },
+  {
+    name: "credits:create",
+    module: "finance",
+    action: "create",
+    description: "Manage customer credit limits",
+  },
+  {
+    name: "credits:read",
+    module: "finance",
+    action: "read",
+    description: "View customer credit profiles",
+  },
+  {
+    name: "credits:update",
+    module: "finance",
+    action: "update",
+    description: "Update customer credit profiles",
+  },
+  {
+    name: "credits:delete",
+    module: "finance",
+    action: "delete",
+    description: "Delete customer credit profiles",
+  },
+
+  // Pricing, Tiers, Discounts & Quotas
+  {
+    name: "PRICE_TIER_VIEW",
+    module: "pricing",
+    action: "view_tiers",
+    description: "View price tiers",
+  },
+  {
+    name: "PRICE_TIER_CREATE",
+    module: "pricing",
+    action: "create_tiers",
+    description: "Create price tiers",
+  },
+  {
+    name: "PRICE_TIER_UPDATE",
+    module: "pricing",
+    action: "update_tiers",
+    description: "Update price tiers",
+  },
+  {
+    name: "PRICE_TIER_DELETE",
+    module: "pricing",
+    action: "delete_tiers",
+    description: "Delete price tiers",
+  },
 
   {
-    name: "regions:create",
-    module: "regions",
-    action: "create",
-    description: "Create regions",
+    name: "PRODUCT_PRICE_VIEW",
+    module: "pricing",
+    action: "view_prices",
+    description: "View product prices",
   },
   {
-    name: "regions:read",
-    module: "regions",
-    action: "read",
-    description: "Read regions",
+    name: "PRODUCT_PRICE_CREATE",
+    module: "pricing",
+    action: "create_prices",
+    description: "Create product prices",
   },
   {
-    name: "regions:update",
-    module: "regions",
-    action: "update",
-    description: "Update regions",
+    name: "PRODUCT_PRICE_UPDATE",
+    module: "pricing",
+    action: "update_prices",
+    description: "Update product prices",
   },
   {
-    name: "regions:delete",
-    module: "regions",
-    action: "delete",
-    description: "Delete regions",
+    name: "PRODUCT_PRICE_DELETE",
+    module: "pricing",
+    action: "delete_prices",
+    description: "Delete product prices",
+  },
+
+  {
+    name: "DISCOUNT_VIEW",
+    module: "pricing",
+    action: "view_discounts",
+    description: "View discount rules",
+  },
+  {
+    name: "DISCOUNT_CREATE",
+    module: "pricing",
+    action: "create_discounts",
+    description: "Create discount rules",
+  },
+  {
+    name: "DISCOUNT_UPDATE",
+    module: "pricing",
+    action: "update_discounts",
+    description: "Update discount rules",
+  },
+  {
+    name: "DISCOUNT_DELETE",
+    module: "pricing",
+    action: "delete_discounts",
+    description: "Delete discount rules",
+  },
+
+  {
+    name: "QUOTA_VIEW",
+    module: "pricing",
+    action: "view_quotas",
+    description: "View sales quotas",
+  },
+  {
+    name: "QUOTA_CREATE",
+    module: "pricing",
+    action: "create_quotas",
+    description: "Create sales quotas",
+  },
+  {
+    name: "QUOTA_UPDATE",
+    module: "pricing",
+    action: "update_quotas",
+    description: "Update sales quotas",
+  },
+  {
+    name: "QUOTA_DELETE",
+    module: "pricing",
+    action: "delete_quotas",
+    description: "Delete sales quotas",
+  },
+  {
+    name: "sales_quotas:read_all",
+    module: "pricing",
+    action: "read_all_quotas",
+    description: "View quota consumption for any customer",
   },
 
   // Identity & Access
@@ -252,13 +823,18 @@ const ALL_PERMISSIONS = [
     description: "Update users",
   },
   {
+    name: "users:delete",
+    module: "users",
+    action: "delete",
+    description: "Delete or archive users",
+  },
+  {
     name: "users:resetPassword",
     module: "users",
     action: "resetPassword",
     description: "Reset user passwords",
   },
 
-  // Permissions
   {
     name: "permissions:read",
     module: "permissions",
@@ -272,10 +848,53 @@ const ALL_PERMISSIONS = [
     description: "Create and update permissions",
   },
   {
+    name: "permissions:create",
+    module: "permissions",
+    action: "create",
+    description: "Create permissions (alias)",
+  },
+  {
+    name: "permissions:update",
+    module: "permissions",
+    action: "update",
+    description: "Update permissions (alias)",
+  },
+  {
     name: "permissions:delete",
     module: "permissions",
     action: "delete",
     description: "Delete permissions",
+  },
+
+  {
+    name: "roles:read",
+    module: "roles",
+    action: "read",
+    description: "Read roles",
+  },
+  {
+    name: "roles:write",
+    module: "roles",
+    action: "write",
+    description: "Create and update roles",
+  },
+  {
+    name: "roles:create",
+    module: "roles",
+    action: "create",
+    description: "Create roles (alias)",
+  },
+  {
+    name: "roles:update",
+    module: "roles",
+    action: "update",
+    description: "Update roles (alias)",
+  },
+  {
+    name: "roles:delete",
+    module: "roles",
+    action: "delete",
+    description: "Delete roles",
   },
 
   // Reporting & Dashboards
@@ -321,76 +940,187 @@ const ALL_PERMISSIONS = [
     action: "view_deliveries",
     description: "View delivery reports",
   },
+  {
+    name: "reports:view_all",
+    module: "reporting",
+    action: "view_all",
+    description: "View company-wide reports and analytics",
+  },
+
+  // Suppliers Management
+  {
+    name: "suppliers:create",
+    module: "suppliers",
+    action: "create",
+    description: "Create suppliers",
+  },
+  {
+    name: "suppliers:read",
+    module: "suppliers",
+    action: "read",
+    description: "Read suppliers",
+  },
+  {
+    name: "suppliers:update",
+    module: "suppliers",
+    action: "update",
+    description: "Update suppliers",
+  },
+  {
+    name: "suppliers:delete",
+    module: "suppliers",
+    action: "delete",
+    description: "Delete suppliers",
+  },
+
+  // Procurement (Purchase Orders & Goods Receipts)
+  {
+    name: "purchase_orders:create",
+    module: "procurement",
+    action: "create",
+    description: "Create purchase orders",
+  },
+  {
+    name: "purchase_orders:read",
+    module: "procurement",
+    action: "read",
+    description: "Read purchase orders",
+  },
+  {
+    name: "purchase_orders:update",
+    module: "procurement",
+    action: "update",
+    description: "Update purchase orders",
+  },
+  {
+    name: "purchase_orders:delete",
+    module: "procurement",
+    action: "delete",
+    description: "Delete purchase orders",
+  },
+  {
+    name: "purchase_orders:approve",
+    module: "procurement",
+    action: "approve",
+    description: "Approve purchase orders",
+  },
+  {
+    name: "goods_receipts:create",
+    module: "procurement",
+    action: "create",
+    description: "Create goods receipt notes",
+  },
+  {
+    name: "goods_receipts:read",
+    module: "procurement",
+    action: "read",
+    description: "Read goods receipt notes",
+  },
+  {
+    name: "goods_receipts:update",
+    module: "procurement",
+    action: "update",
+    description: "Update goods receipt notes",
+  },
+  {
+    name: "goods_receipts:delete",
+    module: "procurement",
+    action: "delete",
+    description: "Delete goods receipt notes",
+  },
+
+  // Documents Management
+  {
+    name: "documents:create",
+    module: "documents",
+    action: "create",
+    description: "Upload and create documents",
+  },
+  {
+    name: "documents:read",
+    module: "documents",
+    action: "read",
+    description: "Read and download documents",
+  },
+  {
+    name: "documents:update",
+    module: "documents",
+    action: "update",
+    description: "Update document metadata and status",
+  },
+  {
+    name: "documents:delete",
+    module: "documents",
+    action: "delete",
+    description: "Delete or archive documents",
+  },
+
+  // Sales Returns
+  {
+    name: "sales_returns:create",
+    module: "sales_returns",
+    action: "create",
+    description: "Initiate sales returns and credit notes",
+  },
+  {
+    name: "sales_returns:read",
+    module: "sales_returns",
+    action: "read",
+    description: "Read sales return requests",
+  },
+  {
+    name: "sales_returns:update",
+    module: "sales_returns",
+    action: "update",
+    description: "Update sales return requests",
+  },
+  {
+    name: "sales_returns:delete",
+    module: "sales_returns",
+    action: "delete",
+    description: "Cancel sales return requests",
+  },
+  {
+    name: "sales_returns:approve",
+    module: "sales_returns",
+    action: "approve",
+    description: "Approve or reject sales return claims",
+  },
+
+  // Notifications
+  {
+    name: "notifications:create",
+    module: "notifications",
+    action: "create",
+    description: "Send system notifications",
+  },
+  {
+    name: "notifications:read",
+    module: "notifications",
+    action: "read",
+    description: "View system notifications",
+  },
+  {
+    name: "notifications:update",
+    module: "notifications",
+    action: "update",
+    description: "Mark notifications as read",
+  },
+  {
+    name: "notifications:delete",
+    module: "notifications",
+    action: "delete",
+    description: "Clear system notifications",
+  },
+
+  // Audit
+  {
+    name: "audit:read",
+    module: "audit",
+    action: "read",
+    description: "View system audit logs and compliance history",
+  },
 ];
-
-async function ensureCustomerPermissions() {
-  const customerRole = await prisma.role.upsert({
-    where: { name: "CUSTOMER" },
-    update: { description: "Customer portal user" },
-    create: { name: "CUSTOMER", description: "Customer portal user" },
-  });
-
-  if (!customerRole) return;
-
-  const allPermissions = await prisma.permission.findMany();
-  const customerPermissions = [
-    "warehouses:read",
-    "products:read",
-    "sales_orders:create",
-  ];
-
-  for (const permName of customerPermissions) {
-    const perm = allPermissions.find((p) => p.name === permName);
-    if (!perm) continue;
-    const existing = await prisma.rolePermission.findFirst({
-      where: { roleId: customerRole.id, permissionId: perm.id },
-    });
-    if (!existing) {
-      await prisma.rolePermission.create({
-        data: { roleId: customerRole.id, permissionId: perm.id },
-      });
-      console.log(`Granted ${permName} to CUSTOMER role.`);
-    }
-  }
-}
-
-async function ensureSalesRepresentativePermissions() {
-  const salesRepRole = await prisma.role.upsert({
-    where: { name: "SALES_REPRESENTATIVE" },
-    update: { description: "Sales Representative" },
-    create: { name: "SALES_REPRESENTATIVE", description: "Sales Representative" },
-  });
-
-  if (!salesRepRole) return;
-
-  const allPermissions = await prisma.permission.findMany();
-  const salesRepPermissions = [
-    "sales_orders:create",
-    "sales_orders:read",
-    "sales_orders:update",
-    "sales_orders:delete",
-    "customers:read",
-    "products:read",
-    "warehouses:read",
-    "REPORT_VIEW_SALES",
-    "REPORT_VIEW_SALES_REPS",
-    "REPORT_VIEW_DASHBOARD",
-  ];
-
-  for (const permName of salesRepPermissions) {
-    const perm = allPermissions.find((p) => p.name === permName);
-    if (!perm) continue;
-    const existing = await prisma.rolePermission.findFirst({
-      where: { roleId: salesRepRole.id, permissionId: perm.id },
-    });
-    if (!existing) {
-      await prisma.rolePermission.create({
-        data: { roleId: salesRepRole.id, permissionId: perm.id },
-      });
-      console.log(`Granted ${permName} to SALES_REPRESENTATIVE role.`);
-    }
-  }
-}
 
 async function ensureDefaultPriceTiers() {
   const tiers = [
@@ -423,55 +1153,6 @@ async function ensureDefaultPriceTiers() {
         priority: tier.priority,
       },
       create: tier,
-    });
-  }
-}
-
-async function ensureAdminPermissions(userId) {
-  const superAdminRole = await prisma.role.findUnique({
-    where: { name: "SUPER_ADMIN" },
-  });
-  const adminRole = await prisma.role.findUnique({ where: { name: "ADMIN" } });
-  if (!superAdminRole || !adminRole) return;
-
-  for (const perm of ALL_PERMISSIONS) {
-    await prisma.permission.upsert({
-      where: { name: perm.name },
-      update: {
-        description: perm.description,
-        module: perm.module,
-        action: perm.action,
-      },
-      create: perm,
-    });
-  }
-
-  const allPermissions = await prisma.permission.findMany();
-
-  const wildcardPerm = allPermissions.find((p) => p.name === "*");
-
-  await prisma.rolePermission.deleteMany({
-    where: { roleId: superAdminRole.id },
-  });
-  if (wildcardPerm) {
-    await prisma.rolePermission.create({
-      data: { roleId: superAdminRole.id, permissionId: wildcardPerm.id },
-    });
-  }
-
-  await prisma.rolePermission.deleteMany({ where: { roleId: adminRole.id } });
-  for (const perm of allPermissions) {
-    await prisma.rolePermission.create({
-      data: { roleId: adminRole.id, permissionId: perm.id },
-    });
-  }
-
-  const existing = await prisma.userRole.findFirst({
-    where: { userId, roleId: superAdminRole.id },
-  });
-  if (!existing) {
-    await prisma.userRole.create({
-      data: { userId, roleId: superAdminRole.id },
     });
   }
 }
@@ -528,133 +1209,7 @@ async function ensureDefaultOrganizationAndBranch() {
     },
   });
 
-  console.log(
-    `Seeded organization: ${company.name} and branch: ${branch.name}`,
-  );
   return { region, company, branch };
-}
-
-async function main() {
-  console.log("Starting seed...");
-
-  await ensureDefaultPriceTiers();
-  await ensureDefaultOrganizationAndBranch();
-
-  // Remove any legacy mati test user
-  const existingMati = await prisma.user.findFirst({
-    where: {
-      OR: [{ username: "mati" }, { person: { email: "mati@example.com" } }],
-    },
-  });
-  if (existingMati) {
-    await prisma.user.delete({ where: { id: existingMati.id } });
-    console.log("Removed legacy mati user.");
-  }
-
-  const existingAdmin = await prisma.user.findFirst({
-    where: {
-      OR: [{ username: ADMIN_USERNAME }, { person: { email: ADMIN_EMAIL } }],
-    },
-    include: { person: true },
-  });
-
-  if (existingAdmin) {
-    console.log(
-      `Admin user already exists: ${existingAdmin.username} (${existingAdmin.id})`,
-    );
-    await ensureAdminPermissions(existingAdmin.id);
-    console.log("Seed completed (idempotent).");
-    await ensureCustomerPermissions();
-    await ensureSalesRepresentativePermissions();
-    await seedAllWorkflowRolesAndUsers();
-    return;
-  }
-
-  const { adminRole, superAdminRole, createdPermissions } =
-    await prisma.$transaction(async (tx) => {
-      const superAdminRole = await tx.role.upsert({
-        where: { name: "SUPER_ADMIN" },
-        update: { description: "Super System Administrator" },
-        create: {
-          name: "SUPER_ADMIN",
-          description: "Super System Administrator",
-        },
-      });
-
-      const adminRole = await tx.role.upsert({
-        where: { name: "ADMIN" },
-        update: { description: "System Administrator" },
-        create: {
-          name: "ADMIN",
-          description: "System Administrator",
-        },
-      });
-
-      const createdPermissions = [];
-      for (const perm of ALL_PERMISSIONS) {
-        const p = await tx.permission.upsert({
-          where: { name: perm.name },
-          update: {
-            description: perm.description,
-            module: perm.module,
-            action: perm.action,
-          },
-          create: perm,
-        });
-        createdPermissions.push(p);
-      }
-
-      const wildcardPerm = createdPermissions.find((p) => p.name === "*");
-
-      await tx.rolePermission.deleteMany({
-        where: { roleId: superAdminRole.id },
-      });
-
-      if (wildcardPerm) {
-        await tx.rolePermission.create({
-          data: {
-            roleId: superAdminRole.id,
-            permissionId: wildcardPerm.id,
-          },
-        });
-      }
-
-      await tx.rolePermission.deleteMany({
-        where: { roleId: adminRole.id },
-      });
-
-      for (const perm of createdPermissions) {
-        await tx.rolePermission.create({
-          data: {
-            roleId: adminRole.id,
-            permissionId: perm.id,
-          },
-        });
-      }
-
-      return { superAdminRole, adminRole, createdPermissions };
-    });
-
-  console.log(
-    `Seeded ${createdPermissions.length} permissions for SUPER_ADMIN & ADMIN roles.`,
-  );
-
-  // 1. Ensure Default Admin User (Super Admin with all permissions)
-  await createOrUpdateSuperUser({
-    username: ADMIN_USERNAME,
-    email: ADMIN_EMAIL,
-    password: ADMIN_PASSWORD,
-    fullName: ADMIN_FULL_NAME,
-    roleId: superAdminRole.id,
-  });
-
-  await ensureCustomerPermissions();
-  await ensureSalesRepresentativePermissions();
-  await seedAllWorkflowRolesAndUsers();
-
-  console.log(
-    "Seed completed successfully! The admin user is now a Super Admin with all permissions.",
-  );
 }
 
 async function createOrUpdateSuperUser({
@@ -679,7 +1234,7 @@ async function createOrUpdateSuperUser({
 
   if (existingUser) {
     console.log(
-      `Updating existing user: ${existingUser.username} (${existingUser.id})`,
+      `Updating existing admin user: ${existingUser.username} (${existingUser.id})`
     );
     await prisma.user.update({
       where: { id: existingUser.id },
@@ -701,7 +1256,7 @@ async function createOrUpdateSuperUser({
       });
       console.log(`Assigned role to existing user: ${existingUser.username}`);
     }
-    return;
+    return existingUser;
   }
 
   const person = await prisma.person.create({
@@ -728,7 +1283,129 @@ async function createOrUpdateSuperUser({
     data: { userId: user.id, roleId },
   });
 
-  console.log(`Created super user: ${username} (${user.id})`);
+  console.log(`Created super admin user: ${username} (${user.id})`);
+  return user;
+}
+
+async function ensureSchemaUpToDate(client) {
+  try {
+    await client.$executeRawUnsafe(`
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "driver_confirmed_at" TIMESTAMP(3);
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "driver_notes" TEXT;
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_confirmed_at" TIMESTAMP(3);
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_confirmed_by" UUID;
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_recipient_name" TEXT;
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_notes" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "delivery_latitude" DECIMAL(10, 7);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "delivery_longitude" DECIMAL(10, 7);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "delivery_address_text" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "fulfillment_type" "FulfillmentType" DEFAULT 'DELIVERY';
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_person_name" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_phone" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_vehicle_plate" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_notes" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "picked_up_at" TIMESTAMP(3);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "picked_up_by" UUID;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_confirmed_at" TIMESTAMP(3);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_confirmed_by" UUID;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_recipient_name" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_notes" TEXT;
+    `);
+  } catch (err) {
+    console.warn("Schema self-heal note:", err?.message);
+  }
+}
+
+async function main() {
+  console.log("==========================================================");
+  console.log("Starting Core System Seed (Permissions & Super Admin)...");
+  console.log("==========================================================");
+
+  await ensureSchemaUpToDate(prisma);
+  await ensureDefaultPriceTiers();
+  await ensureDefaultOrganizationAndBranch();
+
+
+  // 1. Upsert all system permissions
+  console.log(`Upserting ${ALL_PERMISSIONS.length} system permissions...`);
+  const upsertedPermissions = [];
+  for (const perm of ALL_PERMISSIONS) {
+    const p = await prisma.permission.upsert({
+      where: { name: perm.name },
+      update: {
+        description: perm.description,
+        module: perm.module,
+        action: perm.action,
+      },
+      create: perm,
+    });
+    upsertedPermissions.push(p);
+  }
+  console.log(`✓ ${upsertedPermissions.length} permissions ready.`);
+
+  // 2. Upsert SUPER_ADMIN and ADMIN roles
+  const superAdminRole = await prisma.role.upsert({
+    where: { name: "SUPER_ADMIN" },
+    update: { description: "Super System Administrator" },
+    create: {
+      name: "SUPER_ADMIN",
+      description: "Super System Administrator",
+    },
+  });
+
+  const adminRole = await prisma.role.upsert({
+    where: { name: "ADMIN" },
+    update: { description: "System Administrator" },
+    create: {
+      name: "ADMIN",
+      description: "System Administrator",
+    },
+  });
+
+  // 3. Assign Wildcard & All Permissions to SUPER_ADMIN
+  const wildcardPerm = upsertedPermissions.find((p) => p.name === "*");
+  const allDbPerms = await prisma.permission.findMany();
+
+  await prisma.rolePermission.deleteMany({
+    where: { roleId: superAdminRole.id },
+  });
+
+  if (wildcardPerm) {
+    await prisma.rolePermission.create({
+      data: {
+        roleId: superAdminRole.id,
+        permissionId: wildcardPerm.id,
+      },
+    });
+  }
+
+  // Also assign all permissions to ADMIN role
+  await prisma.rolePermission.deleteMany({
+    where: { roleId: adminRole.id },
+  });
+  for (const perm of allDbPerms) {
+    await prisma.rolePermission.create({
+      data: {
+        roleId: adminRole.id,
+        permissionId: perm.id,
+      },
+    });
+  }
+  console.log("✓ SUPER_ADMIN and ADMIN roles populated with all permissions.");
+
+  // 4. Create / Update Super Admin User
+  await createOrUpdateSuperUser({
+    username: ADMIN_USERNAME,
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD,
+    fullName: ADMIN_FULL_NAME,
+    roleId: superAdminRole.id,
+  });
+
+  console.log("==========================================================");
+  console.log("✓ Core System Seed Complete: All Permissions & Super Admin Ready.");
+  console.log("  To seed workflow business data, run: npm run prisma:seed:sales");
+  console.log("==========================================================\n");
 }
 
 main()

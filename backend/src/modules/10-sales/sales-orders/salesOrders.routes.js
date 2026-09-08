@@ -15,6 +15,7 @@ import prisma from "../../../config/prisma.js";
 import { sendSuccess } from "../../../utils/api-response.js";
 import { confirmCustomerHandover } from "./salesOrders.handover.service.js";
 import { completeDelivery } from "./salesOrders.driver.service.js";
+import { confirmCustomerPickup, confirmCustomerPickupReceipt } from "./salesOrders.warehouse.service.js";
 import {
   previewSalesOrderSchema,
   createSalesOrderSchema,
@@ -441,6 +442,32 @@ router.post(
         return res.status(404).json({ status: "error", message: "Delivery not found for this sales order" });
       }
       const result = await completeDelivery(salesOrder.deliveries[0].id, req.body.proof || req.body, req.user);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  "/:id/confirm-pickup",
+  validate(salesOrderIdSchema),
+  async (req, res, next) => {
+    try {
+      const result = await confirmCustomerPickup(req.params.id, req.body, req.user);
+      sendSuccess(res, result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  "/:id/customer-pickup-confirm",
+  validate(salesOrderIdSchema),
+  async (req, res, next) => {
+    try {
+      const result = await confirmCustomerPickupReceipt(req.params.id, req.body, req.user);
       sendSuccess(res, result);
     } catch (err) {
       next(err);

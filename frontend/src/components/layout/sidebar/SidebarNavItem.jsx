@@ -34,12 +34,6 @@ export default function SidebarNavItem({ item, onClick }) {
         {item.icon}
       </span>
       <span className="flex-1 truncate">{item.name}</span>
-      {item.badge !== undefined && item.badge !== null && item.badge > 0 && (
-        <span className="ml-auto flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-400 text-slate-950 shadow-sm border border-amber-300">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-950 animate-pulse" />
-          {item.badge}
-        </span>
-      )}
     </NavLink>
   );
 }

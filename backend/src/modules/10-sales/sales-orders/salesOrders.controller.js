@@ -96,6 +96,11 @@ export async function addSalesOrder(req, res, next) {
       items: bodyResult.data.items,
       requiredDate: bodyResult.data.requiredDate,
       deliveryLocation: bodyResult.data.deliveryLocation,
+      fulfillmentType: bodyResult.data.fulfillmentType,
+      pickupPersonName: bodyResult.data.pickupPersonName,
+      pickupPhone: bodyResult.data.pickupPhone,
+      pickupVehiclePlate: bodyResult.data.pickupVehiclePlate,
+      pickupNotes: bodyResult.data.pickupNotes,
       requestingUser: req.user,
     });
     sendCreated(res, salesOrder);
@@ -122,6 +127,11 @@ export async function addSalesRepOrder(req, res, next) {
       items: bodyResult.data.items,
       requiredDate: bodyResult.data.requiredDate,
       deliveryLocation: bodyResult.data.deliveryLocation,
+      fulfillmentType: bodyResult.data.fulfillmentType,
+      pickupPersonName: bodyResult.data.pickupPersonName,
+      pickupPhone: bodyResult.data.pickupPhone,
+      pickupVehiclePlate: bodyResult.data.pickupVehiclePlate,
+      pickupNotes: bodyResult.data.pickupNotes,
       requestingUser: req.user,
     });
     sendCreated(res, salesOrder);

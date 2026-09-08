@@ -12,17 +12,19 @@
   box-sizing: border-box;
 }
 
-html {
-  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+html,
 body,
 #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   color: var(--color-foreground);
   background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================================
@@ -599,6 +601,48 @@ header {
 
 .user-dropdown-divider {
   border-top-color: var(--color-border);
+}
+
+.notification-dropdown-menu {
+  background-color: var(--color-popover) !important;
+  color: var(--color-popover-foreground);
+  border-color: var(--color-border);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.35), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+.notification-dropdown-header {
+  background-color: var(--color-card);
+  border-bottom-color: var(--color-border);
+}
+
+.notification-dropdown-tabs {
+  background-color: var(--color-popover);
+  border-bottom-color: var(--color-border);
+}
+
+.notification-dropdown-footer {
+  background-color: var(--color-card);
+  border-top-color: var(--color-border);
+}
+
+.notification-item {
+  background-color: var(--color-popover);
+  border-bottom-color: var(--color-border);
+}
+
+.notification-item:hover {
+  background-color: var(--color-secondary);
+}
+
+.notification-item-unread {
+  background-color: var(--color-card);
+}
+
+.notification-item-unread:hover {
+  background-color: var(--color-secondary);
 }
 
 /* Profile Page Tab Buttons — uses CSS variables, auto-adapts to theme */

@@ -424,12 +424,12 @@ export default function DeliveriesPage() {
         onClose={() => setIsHandoverModalOpen(false)}
         title="Confirm Delivery Handover"
         subtitle={`Waybill: ${selectedDelivery?.deliveryNumber || ''}`}
-        icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+        icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
       >
         <form onSubmit={handleCompleteSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Recipient Name <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Recipient Name <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -439,12 +439,12 @@ export default function DeliveriesPage() {
                 setHandoverForm((prev) => ({ ...prev, recipientName: e.target.value }))
               }
               placeholder="Name of recipient"
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-muted-foreground"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Proof of Delivery Method
             </label>
             <select
@@ -452,7 +452,7 @@ export default function DeliveriesPage() {
               onChange={(e) =>
                 setHandoverForm((prev) => ({ ...prev, proofType: e.target.value }))
               }
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="SIGNATURE">Customer Signature</option>
               <option value="OFFICIAL_STAMP">Company / Official Stamp</option>
@@ -462,17 +462,17 @@ export default function DeliveriesPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Handover Remarks / Notes
             </label>
             <textarea
-              rows={2}
+              rows={3}
               value={handoverForm.notes}
               onChange={(e) =>
                 setHandoverForm((prev) => ({ ...prev, notes: e.target.value }))
               }
               placeholder="e.g. Received in good order, seals intact..."
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-muted-foreground"
             />
           </div>
 

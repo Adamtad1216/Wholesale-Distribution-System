@@ -6,12 +6,14 @@ import {
   productPriceQuerySchema,
   productPriceIdSchema,
   createProductPriceSchema,
+  createBatchProductPricesSchema,
   updateProductPriceSchema,
 } from "./productPrices.validation.js";
 import {
   listProductPricesHandler,
   getProductPriceHandler,
   createProductPriceHandler,
+  createBatchProductPricesHandler,
   updateProductPriceHandler,
   deleteProductPriceHandler,
 } from "./productPrices.controller.js";
@@ -114,6 +116,13 @@ router.post(
   validate(createProductPriceSchema),
   requirePermission("PRODUCT_PRICE_CREATE"),
   createProductPriceHandler,
+);
+
+router.post(
+  "/batch",
+  validate(createBatchProductPricesSchema),
+  requirePermission("PRODUCT_PRICE_CREATE"),
+  createBatchProductPricesHandler,
 );
 
 /**

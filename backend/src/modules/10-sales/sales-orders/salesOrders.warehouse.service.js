@@ -3,15 +3,33 @@ import { AppError } from "../../../utils/errors.js";
 import {
   recordStatusChange,
   getSalesOrderWithHistory,
+  validateStatusTransition,
 } from "./salesOrders.status.service.js";
+import { hasPermission } from "../../../middleware/permission.middleware.js";
+import {
+  sendNotificationToCustomer,
+  sendNotificationToEmployee,
+  sendNotificationToRoles,
+} from "../../../utils/notifications.js";
 
 function hasRole(userRoles, roleName) {
-  return userRoles.some((ur) => ur.role.name === roleName);
+  return (userRoles || []).some((ur) => (ur.role?.name || ur.role || ur) === roleName);
 }
 
-function ensureWarehouseManagerOrAdmin(userRoles) {
-  if (!hasRole(userRoles, "WAREHOUSE_MANAGER") && !hasRole(userRoles, "ADMIN")) {
-    throw new AppError("Only warehouse managers and admins can perform this action", 403);
+function ensureWarehouseManagerOrAdmin(userRolesOrUser) {
+  const userObj = Array.isArray(userRolesOrUser) ? { userRoles: userRolesOrUser } : userRolesOrUser;
+  const userRoles = userObj?.userRoles || [];
+  const isAuthorized =
+    hasRole(userRoles, "WAREHOUSE_MANAGER") ||
+    hasRole(userRoles, "ADMIN") ||
+    hasRole(userRoles, "SUPER_ADMIN") ||
+    hasPermission(userObj, "preparation_tasks:create") ||
+    hasPermission(userObj, "preparation_tasks:manage_all") ||
+    hasPermission(userObj, "deliveries:create") ||
+    hasPermission(userObj, "deliveries:manage_all");
+
+  if (!isAuthorized) {
+    throw new AppError("Only authorized logistics personnel, warehouse managers, and admins can perform this action", 403);
   }
 }
 
@@ -34,15 +52,20 @@ export async function getApprovedOrders(reqQuery, user) {
   }
 
   const roles = getUserRoles(user);
+  const isGlobalView =
+    hasRole(roles, "ADMIN") ||
+    hasRole(roles, "SUPER_ADMIN") ||
+    hasPermission(user, "sales_orders:read_all");
 
-  if (!hasRole(roles, "ADMIN")) {
-    if (hasRole(roles, "WAREHOUSE_MANAGER")) {
+  if (!isGlobalView) {
+    if (hasRole(roles, "WAREHOUSE_MANAGER") || hasPermission(user, "preparation_tasks:manage_all")) {
       let managedWarehouseIds = user.employee?.managedWarehouses?.map((w) => w.id) || [];
       if (managedWarehouseIds.length === 0) {
         const employee = await prisma.employee.findFirst({
           where: { personId: user.personId, status: "ACTIVE" },
           include: { managedWarehouses: true },
         });
+
         managedWarehouseIds = employee?.managedWarehouses?.map((w) => w.id) || [];
       }
       if (managedWarehouseIds.length > 0) {
@@ -121,7 +144,7 @@ export async function schedulePreparation(salesOrderId, data, user) {
     throw new AppError("Sales order must be in SALES_REP_APPROVED status to schedule preparation", 400);
   }
 
-  if (!hasRole(roles, "ADMIN")) {
+  if (!hasRole(roles, "ADMIN") && !hasRole(roles, "SUPER_ADMIN")) {
     let managedWarehouseIds = user.employee?.managedWarehouses?.map((w) => w.id) || [];
     if (managedWarehouseIds.length === 0) {
       const employee = await prisma.employee.findFirst({
@@ -212,6 +235,22 @@ export async function schedulePreparation(salesOrderId, data, user) {
     null,
     user.id
   );
+
+  sendNotificationToEmployee({
+    employeeId: storeKeeperId,
+    title: "Warehouse Preparation Task Assigned",
+    message: `You have been assigned to prepare items for order #${salesOrder.orderNumber}.`,
+    type: "PREPARATION_TASK_ASSIGNED",
+    createdById: user.id,
+  });
+
+  sendNotificationToCustomer({
+    customerId: salesOrder.customerId,
+    title: "Order In Preparation",
+    message: `Items for order #${salesOrder.orderNumber} are now being picked and prepared at the warehouse.`,
+    type: "ORDER_PREPARING",
+    createdById: user.id,
+  });
 
   return preparationTask;
 }
@@ -332,5 +371,332 @@ export async function scheduleDelivery(salesOrderId, data, user) {
     user.id
   );
 
+  sendNotificationToEmployee({
+    employeeId: driverId,
+    title: "Delivery Run Assigned",
+    message: `Delivery run for order #${salesOrder.orderNumber} assigned to you.`,
+    type: "DELIVERY_ASSIGNED",
+    createdById: user.id,
+  });
+
+  sendNotificationToCustomer({
+    customerId: salesOrder.customerId,
+    title: "Order Scheduled for Delivery",
+    message: `Your order #${salesOrder.orderNumber} has been scheduled for delivery dispatch.`,
+    type: "DELIVERY_SCHEDULED",
+    createdById: user.id,
+  });
+
   return delivery;
 }
+
+export async function confirmCustomerPickup(salesOrderId, payload = {}, user) {
+  if (!user) {
+    throw new AppError("Authentication required", 401);
+  }
+
+  const salesOrder = await prisma.salesOrder.findUnique({
+    where: { id: salesOrderId },
+    include: {
+      customer: {
+        include: {
+          person: true,
+          organization: true,
+        },
+      },
+      warehouse: true,
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
+  });
+
+  if (!salesOrder) {
+    throw new AppError("Sales order not found", 404);
+  }
+
+  if (salesOrder.fulfillmentType !== "SELF_PICKUP") {
+    throw new AppError("This sales order is not configured for self-pickup", 400);
+  }
+
+  if (salesOrder.status !== "READY_FOR_PICKUP") {
+    throw new AppError(
+      `Sales order must be in READY_FOR_PICKUP status to confirm pickup, but was ${salesOrder.status}`,
+      400
+    );
+  }
+
+  if (salesOrder.pickedUpAt) {
+    throw new AppError("Pickup has already been confirmed by the warehouse storekeeper", 400);
+  }
+
+  const roles = getUserRoles(user);
+  const isAuthorized =
+    hasRole(roles, "ADMIN") ||
+    hasRole(roles, "SUPER_ADMIN") ||
+    hasRole(roles, "WAREHOUSE_MANAGER") ||
+    hasRole(roles, "STORE_KEEPER") ||
+    hasRole(roles, "STOREKEEPER") ||
+    hasPermission(user, "preparation_tasks:update") ||
+    hasPermission(user, "warehouses:read") ||
+    hasPermission(user, "deliveries:update");
+
+  if (!isAuthorized) {
+    throw new AppError("You are not authorized to confirm warehouse pickup for this order", 403);
+  }
+
+  const isCustomerAlreadyApproved = Boolean(salesOrder.customerPickupConfirmedAt);
+  const nextStatus = isCustomerAlreadyApproved ? "COMPLETED" : "READY_FOR_PICKUP";
+  const actorRole = hasRole(roles, "ADMIN") || hasRole(roles, "SUPER_ADMIN") ? "ADMIN" : "STORE_KEEPER";
+
+  if (isCustomerAlreadyApproved) {
+    await validateStatusTransition("READY_FOR_PICKUP", "COMPLETED", actorRole);
+  }
+
+  const recipientName =
+    payload.recipientName?.trim() ||
+    salesOrder.pickupPersonName ||
+    salesOrder.customer?.organization?.name ||
+    (salesOrder.customer?.person
+      ? `${salesOrder.customer.person.firstName} ${salesOrder.customer.person.lastName || ""}`.trim()
+      : "Customer");
+
+  const recipientPhone = payload.recipientPhone?.trim() || salesOrder.pickupPhone || null;
+  const vehiclePlate = payload.vehiclePlateNumber?.trim() || salesOrder.pickupVehiclePlate || null;
+  const notes = payload.notes?.trim() || salesOrder.pickupNotes || null;
+
+  const updatedOrder = await prisma.$transaction(async (tx) => {
+    const updated = await tx.salesOrder.update({
+      where: { id: salesOrderId },
+      data: {
+        status: nextStatus,
+        pickedUpAt: new Date(),
+        pickedUpBy: user.id,
+        pickupPersonName: recipientName,
+        pickupPhone: recipientPhone,
+        pickupVehiclePlate: vehiclePlate,
+        pickupNotes: notes,
+      },
+      include: {
+        customer: {
+          include: {
+            person: true,
+            organization: true,
+          },
+        },
+        warehouse: true,
+        items: true,
+      },
+    });
+
+    if (isCustomerAlreadyApproved) {
+      await recordStatusChange(
+        salesOrderId,
+        "READY_FOR_PICKUP",
+        "COMPLETED",
+        "COMPLETED",
+        `Warehouse self-pickup dual-confirmed by Storekeeper (${user.username || user.id}) and Customer (${salesOrder.customerPickupRecipientName || 'Customer'}). Sales order COMPLETED.`,
+        user.id
+      );
+    } else {
+      await recordStatusChange(
+        salesOrderId,
+        "READY_FOR_PICKUP",
+        "READY_FOR_PICKUP",
+        "READY_FOR_PICKUP",
+        `Storekeeper (${user.username || user.id}) verified collector (${recipientName}) and confirmed physical handover. Awaiting Customer sign-off to complete sales order.`,
+        user.id
+      );
+    }
+
+    return updated;
+  });
+
+  if (isCustomerAlreadyApproved) {
+    sendNotificationToCustomer({
+      customerId: salesOrder.customerId,
+      title: "Order Picked Up & Completed",
+      message: `Your order #${salesOrder.orderNumber} self-pickup has been dual-confirmed and completed. Thank you!`,
+      type: "SALES_ORDER_COMPLETED",
+      createdById: user.id,
+    });
+
+    sendNotificationToRoles({
+      roleNames: ["WAREHOUSE_MANAGER", "ADMIN", "SUPER_ADMIN"],
+      title: "Order Self-Pickup Completed",
+      message: `Order #${salesOrder.orderNumber} self-pickup dual-confirmed by both Storekeeper and Customer. Order completed.`,
+      type: "SALES_ORDER_COMPLETED",
+      createdById: user.id,
+    });
+  } else {
+    sendNotificationToCustomer({
+      customerId: salesOrder.customerId,
+      title: "Warehouse Handover Verified - Please Sign Off",
+      message: `Warehouse storekeeper has verified and handed over items for Order #${salesOrder.orderNumber}. Please confirm receipt on your portal to complete your order.`,
+      type: "SALES_ORDER_PICKUP_READY",
+      createdById: user.id,
+    });
+  }
+
+  return updatedOrder;
+}
+
+export async function confirmCustomerPickupReceipt(salesOrderId, payload = {}, user) {
+  if (!user) {
+    throw new AppError("Authentication required", 401);
+  }
+
+  const salesOrder = await prisma.salesOrder.findUnique({
+    where: { id: salesOrderId },
+    include: {
+      customer: {
+        include: {
+          person: true,
+          organization: true,
+        },
+      },
+      warehouse: true,
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
+  });
+
+  if (!salesOrder) {
+    throw new AppError("Sales order not found", 404);
+  }
+
+  if (salesOrder.fulfillmentType !== "SELF_PICKUP") {
+    throw new AppError("This sales order is not configured for self-pickup", 400);
+  }
+
+  if (salesOrder.status !== "READY_FOR_PICKUP") {
+    throw new AppError(
+      `Sales order must be in READY_FOR_PICKUP status to confirm collection receipt, but was ${salesOrder.status}`,
+      400
+    );
+  }
+
+  if (salesOrder.customerPickupConfirmedAt) {
+    throw new AppError("Collection receipt has already been confirmed by the customer", 400);
+  }
+
+  const isPrivileged =
+    user.userRoles?.some((ur) =>
+      ["ADMIN", "SUPER_ADMIN"].includes(ur.role?.name || ur.role)
+    ) ||
+    hasPermission(user, "deliveries:confirm_any");
+
+  let userCustomerId = user.customer?.id || user.person?.customer?.id;
+  if (!userCustomerId && user.personId) {
+    const custRecord = await prisma.customer.findFirst({
+      where: { personId: user.personId },
+      select: { id: true },
+    });
+    userCustomerId = custRecord?.id;
+  }
+
+  const isCustomerOwner =
+    salesOrder.createdById === user.id ||
+    salesOrder.customer?.personId === user.personId ||
+    (userCustomerId && salesOrder.customerId === userCustomerId);
+
+  if (!isPrivileged && !isCustomerOwner) {
+    throw new AppError("You are not authorized to confirm pickup receipt for this sales order", 403);
+  }
+
+  const isStorekeeperAlreadyApproved = Boolean(salesOrder.pickedUpAt);
+  const nextStatus = isStorekeeperAlreadyApproved ? "COMPLETED" : "READY_FOR_PICKUP";
+  const actorRole = isPrivileged ? "ADMIN" : "CUSTOMER";
+
+  if (isStorekeeperAlreadyApproved) {
+    await validateStatusTransition("READY_FOR_PICKUP", "COMPLETED", actorRole);
+  }
+
+  const customerName =
+    payload.recipientName?.trim() ||
+    salesOrder.customer?.organization?.name ||
+    (salesOrder.customer?.person
+      ? `${salesOrder.customer.person.firstName} ${salesOrder.customer.person.lastName || ""}`.trim()
+      : user.username || "Customer");
+
+  const notes = payload.notes?.trim() || null;
+
+  const updatedOrder = await prisma.$transaction(async (tx) => {
+    const updated = await tx.salesOrder.update({
+      where: { id: salesOrderId },
+      data: {
+        status: nextStatus,
+        customerPickupConfirmedAt: new Date(),
+        customerPickupConfirmedBy: user.id,
+        customerPickupRecipientName: customerName,
+        customerPickupNotes: notes,
+      },
+      include: {
+        customer: {
+          include: {
+            person: true,
+            organization: true,
+          },
+        },
+        warehouse: true,
+        items: true,
+      },
+    });
+
+    if (isStorekeeperAlreadyApproved) {
+      await recordStatusChange(
+        salesOrderId,
+        "READY_FOR_PICKUP",
+        "COMPLETED",
+        "COMPLETED",
+        `Warehouse self-pickup dual-confirmed by Customer (${customerName}) and Storekeeper. Sales order COMPLETED.`,
+        user.id
+      );
+    } else {
+      await recordStatusChange(
+        salesOrderId,
+        "READY_FOR_PICKUP",
+        "READY_FOR_PICKUP",
+        "READY_FOR_PICKUP",
+        `Customer (${customerName}) confirmed collection & acceptance of goods. Awaiting Storekeeper verification sign-off to complete sales order.`,
+        user.id
+      );
+    }
+
+    return updated;
+  });
+
+  if (isStorekeeperAlreadyApproved) {
+    sendNotificationToCustomer({
+      customerId: salesOrder.customerId,
+      title: "Order Picked Up & Completed",
+      message: `Your order #${salesOrder.orderNumber} self-pickup has been dual-confirmed and completed. Thank you!`,
+      type: "SALES_ORDER_COMPLETED",
+      createdById: user.id,
+    });
+
+    sendNotificationToRoles({
+      roleNames: ["STORE_KEEPER", "STOREKEEPER", "WAREHOUSE_MANAGER", "ADMIN", "SUPER_ADMIN"],
+      title: "Customer Pickup Dual-Confirmed",
+      message: `Customer ${customerName} confirmed goods receipt for Order #${salesOrder.orderNumber}. Order completed.`,
+      type: "SALES_ORDER_COMPLETED",
+      createdById: user.id,
+    });
+  } else {
+    sendNotificationToRoles({
+      roleNames: ["STORE_KEEPER", "STOREKEEPER", "WAREHOUSE_MANAGER", "ADMIN", "SUPER_ADMIN"],
+      title: "Customer Signed Off Pickup - Awaiting Storekeeper",
+      message: `Customer ${customerName} has signed off collection for Order #${salesOrder.orderNumber} at ${salesOrder.warehouse?.name || "warehouse"}. Please verify and sign off handover.`,
+      type: "SALES_ORDER_PICKUP_READY",
+      createdById: user.id,
+    });
+  }
+
+  return updatedOrder;
+}
+

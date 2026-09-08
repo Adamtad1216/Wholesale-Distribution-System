@@ -71,6 +71,11 @@ enum CustomerType {
   ORGANIZATION
 }
 
+enum FulfillmentType {
+  DELIVERY
+  SELF_PICKUP
+}
+
 enum SalesOrderStatus {
   DRAFT
   PENDING_REVIEW
@@ -88,6 +93,7 @@ enum SalesOrderStatus {
   PREPARING
   DELIVERY_SCHEDULED
   OUT_FOR_DELIVERY
+  READY_FOR_PICKUP
 }
 
 enum SalesOrderSource {
@@ -112,6 +118,8 @@ enum SalesOrderHistoryAction {
   PREPARING
   DELIVERY_SCHEDULED
   OUT_FOR_DELIVERY
+  READY_FOR_PICKUP
+  PICKED_UP
 }
 
 enum StockReservationStatus {
@@ -373,6 +381,7 @@ model User {
   updatedWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceUpdater")
   createdCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressCreator")
   updatedCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressUpdater")
+  createdVehicleAssignments       VehicleAssignment[]       @relation("VehicleAssignmentCreator")
 
   @@map("users")
 }
@@ -499,6 +508,8 @@ model Employee {
   salesOrders         SalesOrder[]
   deliveries          Delivery[]
   preparationTasks    PreparationTask[]
+  assignedVehicles    Vehicle[]           @relation("VehicleAssignedDriver")
+  vehicleAssignments  VehicleAssignment[] @relation("EmployeeVehicleAssignments")
   branchId            String?        @map("branch_id") @db.Uuid
   isAvailableForSales Boolean        @default(true) @map("is_available_for_sales")
   branch              Branch?        @relation("EmployeeBranch", fields: [branchId], references: [id])
@@ -798,6 +809,7 @@ model Category {
   parentId    String?   @map("parent_id") @db.Uuid
   status      String    @default("ACTIVE")
   products    Product[]
+  discountRules DiscountRule[]
 
   createdBy User?      @relation("CategoryCreator", fields: [createdById], references: [id])
   updatedBy User?      @relation("CategoryUpdater", fields: [updatedById], references: [id])
@@ -881,6 +893,7 @@ model Product {
   productPrices       ProductPrice[]
   discountRules       DiscountRule[]
   salesQuotas         SalesQuota[]
+  salesQuotaUsages    SalesQuotaUsage[]
 
   createdBy User?    @relation("ProductCreator", fields: [createdById], references: [id])
   updatedBy User?    @relation("ProductUpdater", fields: [updatedById], references: [id])
@@ -1266,19 +1279,19 @@ model ProductPrice {
   updatedAt   DateTime          @updatedAt @map("updated_at")
   productId   String            @map("product_id") @db.Uuid
   priceTierId String            @map("price_tier_id") @db.Uuid
-  warehouseId String            @map("warehouse_id") @db.Uuid
+  warehouseId String?           @map("warehouse_id") @db.Uuid
   unitPrice   Decimal           @map("unit_price") @db.Decimal(15, 2)
   status      PricingRuleStatus @default(ACTIVE)
   startsAt    DateTime?         @map("starts_at")
   endsAt      DateTime?         @map("ends_at")
 
-  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  priceTier PriceTier @relation(fields: [priceTierId], references: [id], onDelete: Cascade)
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  createdBy User?     @relation("ProductPriceCreator", fields: [createdById], references: [id])
-  updatedBy User?     @relation("ProductPriceUpdater", fields: [updatedById], references: [id])
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  priceTier PriceTier  @relation(fields: [priceTierId], references: [id], onDelete: Cascade)
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  createdBy User?      @relation("ProductPriceCreator", fields: [createdById], references: [id])
+  updatedBy User?      @relation("ProductPriceUpdater", fields: [updatedById], references: [id])
 
-  @@unique([productId, priceTierId, warehouseId, status])
+  @@index([productId, priceTierId])
   @@index([productId, warehouseId])
   @@index([priceTierId])
   @@map("product_prices")
@@ -1292,6 +1305,7 @@ model DiscountRule {
   updatedAt     DateTime          @updatedAt @map("updated_at")
   name          String
   productId     String?           @map("product_id") @db.Uuid
+  categoryId    String?           @map("category_id") @db.Uuid
   priceTierId   String?           @map("price_tier_id") @db.Uuid
   warehouseId   String?           @map("warehouse_id") @db.Uuid
   minQuantity   Decimal?          @map("min_quantity") @db.Decimal(15, 3)
@@ -1303,6 +1317,7 @@ model DiscountRule {
   endsAt        DateTime?         @map("ends_at")
 
   product         Product?         @relation(fields: [productId], references: [id])
+  category        Category?        @relation(fields: [categoryId], references: [id])
   priceTier       PriceTier?       @relation(fields: [priceTierId], references: [id])
   warehouse       Warehouse?       @relation(fields: [warehouseId], references: [id])
   salesOrders     SalesOrder[]
@@ -1311,6 +1326,7 @@ model DiscountRule {
   updatedBy       User?            @relation("DiscountRuleUpdater", fields: [updatedById], references: [id])
 
   @@index([productId, status, priority])
+  @@index([categoryId, status])
   @@index([warehouseId, status])
   @@map("discount_rules")
 }
@@ -1353,14 +1369,16 @@ model SalesQuotaUsage {
   quotaId      String   @map("quota_id") @db.Uuid
   customerId   String   @map("customer_id") @db.Uuid
   salesOrderId String   @map("sales_order_id") @db.Uuid
+  productId    String?  @map("product_id") @db.Uuid
   quantity     Decimal  @db.Decimal(15, 3)
   createdAt    DateTime @default(now()) @map("created_at")
 
   quota      SalesQuota @relation(fields: [quotaId], references: [id])
   customer   Customer   @relation(fields: [customerId], references: [id])
-  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product?   @relation(fields: [productId], references: [id])
 
-  @@unique([quotaId, salesOrderId])
+  @@index([quotaId, salesOrderId])
   @@index([quotaId, customerId])
   @@map("sales_quota_usages")
 }
@@ -1412,6 +1430,17 @@ model SalesOrder {
   deliveryLatitude  Decimal?                  @map("delivery_latitude") @db.Decimal(10, 7)
   deliveryLongitude Decimal?                  @map("delivery_longitude") @db.Decimal(10, 7)
   deliveryAddressText String?                 @map("delivery_address_text")
+  fulfillmentType     FulfillmentType           @default(DELIVERY) @map("fulfillment_type")
+  pickupPersonName    String?                   @map("pickup_person_name")
+  pickupPhone         String?                   @map("pickup_phone")
+  pickupVehiclePlate  String?                   @map("pickup_vehicle_plate")
+  pickupNotes         String?                   @map("pickup_notes")
+  pickedUpAt          DateTime?                 @map("picked_up_at")
+  pickedUpBy          String?                   @map("picked_up_by") @db.Uuid
+  customerPickupConfirmedAt   DateTime?         @map("customer_pickup_confirmed_at")
+  customerPickupConfirmedBy   String?           @map("customer_pickup_confirmed_by") @db.Uuid
+  customerPickupRecipientName String?           @map("customer_pickup_recipient_name")
+  customerPickupNotes         String?           @map("customer_pickup_notes")
   priceTierId       String?                   @map("price_tier_id") @db.Uuid
   discountRuleId    String?                   @map("discount_rule_id") @db.Uuid
   salesQuotaId      String?                   @map("sales_quota_id") @db.Uuid
@@ -1605,23 +1634,52 @@ model PreparationTaskItem {
 // ============================================================
 
 model Vehicle {
-  id          String     @id @default(uuid()) @db.Uuid
-  createdById String?    @map("created_by_id") @db.Uuid
-  updatedById String?    @map("updated_by_id") @db.Uuid
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  isArchived  Boolean    @default(false) @map("is_archived")
-  archivedAt  DateTime?  @map("archived_at")
-  plateNumber String     @unique @map("plate_number")
-  vehicleType String     @map("vehicle_type")
-  capacity    Decimal?   @db.Decimal(15, 3)
-  status      String     @default("ACTIVE")
-  deliveries  Delivery[]
+  id               String              @id @default(uuid()) @db.Uuid
+  createdById      String?             @map("created_by_id") @db.Uuid
+  updatedById      String?             @map("updated_by_id") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+  isArchived       Boolean             @default(false) @map("is_archived")
+  archivedAt       DateTime?           @map("archived_at")
+  plateNumber      String              @unique @map("plate_number")
+  vehicleType      String              @map("vehicle_type")
+  make             String?
+  model            String?
+  year             Int?
+  capacity         Decimal?            @db.Decimal(15, 3)
+  status           String              @default("ACTIVE")
+  notes            String?
+  assignedDriverId String?             @map("assigned_driver_id") @db.Uuid
+
+  assignedDriver   Employee?           @relation("VehicleAssignedDriver", fields: [assignedDriverId], references: [id])
+  assignments      VehicleAssignment[]
+  deliveries       Delivery[]
 
   createdBy User? @relation("VehicleCreator", fields: [createdById], references: [id])
   updatedBy User? @relation("VehicleUpdater", fields: [updatedById], references: [id])
 
   @@map("vehicles")
+}
+
+model VehicleAssignment {
+  id           String    @id @default(uuid()) @db.Uuid
+  createdById  String?   @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  vehicleId    String    @map("vehicle_id") @db.Uuid
+  driverId     String    @map("driver_id") @db.Uuid
+  assignedAt   DateTime  @default(now()) @map("assigned_at")
+  unassignedAt DateTime? @map("unassigned_at")
+  status       String    @default("ACTIVE")
+  notes        String?
+
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  driver    Employee  @relation("EmployeeVehicleAssignments", fields: [driverId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("VehicleAssignmentCreator", fields: [createdById], references: [id])
+
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("vehicle_assignments")
 }
 
 model Delivery {

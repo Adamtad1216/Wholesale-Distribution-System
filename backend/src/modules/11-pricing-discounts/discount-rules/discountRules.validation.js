@@ -6,6 +6,7 @@ export const discountRuleQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(200).default(20),
   productId: uuid.optional(),
+  categoryId: uuid.optional(),
   priceTierId: uuid.optional(),
   warehouseId: uuid.optional(),
   status: z.enum(["DRAFT", "ACTIVE", "INACTIVE", "EXPIRED"]).optional(),
@@ -17,6 +18,7 @@ export const createDiscountRuleSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     productId: uuid.optional().nullable(),
+    categoryId: uuid.optional().nullable(),
     priceTierId: uuid.optional().nullable(),
     warehouseId: uuid.optional().nullable(),
     minQuantity: z.coerce.number().nonnegative().optional().nullable(),
@@ -40,6 +42,7 @@ export const updateDiscountRuleSchema = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
     productId: uuid.optional().nullable(),
+    categoryId: uuid.optional().nullable(),
     priceTierId: uuid.optional().nullable(),
     warehouseId: uuid.optional().nullable(),
     minQuantity: z.coerce.number().nonnegative().optional().nullable(),

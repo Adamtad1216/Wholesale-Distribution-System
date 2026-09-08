@@ -23,7 +23,17 @@ export async function getNotifications(filters) {
   const where = { isArchived: false };
 
   if (filters.userId) where.userId = filters.userId;
-  if (filters.type) where.type = filters.type;
+  if (filters.module === 'sales' || filters.type === 'SALES') {
+    where.OR = [
+      { type: { startsWith: 'SALES' } },
+      { type: { startsWith: 'ORDER' } },
+      { type: { startsWith: 'INVOICE' } },
+      { type: { startsWith: 'DELIVERY' } },
+      { type: { startsWith: 'PREPARATION' } },
+    ];
+  } else if (filters.type) {
+    where.type = filters.type;
+  }
   if (filters.isRead !== undefined) where.isRead = filters.isRead === 'true' || filters.isRead === true;
 
   const [notifications, total] = await Promise.all([

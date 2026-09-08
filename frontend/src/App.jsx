@@ -40,6 +40,20 @@ import CustomerCatalog from './features/customer-portal/pages/CustomerCatalog';
 import CustomerInvoices from './features/customer-portal/pages/CustomerInvoices';
 import CustomerCredit from './features/customer-portal/pages/CustomerCredit';
 import DeliveriesPage from './features/deliveries/pages/DeliveriesPage';
+import VehiclesListPage from './features/vehicles/pages/VehiclesListPage';
+import VehicleFormPage from './features/vehicles/pages/VehicleFormPage';
+import VehicleDetailPage from './features/vehicles/pages/VehicleDetailPage';
+import PricingHubPage from './features/pricing/pages/PricingHubPage';
+import PriceTiersListPage from './features/pricing/pages/PriceTiersListPage';
+import PriceTierFormPage from './features/pricing/pages/PriceTierFormPage';
+import ProductPricesListPage from './features/pricing/pages/ProductPricesListPage';
+import ProductPriceFormPage from './features/pricing/pages/ProductPriceFormPage';
+import CustomerPricingPage from './features/pricing/pages/CustomerPricingPage';
+import AssignCustomerTierPage from './features/pricing/pages/AssignCustomerTierPage';
+import DiscountRulesListPage from './features/pricing/pages/DiscountRulesListPage';
+import DiscountRuleFormPage from './features/pricing/pages/DiscountRuleFormPage';
+import SalesQuotasListPage from './features/pricing/pages/SalesQuotasListPage';
+import SalesQuotaFormPage from './features/pricing/pages/SalesQuotaFormPage';
 
 /**
  * AppRoutes — inner component mounted inside <Router>.
@@ -121,6 +135,32 @@ function AppRoutes() {
 
         <Route element={<PermissionRoute permission="deliveries:read" />}>
           <Route path="/deliveries" element={<DeliveriesPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="vehicles:read" />}>
+          <Route path="/vehicles" element={<VehiclesListPage />} />
+          <Route path="/vehicles/new" element={<VehicleFormPage />} />
+          <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
+          <Route path="/vehicles/:id/edit" element={<VehicleFormPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission={['PRICE_TIER_VIEW', 'PRODUCT_PRICE_VIEW', 'DISCOUNT_VIEW', 'QUOTA_VIEW']} />}>
+          <Route path="/pricing" element={<Navigate to="/pricing/tiers" replace />} />
+          <Route path="/pricing/tiers" element={<PriceTiersListPage />} />
+          <Route path="/pricing/tiers/new" element={<PriceTierFormPage />} />
+          <Route path="/pricing/tiers/:id/edit" element={<PriceTierFormPage />} />
+          <Route path="/pricing/product-prices" element={<ProductPricesListPage />} />
+          <Route path="/pricing/product-prices/new" element={<ProductPriceFormPage />} />
+          <Route path="/pricing/product-prices/:id/edit" element={<ProductPriceFormPage />} />
+          <Route path="/pricing/customer-pricing" element={<CustomerPricingPage />} />
+          <Route path="/pricing/customers" element={<CustomerPricingPage />} />
+          <Route path="/pricing/customers/price-tier" element={<AssignCustomerTierPage />} />
+          <Route path="/pricing/discounts" element={<DiscountRulesListPage />} />
+          <Route path="/pricing/discounts/new" element={<DiscountRuleFormPage />} />
+          <Route path="/pricing/discounts/:id/edit" element={<DiscountRuleFormPage />} />
+          <Route path="/pricing/quotas" element={<SalesQuotasListPage />} />
+          <Route path="/pricing/quotas/new" element={<SalesQuotaFormPage />} />
+          <Route path="/pricing/quotas/:id/edit" element={<SalesQuotaFormPage />} />
         </Route>
 
         <Route path="/catalog" element={<CustomerCatalog />} />

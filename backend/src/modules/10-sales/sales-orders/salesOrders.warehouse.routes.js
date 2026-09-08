@@ -5,6 +5,8 @@ import {
   getApprovedOrders,
   schedulePreparation,
   scheduleDelivery,
+  confirmPickup,
+  confirmCustomerPickupReceipt,
 } from "./salesOrders.warehouse.controller.js";
 import {
   warehouseQuerySchema,
@@ -12,6 +14,7 @@ import {
   schedulePreparationSchema,
   scheduleDeliverySchema,
 } from "./salesOrders.warehouse.validation.js";
+import { confirmPickupSchema, confirmCustomerPickupReceiptSchema } from "./salesOrders.validation.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 
 import prisma from "../../../config/prisma.js";
@@ -324,5 +327,18 @@ router.post("/:id/schedule-preparation", validate(schedulePreparationSchema), re
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post("/:id/schedule-delivery", validate(scheduleDeliverySchema), requirePermission("deliveries:create"), scheduleDelivery);
+
+router.post(
+  "/:id/confirm-pickup",
+  validate(confirmPickupSchema),
+  requirePermission(["preparation_tasks:update", "warehouses:read", "deliveries:update", "preparation_tasks:create"]),
+  confirmPickup
+);
+
+router.post(
+  "/:id/customer-pickup-confirm",
+  validate(confirmCustomerPickupReceiptSchema),
+  confirmCustomerPickupReceipt
+);
 
 export default router;

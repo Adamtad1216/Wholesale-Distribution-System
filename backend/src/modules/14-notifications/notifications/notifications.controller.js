@@ -11,9 +11,19 @@ import { notificationIdSchema } from './notifications.validation.js';
 
 export async function listNotifications(req, res, next) {
   try {
+    const isSuperAdmin =
+      req.user.role === 'SUPER_ADMIN' ||
+      req.user.role === 'ADMIN' ||
+      req.user.userRoles?.some((ur) => ['SUPER_ADMIN', 'ADMIN'].includes(ur.role?.name));
+
+    const targetUserId =
+      isSuperAdmin && (req.query.scope === 'all' || req.query.all === true || req.query.all === 'true')
+        ? undefined
+        : req.user.id;
+
     const { notifications, meta } = await getNotifications({
       ...req.query,
-      userId: req.user.id,
+      userId: targetUserId,
     });
     sendPaginatedSuccess(res, notifications, meta);
   } catch (err) {

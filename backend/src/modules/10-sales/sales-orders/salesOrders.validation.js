@@ -29,6 +29,11 @@ export const previewSalesOrderSchema = z.object({
 export const createSalesOrderSchema = z.object({
   warehouseId: z.string().uuid(),
   requiredDate: z.string().datetime().or(z.coerce.date()).optional(),
+  fulfillmentType: z.enum(["DELIVERY", "SELF_PICKUP"]).default("DELIVERY").optional(),
+  pickupPersonName: z.string().optional(),
+  pickupPhone: z.string().optional(),
+  pickupVehiclePlate: z.string().optional(),
+  pickupNotes: z.string().optional(),
   deliveryLocation: z
     .object({
       latitude: z.coerce.number().min(-90).max(90),
@@ -98,6 +103,11 @@ export const createSalesRepOrderSchema = z
     newCustomer: newCustomerSchema.optional(),
     warehouseId: z.string().uuid(),
     requiredDate: z.string().datetime().or(z.coerce.date()).optional(),
+    fulfillmentType: z.enum(["DELIVERY", "SELF_PICKUP"]).default("DELIVERY").optional(),
+    pickupPersonName: z.string().optional(),
+    pickupPhone: z.string().optional(),
+    pickupVehiclePlate: z.string().optional(),
+    pickupNotes: z.string().optional(),
     deliveryLocation: z
       .object({
         latitude: z.coerce.number().min(-90).max(90),
@@ -117,3 +127,17 @@ export const createSalesRepOrderSchema = z
   .refine((data) => data.customerId || data.newCustomer, {
     message: "Either customerId or newCustomer must be provided",
   });
+
+export const confirmPickupSchema = z.object({
+  recipientName: z.string().min(1, "Recipient name is required"),
+  recipientPhone: z.string().optional(),
+  recipientIdNumber: z.string().optional(),
+  vehiclePlate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+export const confirmCustomerPickupReceiptSchema = z.object({
+  recipientName: z.string().optional(),
+  notes: z.string().optional(),
+  confirmedReceived: z.boolean().optional(),
+});

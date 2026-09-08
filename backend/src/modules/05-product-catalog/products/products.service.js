@@ -3,6 +3,8 @@ import { logAudit } from "../../../middleware/audit.middleware.js";
 import { createNotification } from "../../14-notifications/notifications/notifications.service.js";
 import { AppError } from "../../../utils/errors.js";
 import { getPaginationParams, buildPaginationMeta } from "../../../utils/pagination.js";
+import { hasPermission } from "../../../middleware/permission.middleware.js";
+
 
 export const generateProductCode = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -811,10 +813,13 @@ async function buildProductWhere(filters, user = null) {
 
   let targetWarehouseId = filters.warehouseId;
 
-  // Auto-scope if user is assigned/managing a warehouse and not an admin
+  // Auto-scope if user is assigned/managing a warehouse and not an admin or lacks warehouses:manage_all
   if (!targetWarehouseId && user) {
-    const isAdmin = user.userRoles?.some((ur) => ur.role?.name === 'ADMIN');
+    const isAdmin =
+      user.userRoles?.some((ur) => ['ADMIN', 'SUPER_ADMIN'].includes(ur.role?.name || ur.role)) ||
+      hasPermission(user, 'warehouses:manage_all');
     if (!isAdmin && user.personId) {
+
       const managedWarehouse = await prisma.warehouse.findFirst({
         where: {
           manager: { personId: user.personId, isArchived: false },

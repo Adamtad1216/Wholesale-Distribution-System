@@ -167,6 +167,7 @@ export async function createCustomer(data, createdById, req) {
           personId: person.id,
           creditLimit: data.creditLimit ?? 0,
           paymentTermsId: data.paymentTermsId,
+          priceTierId: data.priceTierId,
           assignedSalesRepId: data.assignedSalesRepId,
           status: data.status || "ACTIVE",
           createdById: createdById,
@@ -175,6 +176,9 @@ export async function createCustomer(data, createdById, req) {
         include: {
           person: true,
           paymentTerms: true,
+          priceTier: {
+            select: { id: true, name: true, isDefault: true, status: true },
+          },
           createdBy: {
             include: {
               person: {
@@ -362,12 +366,16 @@ export async function createCustomer(data, createdById, req) {
           organizationId: organization.id,
           creditLimit: data.creditLimit ?? 0,
           paymentTermsId: data.paymentTermsId,
+          priceTierId: data.priceTierId,
           assignedSalesRepId: data.assignedSalesRepId,
           status: data.status || "ACTIVE",
           createdById: createdById,
           updatedById: createdById,
         },
         include: {
+          priceTier: {
+            select: { id: true, name: true, isDefault: true, status: true },
+          },
           organization: {
             include: {
               contacts: {
@@ -465,6 +473,14 @@ export async function getCustomers(filters) {
             days: true,
           },
         },
+        priceTier: {
+          select: {
+            id: true,
+            name: true,
+            isDefault: true,
+            status: true,
+          },
+        },
         createdBy: {
           include: {
             person: {
@@ -508,6 +524,14 @@ export async function getCustomerById(id) {
     where: { id, isArchived: false },
     include: {
       person: true,
+      priceTier: {
+        select: {
+          id: true,
+          name: true,
+          isDefault: true,
+          status: true,
+        },
+      },
       organization: {
         include: {
           contacts: {
@@ -703,11 +727,20 @@ export async function updateCustomer(id, data, createdById, req) {
         customerCode: data.customerCode,
         creditLimit: data.creditLimit,
         paymentTermsId: data.paymentTermsId,
+        ...(data.priceTierId !== undefined ? { priceTierId: data.priceTierId } : {}),
         status: data.status,
         updatedById: createdById,
       },
       include: {
         person: true,
+        priceTier: {
+          select: {
+            id: true,
+            name: true,
+            isDefault: true,
+            status: true,
+          },
+        },
         organization: {
           include: {
             contacts: {

@@ -44,6 +44,7 @@ const STATUS_COLORS = {
   WAREHOUSE_PREPARATION_SCHEDULED: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
   PREPARING: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
   READY_FOR_DELIVERY: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+  READY_FOR_PICKUP: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
   DELIVERY_SCHEDULED: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
   DISPATCHED: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
   OUT_FOR_DELIVERY: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
@@ -116,6 +117,21 @@ export default function SalesOrderDetail() {
     recipientName: '',
     confirmedReceived: true,
     notes: '',
+  });
+
+  const [isConfirmPickupModalOpen, setIsConfirmPickupModalOpen] = useState(false);
+  const [confirmPickupForm, setConfirmPickupForm] = useState({
+    recipientName: '',
+    recipientPhone: '',
+    vehiclePlateNumber: '',
+    notes: '',
+  });
+
+  const [isCustomerPickupModalOpen, setIsCustomerPickupModalOpen] = useState(false);
+  const [customerPickupForm, setCustomerPickupForm] = useState({
+    recipientName: '',
+    notes: '',
+    confirmedReceived: true,
   });
 
   const isCustomer =
@@ -227,20 +243,6 @@ export default function SalesOrderDetail() {
     },
   });
 
-  const skipInvoicePaymentMutation = useMutation({
-    mutationFn: (invoiceId) => salesOrdersApi.skipInvoicePayment(invoiceId),
-    onSuccess: () => {
-      toast.success('Invoice marked as PAID! Stock reserved for warehouse preparation.');
-      queryClient.invalidateQueries({ queryKey: ['salesOrder', id] });
-      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
-      queryClient.invalidateQueries({ queryKey: ['customerInvoices'] });
-      queryClient.invalidateQueries({ queryKey: ['warehouseOrders'] });
-    },
-    onError: (err) => {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to settle invoice payment');
-    },
-  });
-
   const schedulePrepMutation = useMutation({
     mutationFn: (payload) => salesOrdersApi.schedulePreparation(id, payload),
     onSuccess: () => {
@@ -326,6 +328,42 @@ export default function SalesOrderDetail() {
     },
     onError: (err) => {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to confirm receipt');
+    },
+  });
+
+  const confirmPickupMutation = useMutation({
+    mutationFn: (payload) => salesOrdersApi.confirmPickup(id, payload),
+    onSuccess: (res) => {
+      const isDual = res?.data?.status === 'COMPLETED' || res?.status === 'COMPLETED';
+      if (isDual) {
+        toast.success('Self-pickup dual-confirmed by both Storekeeper and Customer! Sales order COMPLETED.');
+      } else {
+        toast.success('Storekeeper handover confirmed! Waiting for Customer sign-off to complete sales order.');
+      }
+      setIsConfirmPickupModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['salesOrder', id] });
+      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to confirm pickup');
+    },
+  });
+
+  const customerConfirmPickupMutation = useMutation({
+    mutationFn: (payload) => salesOrdersApi.confirmCustomerPickupReceipt(id, payload),
+    onSuccess: (res) => {
+      const isDual = res?.data?.status === 'COMPLETED' || res?.status === 'COMPLETED';
+      if (isDual) {
+        toast.success('Self-pickup dual-confirmed by both Customer and Storekeeper! Sales order COMPLETED.');
+      } else {
+        toast.success('Customer collection confirmed! Waiting for Storekeeper sign-off to complete sales order.');
+      }
+      setIsCustomerPickupModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['salesOrder', id] });
+      queryClient.invalidateQueries({ queryKey: ['salesOrders'] });
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to confirm pickup collection');
     },
   });
 
@@ -436,6 +474,7 @@ export default function SalesOrderDetail() {
     WAREHOUSE_PREPARATION_SCHEDULED: 3,
     PREPARING: 3,
     READY_FOR_DELIVERY: 4,
+    READY_FOR_PICKUP: 4,
     DELIVERY_SCHEDULED: 4,
     DISPATCHED: 5,
     OUT_FOR_DELIVERY: 5,
@@ -444,57 +483,111 @@ export default function SalesOrderDetail() {
   };
 
   const currentRank = statusRank[order.status] ?? 0;
+  const isPickupOrder = order.fulfillmentType === 'SELF_PICKUP';
 
-  const steps = [
-    {
-      label: 'Order Placed',
-      description: new Date(order.createdAt).toLocaleDateString(),
-      icon: FileText,
-      isDone: currentRank >= 1,
-      isCurrent: currentRank === 1 && order.status === 'PENDING_REVIEW',
-    },
-    {
-      label: 'Rep Approved',
-      description: order.salesRep
-        ? `${order.salesRep.person?.firstName || 'Rep'} verified`
-        : 'Quotation review',
-      icon: ShieldCheck,
-      isDone: currentRank >= 2,
-      isCurrent: currentRank === 2,
-    },
-    {
-      label: 'Warehouse Packed',
-      description:
-        order.status === 'READY_FOR_DELIVERY' || currentRank > 3
-          ? 'Goods Staged'
-          : latestPrepTask
-          ? 'Preparing'
-          : 'Scheduling Prep',
-      icon: Package,
-      isDone: currentRank >= 4,
-      isCurrent: currentRank === 3,
-    },
-    {
-      label: 'Out for Delivery',
-      description:
-        currentRank >= 5
-          ? latestDelivery?.vehicle?.plateNumber || 'In Transit'
-          : 'Pending Dispatch',
-      icon: Truck,
-      isDone: currentRank >= 6,
-      isCurrent: currentRank === 5,
-    },
-    {
-      label: 'Handover & Delivered',
-      description:
-        currentRank >= 6
-          ? 'Delivered to Customer'
-          : 'Awaiting Handover',
-      icon: CheckCircle2,
-      isDone: currentRank >= 6,
-      isCurrent: currentRank >= 6,
-    },
-  ];
+  const steps = isPickupOrder
+    ? [
+        {
+          label: 'Order Placed',
+          description: new Date(order.createdAt).toLocaleDateString(),
+          icon: FileText,
+          isDone: currentRank >= 1,
+          isCurrent: currentRank === 1 && order.status === 'PENDING_REVIEW',
+        },
+        {
+          label: 'Rep Approved',
+          description: order.salesRep
+            ? `${order.salesRep.person?.firstName || 'Rep'} verified`
+            : 'Quotation review',
+          icon: ShieldCheck,
+          isDone: currentRank >= 2,
+          isCurrent: currentRank === 2,
+        },
+        {
+          label: 'Warehouse Packed',
+          description:
+            order.status === 'READY_FOR_PICKUP' || currentRank > 3
+              ? 'Goods Staged'
+              : latestPrepTask
+              ? 'Picking Active'
+              : 'Scheduling Prep',
+          icon: Package,
+          isDone: currentRank >= 4,
+          isCurrent: currentRank === 3,
+        },
+        {
+          label: 'Ready for Pickup',
+          description:
+            order.status === 'READY_FOR_PICKUP'
+              ? 'At Warehouse Dock'
+              : currentRank > 4
+              ? 'Staging Complete'
+              : 'Pending Packing',
+          icon: Warehouse,
+          isDone: currentRank >= 4,
+          isCurrent: order.status === 'READY_FOR_PICKUP',
+        },
+        {
+          label: 'Customer Picked Up',
+          description:
+            order.status === 'COMPLETED'
+              ? 'Goods Collected'
+              : 'Awaiting Collection',
+          icon: CheckCircle2,
+          isDone: order.status === 'COMPLETED',
+          isCurrent: order.status === 'COMPLETED',
+        },
+      ]
+    : [
+        {
+          label: 'Order Placed',
+          description: new Date(order.createdAt).toLocaleDateString(),
+          icon: FileText,
+          isDone: currentRank >= 1,
+          isCurrent: currentRank === 1 && order.status === 'PENDING_REVIEW',
+        },
+        {
+          label: 'Rep Approved',
+          description: order.salesRep
+            ? `${order.salesRep.person?.firstName || 'Rep'} verified`
+            : 'Quotation review',
+          icon: ShieldCheck,
+          isDone: currentRank >= 2,
+          isCurrent: currentRank === 2,
+        },
+        {
+          label: 'Warehouse Packed',
+          description:
+            order.status === 'READY_FOR_DELIVERY' || currentRank > 3
+              ? 'Goods Staged'
+              : latestPrepTask
+              ? 'Preparing'
+              : 'Scheduling Prep',
+          icon: Package,
+          isDone: currentRank >= 4,
+          isCurrent: currentRank === 3,
+        },
+        {
+          label: 'Out for Delivery',
+          description:
+            currentRank >= 5
+              ? latestDelivery?.vehicle?.plateNumber || 'In Transit'
+              : 'Pending Dispatch',
+          icon: Truck,
+          isDone: currentRank >= 6,
+          isCurrent: currentRank === 5,
+        },
+        {
+          label: 'Handover & Delivered',
+          description:
+            currentRank >= 6
+              ? 'Delivered to Customer'
+              : 'Awaiting Handover',
+          icon: CheckCircle2,
+          isDone: currentRank >= 6,
+          isCurrent: currentRank >= 6,
+        },
+      ];
 
   return (
     <ErrorBoundary>
@@ -513,6 +606,17 @@ export default function SalesOrderDetail() {
             >
               {order.status.replace(/_/g, ' ')}
             </span>
+            {order.fulfillmentType === 'SELF_PICKUP' ? (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border bg-cyan-500/15 text-cyan-300 border-cyan-500/30 flex items-center gap-1.5">
+                <Warehouse className="w-3.5 h-3.5" />
+                <span>Self-Pickup at Warehouse</span>
+              </span>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border bg-indigo-500/15 text-indigo-300 border-indigo-500/30 flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5" />
+                <span>Standard Delivery</span>
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
             <span>Created on {new Date(order.createdAt).toLocaleString()}</span>
@@ -595,16 +699,9 @@ export default function SalesOrderDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => skipInvoicePaymentMutation.mutate(latestInvoice.id)}
-              disabled={skipInvoicePaymentMutation.isPending}
-              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 px-4 shadow-md cursor-pointer"
-              title="Fast-track / Skip payment and immediately reserve stock for warehouse preparation"
-            >
-              <Zap className="w-4 h-4 fill-slate-950" />
-              <span>{skipInvoicePaymentMutation.isPending ? 'Reserving Stock...' : 'Skip Payment (Reserve Stock & Proceed)'}</span>
-            </Button>
+            <span className="text-xs text-amber-300/80 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 font-medium">
+              Awaiting Payment Confirmation
+            </span>
           </div>
         </div>
       )}
@@ -827,6 +924,310 @@ export default function SalesOrderDetail() {
           </div>
         ) : null
       )}
+
+      {/* STAGE 4 (SELF_PICKUP DUAL-CONFIRMATION): Warehouse Customer Collection */}
+      {order.fulfillmentType === 'SELF_PICKUP' && ['READY_FOR_PICKUP', 'COMPLETED'].includes(order.status) && (() => {
+        const isStorekeeperConfirmed = Boolean(order.pickedUpAt);
+        const isCustomerConfirmed = Boolean(order.customerPickupConfirmedAt);
+        const isBothConfirmed = (isStorekeeperConfirmed && isCustomerConfirmed) || order.status === 'COMPLETED';
+
+        const isOrderCustomer =
+          Boolean(order?.customerId && (user?.customer?.id === order.customerId || user?.personId === order.customer?.personId || user?.id === order.createdById)) ||
+          role === 'CUSTOMER';
+        const canCustomerConfirm = (isOrderCustomer || role === 'ADMIN' || role === 'SUPER_ADMIN') && !isCustomerConfirmed && !isBothConfirmed;
+        const canStorekeeperConfirm = (isStorekeeperOrAdmin || isWarehouseManagerOrAdmin) && !isStorekeeperConfirmed && !isBothConfirmed;
+
+        return (
+          <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6 relative overflow-hidden">
+            {/* Ambient subtle glow background */}
+            <div className="absolute -top-20 -right-20 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Header: Title & Overall Dual-Confirmation Badge */}
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-5">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                    <Warehouse className="w-5 h-5" />
+                  </span>
+                  <h3 className="text-lg font-black tracking-tight text-foreground">
+                    Warehouse Pickup Dual-Confirmation
+                  </h3>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Both the <strong>Warehouse Storekeeper</strong> and the <strong>Wholesale Customer</strong> must approve collection for this order to be marked <strong>COMPLETED</strong>.
+                </p>
+              </div>
+
+              <div>
+                {isBothConfirmed ? (
+                  <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Dual-Confirmed (2 of 2) • Order Completed</span>
+                  </span>
+                ) : isStorekeeperConfirmed && !isCustomerConfirmed ? (
+                  <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+                    <span>Storekeeper Confirmed • Awaiting Customer Approval (1 of 2)</span>
+                  </span>
+                ) : isCustomerConfirmed && !isStorekeeperConfirmed ? (
+                  <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+                    <span>Customer Confirmed • Awaiting Storekeeper Approval (1 of 2)</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                    <Warehouse className="w-4 h-4 text-cyan-400" />
+                    <span>Ready at Warehouse Dock • Awaiting Dual Sign-Off (0 of 2)</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Side-by-Side Dual-Approval Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+              {/* CARD 1: STOREKEEPER HANDOVER APPROVAL */}
+              <div
+                className={`rounded-2xl p-5 border transition-all ${
+                  isStorekeeperConfirmed
+                    ? 'bg-emerald-500/5 border-emerald-500/30 shadow-sm'
+                    : 'bg-secondary/40 border-border hover:border-border/80'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        isStorekeeperConfirmed
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-cyan-500/15 text-cyan-400'
+                      }`}
+                    >
+                      <Warehouse className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                        1. Storekeeper Handover Sign-off
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Warehouse dock verification & physical release
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                      isStorekeeperConfirmed
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    }`}
+                  >
+                    {isStorekeeperConfirmed ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Confirmed</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
+                        <span>Pending</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs py-2 border-t border-border/40">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Warehouse:</span>
+                    <span className="font-semibold text-foreground">
+                      {order.warehouse?.name || 'Central Warehouse'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Authorized Collector:</span>
+                    <span className="font-semibold text-foreground">
+                      {order.pickupPersonName || 'Customer / Designated Representative'}
+                    </span>
+                  </div>
+                  {order.pickupPhone && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Collector Phone:</span>
+                      <span className="font-mono text-foreground">{order.pickupPhone}</span>
+                    </div>
+                  )}
+                  {order.pickupVehiclePlate && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Vehicle Plate:</span>
+                      <span className="font-mono text-foreground">{order.pickupVehiclePlate}</span>
+                    </div>
+                  )}
+
+                  {isStorekeeperConfirmed ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Confirmed Date:</span>
+                        <span className="text-foreground">
+                          {new Date(order.pickedUpAt).toLocaleString()}
+                        </span>
+                      </div>
+                      {order.pickupNotes && (
+                        <div className="pt-1.5 text-[11px] text-muted-foreground italic bg-background/50 p-2 rounded-lg border border-border">
+                          "{order.pickupNotes}"
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="pt-2">
+                      {canStorekeeperConfirm ? (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setConfirmPickupForm({
+                              recipientName: order.pickupPersonName || order.customer?.organization?.name || (order.customer?.person ? `${order.customer.person.firstName} ${order.customer.person.lastName || ''}`.trim() : ''),
+                              recipientPhone: order.pickupPhone || '',
+                              vehiclePlateNumber: order.pickupVehiclePlate || '',
+                              notes: order.pickupNotes || '',
+                            });
+                            setIsConfirmPickupModalOpen(true);
+                          }}
+                          className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-2 py-2 rounded-xl shadow-md cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Confirm Handover as Storekeeper</span>
+                        </Button>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground bg-secondary/50 p-2 rounded-lg text-center">
+                          Awaiting storekeeper verification and goods handover at warehouse dock.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* CARD 2: CUSTOMER COLLECTION APPROVAL */}
+              <div
+                className={`rounded-2xl p-5 border transition-all ${
+                  isCustomerConfirmed
+                    ? 'bg-emerald-500/5 border-emerald-500/30 shadow-sm'
+                    : 'bg-secondary/40 border-border hover:border-border/80'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        isCustomerConfirmed
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-violet-500/15 text-violet-400'
+                      }`}
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                        2. Customer Receipt Sign-off
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Wholesale client physical collection & goods acceptance
+                      </p>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                      isCustomerConfirmed
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    }`}
+                  >
+                    {isCustomerConfirmed ? (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Confirmed</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3 h-3 text-amber-400 animate-pulse" />
+                        <span>Pending</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs py-2 border-t border-border/40">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Client:</span>
+                    <span className="font-semibold text-foreground">
+                      {order.customer?.companyName ||
+                        order.customer?.organization?.name ||
+                        (order.customer?.person
+                          ? `${order.customer.person.firstName} ${order.customer.person.lastName || ''}`.trim()
+                          : 'Wholesale Customer')}
+                    </span>
+                  </div>
+
+                  {isCustomerConfirmed ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Confirmed By:</span>
+                        <span className="text-foreground font-medium">
+                          {order.customerPickupRecipientName || 'Customer Authorized Agent'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Receipt Date:</span>
+                        <span className="text-foreground">
+                          {new Date(order.customerPickupConfirmedAt).toLocaleString()}
+                        </span>
+                      </div>
+                      {order.customerPickupNotes && (
+                        <div className="pt-1.5 text-[11px] text-muted-foreground italic bg-background/50 p-2 rounded-lg border border-border">
+                          "{order.customerPickupNotes}"
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="pt-2">
+                      {canCustomerConfirm ? (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setCustomerPickupForm({
+                              recipientName:
+                                order.customer?.person
+                                  ? `${order.customer.person.firstName} ${order.customer.person.lastName || ''}`.trim()
+                                  : (order.customer?.organization?.name || ''),
+                              notes: '',
+                              confirmedReceived: true,
+                            });
+                            setIsCustomerPickupModalOpen(true);
+                          }}
+                          className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center justify-center gap-2 py-2 rounded-xl shadow-md cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Confirm Collection as Customer</span>
+                        </Button>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground bg-secondary/50 p-2 rounded-lg text-center">
+                          Awaiting wholesale client collection & acceptance confirmation.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom explanatory message */}
+            <div className="rounded-2xl p-3 bg-muted/40 border border-border text-center text-xs text-muted-foreground">
+              Notice: The self-pickup order will automatically finalize to <strong className="text-foreground">COMPLETED</strong> once both the storekeeper and customer submit their confirmations.
+            </div>
+          </div>
+        );
+      })()}
 
       {/* STAGE 4: READY_FOR_DELIVERY -> Schedule Delivery Run */}
       {order.status === 'READY_FOR_DELIVERY' && isWarehouseManagerOrAdmin && (
@@ -1381,11 +1782,36 @@ export default function SalesOrderDetail() {
                   {order.source ? order.source.replace(/_/g, ' ') : 'Customer Portal'}
                 </span>
               </p>
-              {order.deliveryAddressText && (
-                <div className="pt-1">
-                  <span className="text-slate-500 font-medium block">Delivery Destination:</span>
-                  <span className="text-slate-200">{order.deliveryAddressText}</span>
-                </div>
+              <p className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Fulfillment Type:</span>
+                <span className="text-slate-200 font-medium flex items-center gap-1.5">
+                  {order.fulfillmentType === 'SELF_PICKUP' ? (
+                    <>
+                      <Warehouse className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-cyan-300 font-semibold">Self-Pickup</span>
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-indigo-300 font-semibold">Standard Delivery</span>
+                    </>
+                  )}
+                </span>
+              </p>
+              {order.fulfillmentType === 'SELF_PICKUP' ? (
+                order.pickupPersonName && (
+                  <div className="pt-1">
+                    <span className="text-slate-500 font-medium block">Authorized Collector:</span>
+                    <span className="text-slate-200">{order.pickupPersonName} {order.pickupPhone ? `(${order.pickupPhone})` : ''}</span>
+                  </div>
+                )
+              ) : (
+                order.deliveryAddressText && (
+                  <div className="pt-1">
+                    <span className="text-slate-500 font-medium block">Delivery Destination:</span>
+                    <span className="text-slate-200">{order.deliveryAddressText}</span>
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -1720,8 +2146,54 @@ export default function SalesOrderDetail() {
         )}
       </div>
 
-      {/* Customer Delivery Destination Google Map */}
-      <OrderDeliveryLocationMap order={order} className="my-6" height="320px" />
+      {/* Customer Delivery Destination Google Map OR Self-Pickup Card */}
+      {order.fulfillmentType === 'SELF_PICKUP' ? (
+        <Card className="my-6 p-5 border-cyan-500/30 bg-cyan-500/5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
+              <Warehouse className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                <span>Self-Pickup at Warehouse Collection Dock</span>
+                <span className="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  {order.status === 'READY_FOR_PICKUP' ? 'Ready for Pickup' : order.status === 'COMPLETED' ? 'Collected' : 'In Preparation'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Collection Warehouse: <strong className="text-slate-200">{order.warehouse?.name}</strong> ({order.warehouse?.code})
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-cyan-500/20 text-xs">
+            <div>
+              <span className="text-slate-400 block text-[11px]">Authorized Collector:</span>
+              <span className="font-semibold text-slate-200">{order.pickupPersonName || 'Customer / Representative'}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[11px]">Collector Phone:</span>
+              <span className="font-mono text-slate-200">{order.pickupPhone || '—'}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[11px]">Vehicle Plate:</span>
+              <span className="font-mono text-slate-200">{order.pickupVehiclePlate || '—'}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[11px]">Collection Status:</span>
+              <span className="font-semibold text-emerald-400">
+                {order.pickedUpAt ? `Collected on ${new Date(order.pickedUpAt).toLocaleDateString()}` : order.status === 'READY_FOR_PICKUP' ? 'Ready at Warehouse' : 'Staging In Progress'}
+              </span>
+            </div>
+          </div>
+          {order.pickupNotes && (
+            <div className="mt-3 pt-2 border-t border-cyan-500/10 text-xs text-slate-400">
+              <span className="font-medium text-slate-300">Notes / Instructions:</span> {order.pickupNotes}
+            </div>
+          )}
+        </Card>
+      ) : (
+        <OrderDeliveryLocationMap order={order} className="my-6" height="320px" />
+      )}
 
       {/* Order Items Table */}
       <Card className="p-0 overflow-hidden">
@@ -1900,14 +2372,14 @@ export default function SalesOrderDetail() {
         subtitle={`Order: ${order.orderNumber}`}
         icon={
           actionModal.type === 'REJECT' ? (
-            <XCircle className="w-5 h-5 text-rose-400" />
+            <XCircle className="w-5 h-5 text-rose-500" />
           ) : (
-            <RotateCcw className="w-5 h-5 text-amber-400" />
+            <RotateCcw className="w-5 h-5 text-amber-500" />
           )
         }
       >
         <div className="space-y-4">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             {actionModal.type === 'REJECT'
               ? 'Please provide a reason for rejecting this sales order. The customer will be informed.'
               : 'Please describe the adjustments required (e.g., quantity revision, warehouse stock shortage, delivery address clarification).'}
@@ -1918,7 +2390,7 @@ export default function SalesOrderDetail() {
             value={actionModal.reason}
             onChange={(e) => setActionModal((prev) => ({ ...prev, reason: e.target.value }))}
             placeholder="Type your notes or reasons here..."
-            className="w-full p-3 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="w-full p-3 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-muted-foreground"
           />
 
           <div className="flex justify-end gap-2 pt-2">
@@ -1947,18 +2419,18 @@ export default function SalesOrderDetail() {
         onClose={() => setIsPrepModalOpen(false)}
         title="Schedule Warehouse Preparation"
         subtitle={`Order: ${order.orderNumber} • ${order.warehouse?.name || 'Warehouse'}`}
-        icon={<Package className="w-5 h-5 text-blue-400" />}
+        icon={<Package className="w-5 h-5 text-blue-500" />}
       >
         <form onSubmit={handleSchedulePrepSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Assigned Storekeeper <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Assigned Storekeeper <span className="text-rose-500">*</span>
             </label>
             <select
               value={prepForm.storeKeeperId}
               onChange={(e) => setPrepForm((prev) => ({ ...prev, storeKeeperId: e.target.value }))}
               required
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select a Storekeeper...</option>
               {storekeepers.map((sk) => (
@@ -1971,21 +2443,20 @@ export default function SalesOrderDetail() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Scheduled Preparation Date & Time <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Scheduled Preparation Date & Time <span className="text-rose-500">*</span>
             </label>
             <input
               type="datetime-local"
               value={prepForm.scheduledDate}
               onChange={(e) => setPrepForm((prev) => ({ ...prev, scheduledDate: e.target.value }))}
               required
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-            </input>
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Preparation Instructions / Notes
             </label>
             <textarea
@@ -1993,7 +2464,7 @@ export default function SalesOrderDetail() {
               value={prepForm.notes}
               onChange={(e) => setPrepForm((prev) => ({ ...prev, notes: e.target.value }))}
               placeholder="e.g. Fragile items, special packing material required..."
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-muted-foreground"
             />
           </div>
 
@@ -2025,18 +2496,18 @@ export default function SalesOrderDetail() {
         onClose={() => setIsDeliveryModalOpen(false)}
         title="Schedule Delivery & Assign Driver"
         subtitle={`Order: ${order.orderNumber}`}
-        icon={<Truck className="w-5 h-5 text-indigo-400" />}
+        icon={<Truck className="w-5 h-5 text-indigo-500" />}
       >
         <form onSubmit={handleScheduleDeliverySubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Assigned Delivery Driver <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Assigned Delivery Driver <span className="text-rose-500">*</span>
             </label>
             <select
               value={deliveryForm.driverId}
               onChange={(e) => setDeliveryForm((prev) => ({ ...prev, driverId: e.target.value }))}
               required
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Select a Driver...</option>
               {drivers.map((drv) => (
@@ -2049,13 +2520,13 @@ export default function SalesOrderDetail() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Fleet Vehicle
             </label>
             <select
               value={deliveryForm.vehicleId}
               onChange={(e) => setDeliveryForm((prev) => ({ ...prev, vehicleId: e.target.value }))}
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Select a Vehicle (Optional)...</option>
               {vehicles.map((vh) => (
@@ -2067,20 +2538,20 @@ export default function SalesOrderDetail() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Scheduled Dispatch Date & Time <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Scheduled Dispatch Date & Time <span className="text-rose-500">*</span>
             </label>
             <input
               type="datetime-local"
               value={deliveryForm.scheduledDate}
               onChange={(e) => setDeliveryForm((prev) => ({ ...prev, scheduledDate: e.target.value }))}
               required
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Delivery Notes / Destination Details
             </label>
             <textarea
@@ -2088,7 +2559,7 @@ export default function SalesOrderDetail() {
               value={deliveryForm.notes}
               onChange={(e) => setDeliveryForm((prev) => ({ ...prev, notes: e.target.value }))}
               placeholder="e.g. Call before arrival, gate access code..."
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-muted-foreground"
             />
           </div>
 
@@ -2120,12 +2591,12 @@ export default function SalesOrderDetail() {
         onClose={() => setIsCompleteDeliveryModalOpen(false)}
         title="Confirm Delivery Handover"
         subtitle={`Order: ${order.orderNumber}`}
-        icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />}
+        icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
       >
         <form onSubmit={handleCompleteDeliverySubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Recipient Name <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Recipient Name <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -2135,12 +2606,12 @@ export default function SalesOrderDetail() {
                 setCompleteDeliveryForm((prev) => ({ ...prev, recipientName: e.target.value }))
               }
               placeholder="Name of person receiving goods"
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-muted-foreground"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Proof Type
             </label>
             <select
@@ -2148,7 +2619,7 @@ export default function SalesOrderDetail() {
               onChange={(e) =>
                 setCompleteDeliveryForm((prev) => ({ ...prev, proofType: e.target.value }))
               }
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="SIGNATURE">Customer Signature</option>
               <option value="OFFICIAL_STAMP">Company / Official Stamp</option>
@@ -2158,17 +2629,17 @@ export default function SalesOrderDetail() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Handover Remarks
             </label>
             <textarea
-              rows={2}
+              rows={3}
               value={completeDeliveryForm.notes}
               onChange={(e) =>
                 setCompleteDeliveryForm((prev) => ({ ...prev, notes: e.target.value }))
               }
               placeholder="e.g. Package verified in good shape, zero damages reported"
-              className="w-full p-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-muted-foreground"
             />
           </div>
 
@@ -2200,12 +2671,12 @@ export default function SalesOrderDetail() {
         onClose={() => setIsCustomerHandoverModalOpen(false)}
         title="Confirm Delivery Receipt & Acceptance"
         subtitle={`Order: ${order.orderNumber}`}
-        icon={<UserCheck className="w-5 h-5 text-violet-400" />}
+        icon={<UserCheck className="w-5 h-5 text-violet-500" />}
       >
         <form onSubmit={handleCustomerHandoverSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-foreground mb-1.5">
-              Receiving Authorized Person <span className="text-rose-400">*</span>
+              Receiving Authorized Person <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -2215,7 +2686,7 @@ export default function SalesOrderDetail() {
                 setCustomerHandoverForm((prev) => ({ ...prev, recipientName: e.target.value }))
               }
               placeholder="Your full name"
-              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-muted-foreground"
             />
           </div>
 
@@ -2230,10 +2701,10 @@ export default function SalesOrderDetail() {
                   confirmedReceived: e.target.checked,
                 }))
               }
-              className="mt-0.5 rounded border-border text-violet-600 focus:ring-violet-500"
+              className="mt-0.5 rounded border-border text-violet-600 focus:ring-violet-500 cursor-pointer"
             />
-            <label htmlFor="confirmedReceived" className="text-xs text-foreground cursor-pointer select-none">
-              <strong className="text-violet-400">Goods Verification:</strong> I confirm that all delivered goods have been received, inspected, and accepted in satisfactory condition according to this order.
+            <label htmlFor="confirmedReceived" className="text-xs text-foreground cursor-pointer select-none leading-snug">
+              <strong className="text-violet-500">Goods Verification:</strong> I confirm that all delivered goods have been received, inspected, and accepted in satisfactory condition according to this order.
             </label>
           </div>
 
@@ -2242,13 +2713,13 @@ export default function SalesOrderDetail() {
               Customer Feedback / Remarks (Optional)
             </label>
             <textarea
-              rows={2}
+              rows={3}
               value={customerHandoverForm.notes}
               onChange={(e) =>
                 setCustomerHandoverForm((prev) => ({ ...prev, notes: e.target.value }))
               }
               placeholder="e.g. All cartons verified and stored in warehouse safely"
-              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-muted-foreground"
             />
           </div>
 
@@ -2269,6 +2740,191 @@ export default function SalesOrderDetail() {
               className="bg-violet-600 hover:bg-violet-500 text-white font-bold"
             >
               {customerConfirmMutation.isPending ? 'Confirming...' : 'Confirm Delivery Handover'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 6: Confirm Customer Warehouse Pickup */}
+      <Modal
+        isOpen={isConfirmPickupModalOpen}
+        onClose={() => setIsConfirmPickupModalOpen(false)}
+        title="Confirm Customer Warehouse Pickup"
+        subtitle={`Order: ${order.orderNumber} • ${order.warehouse?.name || 'Warehouse'}`}
+        icon={<Warehouse className="w-5 h-5 text-emerald-500" />}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            confirmPickupMutation.mutate(confirmPickupForm);
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Authorized Collector Name <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={confirmPickupForm.recipientName}
+              onChange={(e) =>
+                setConfirmPickupForm((prev) => ({ ...prev, recipientName: e.target.value }))
+              }
+              placeholder="e.g. Dawit Haile"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Collector Phone Number
+              </label>
+              <input
+                type="tel"
+                value={confirmPickupForm.recipientPhone}
+                onChange={(e) =>
+                  setConfirmPickupForm((prev) => ({ ...prev, recipientPhone: e.target.value }))
+                }
+                placeholder="e.g. +251 911 234567"
+                className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono placeholder:text-muted-foreground"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
+                Vehicle Plate Number
+              </label>
+              <input
+                type="text"
+                value={confirmPickupForm.vehiclePlateNumber}
+                onChange={(e) =>
+                  setConfirmPickupForm((prev) => ({ ...prev, vehiclePlateNumber: e.target.value }))
+                }
+                placeholder="e.g. 3-B12345 AA"
+                className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono placeholder:text-muted-foreground"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Pickup Notes / Verification Remarks
+            </label>
+            <textarea
+              rows={2}
+              value={confirmPickupForm.notes}
+              onChange={(e) =>
+                setConfirmPickupForm((prev) => ({ ...prev, notes: e.target.value }))
+              }
+              placeholder="e.g. ID verified, goods inspected and loaded onto vehicle"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsConfirmPickupModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={confirmPickupMutation.isPending}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+            >
+              {confirmPickupMutation.isPending ? 'Confirming...' : 'Confirm Handover & Complete'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 7: Customer Confirm Warehouse Pickup & Acceptance */}
+      <Modal
+        isOpen={isCustomerPickupModalOpen}
+        onClose={() => setIsCustomerPickupModalOpen(false)}
+        title="Confirm Warehouse Collection & Acceptance"
+        subtitle={`Order: ${order.orderNumber} • ${order.warehouse?.name || 'Warehouse'}`}
+        icon={<UserCheck className="w-5 h-5 text-violet-500" />}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            customerConfirmPickupMutation.mutate(customerPickupForm);
+          }}
+          className="space-y-4"
+        >
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Receiving Authorized Person <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={customerPickupForm.recipientName}
+              onChange={(e) =>
+                setCustomerPickupForm((prev) => ({ ...prev, recipientName: e.target.value }))
+              }
+              placeholder="Your full name"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-violet-500/10 border border-violet-500/20">
+            <input
+              type="checkbox"
+              id="confirmedPickupReceived"
+              checked={customerPickupForm.confirmedReceived}
+              onChange={(e) =>
+                setCustomerPickupForm((prev) => ({
+                  ...prev,
+                  confirmedReceived: e.target.checked,
+                }))
+              }
+              className="mt-0.5 rounded border-border text-violet-600 focus:ring-violet-500 cursor-pointer"
+            />
+            <label htmlFor="confirmedPickupReceived" className="text-xs text-foreground cursor-pointer select-none leading-snug">
+              <strong className="text-violet-500">Goods Verification:</strong> I confirm that all items for this order have been inspected and collected from the warehouse in good condition.
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
+              Customer Feedback / Remarks (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={customerPickupForm.notes}
+              onChange={(e) =>
+                setCustomerPickupForm((prev) => ({ ...prev, notes: e.target.value }))
+              }
+              placeholder="e.g. Items verified and loaded onto our vehicle safely"
+              className="w-full p-2.5 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-muted-foreground"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsCustomerPickupModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={customerConfirmPickupMutation.isPending}
+              className="bg-violet-600 hover:bg-violet-500 text-white font-bold"
+            >
+              {customerConfirmPickupMutation.isPending ? 'Confirming...' : 'Confirm Collection & Receipt'}
             </Button>
           </div>
         </form>

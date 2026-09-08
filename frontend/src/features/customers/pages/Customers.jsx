@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { customersApi } from '../customersApi';
 import { paymentsApi } from '../../payments/paymentsApi';
+import { priceTiersApi } from '../../pricing/pricingApi';
 import { usePermission } from '../../../hooks/usePermission';
 import Button from '../../../components/ui/Button';
 
@@ -17,6 +18,7 @@ export default function Customers() {
   const [meta, setMeta] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [paymentTerms, setPaymentTerms] = useState([]);
+  const [priceTiers, setPriceTiers] = useState([]);
 
   // Search & Filter state
   const [search, setSearch] = useState('');
@@ -40,6 +42,7 @@ export default function Customers() {
     customerCode: '',
     creditLimit: 0,
     paymentTermsId: '',
+    priceTierId: '',
     status: 'ACTIVE',
     // Person fields
     person: {
@@ -114,8 +117,20 @@ export default function Customers() {
     }
   };
 
+  // Fetch Price Tiers for form select
+  const fetchPriceTiers = async () => {
+    try {
+      const res = await priceTiersApi.list({ status: 'ACTIVE', limit: 100 });
+      const tiersList = res.data?.data || res.data || [];
+      setPriceTiers(Array.isArray(tiersList) ? tiersList : []);
+    } catch (err) {
+      setPriceTiers([]);
+    }
+  };
+
   useEffect(() => {
     fetchPaymentTerms();
+    fetchPriceTiers();
   }, []);
 
   useEffect(() => {
@@ -153,6 +168,7 @@ export default function Customers() {
       customerCode: customer.customerCode || '',
       creditLimit: Number(customer.creditLimit) || 0,
       paymentTermsId: customer.paymentTermsId || customer.paymentTerms?.id || '',
+      priceTierId: customer.priceTierId || customer.priceTier?.id || '',
       status: customer.status || 'ACTIVE',
       person: {
         firstName: customer.person?.firstName || '',
@@ -223,6 +239,7 @@ export default function Customers() {
         const updatePayload = {
           creditLimit: Number(formData.creditLimit) || 0,
           paymentTermsId: formData.paymentTermsId || null,
+          priceTierId: formData.priceTierId || null,
           status: formData.status,
         };
 
@@ -255,6 +272,7 @@ export default function Customers() {
           customerCode: formData.customerCode.trim() || undefined,
           creditLimit: Number(formData.creditLimit) || 0,
           paymentTermsId: formData.paymentTermsId || undefined,
+          priceTierId: formData.priceTierId || undefined,
           status: formData.status,
         };
 
@@ -348,6 +366,7 @@ export default function Customers() {
         setFormData={setFormData}
         submitting={submitting}
         paymentTerms={paymentTerms}
+        priceTiers={priceTiers}
         handleSubmit={handleSubmit}
         handleBackToList={handleBackToList}
         getCustomerDisplayName={getCustomerDisplayName}

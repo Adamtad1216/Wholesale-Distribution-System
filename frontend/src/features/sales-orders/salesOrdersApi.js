@@ -29,14 +29,15 @@ export const salesOrdersApi = {
   completeDelivery: (id, proof) => api.post(`/sales/orders/driver/deliveries/${id}/complete`, { proof }),
   customerConfirmHandover: (id, payload) => api.post(`/sales/orders/${id}/customer-confirm-handover`, payload),
   driverConfirmHandoverByOrderId: (id, payload) => api.post(`/sales/orders/${id}/driver-confirm-handover`, payload),
+  confirmPickup: (id, payload) => api.post(`/sales/orders/${id}/confirm-pickup`, payload),
+  confirmCustomerPickupReceipt: (id, payload) => api.post(`/sales/orders/${id}/customer-pickup-confirm`, payload),
 
   // Dropdown Lookups
   getStorekeepers: () => api.get('/sales/orders/warehouse/storekeepers'),
   getDrivers: () => api.get('/sales/orders/warehouse/drivers'),
   getVehicles: () => api.get('/sales/orders/warehouse/vehicles'),
 
-  // Invoice Payment Skip & Settlements
-  skipInvoicePayment: (invoiceId) => api.post(`/invoices/${invoiceId}/skip-payment`),
+  // Invoice Settlements & Queries
   getInvoices: (params) => api.get('/invoices', { params }),
   getInvoiceById: (id) => api.get(`/invoices/${id}`),
 };

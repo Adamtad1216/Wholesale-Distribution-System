@@ -1,9 +1,10 @@
 import prisma from '../config/prisma.js';
 import { AppError } from './errors.js';
+import { hasPermission } from '../middleware/permission.middleware.js';
 
 /**
- * Returns the warehouseId assigned to a user if the user is not an ADMIN.
- * If the user is an ADMIN, returns null (indicating full system-wide access).
+ * Returns the warehouseId assigned to a user if the user is not an ADMIN or lacks warehouses:manage_all.
+ * If the user has global access, returns null (indicating full system-wide access).
  * If the user is an inventory manager / warehouse employee, resolves their managed warehouse ID.
  *
  * @param {Object} user - The authenticated req.user object
@@ -12,8 +13,11 @@ import { AppError } from './errors.js';
 export async function getAssignedWarehouseId(user) {
   if (!user) return null;
 
-  const isAdmin = user.userRoles?.some((ur) => ur.role?.name === 'ADMIN');
-  if (isAdmin) return null;
+  const canManageAll =
+    user.userRoles?.some((ur) => ['ADMIN', 'SUPER_ADMIN'].includes(ur.role?.name || ur.role)) ||
+    hasPermission(user, 'warehouses:manage_all');
+  if (canManageAll) return null;
+
 
   if (user.personId) {
     const managedWarehouse = await prisma.warehouse.findFirst({

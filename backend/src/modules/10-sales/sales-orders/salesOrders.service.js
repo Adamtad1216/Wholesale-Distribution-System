@@ -9,6 +9,12 @@ import {
 } from "../../09-customers/customers/customers.service.js";
 import { recordStatusChange } from "./salesOrders.status.service.js";
 import invoiceService from "../../04-finance/invoice.service.js";
+import { hasPermission } from "../../../middleware/permission.middleware.js";
+import {
+  sendNotificationToEmployee,
+  sendNotificationToRoles,
+  sendNotificationToCustomer,
+} from "../../../utils/notifications.js";
 
 export async function previewSalesOrder({ items, customerId, warehouseId, requestingUser }) {
   const pricing = await calculateSalesOrderPricing({
@@ -47,6 +53,11 @@ export async function createSalesOrder({
   items,
   requiredDate,
   deliveryLocation,
+  fulfillmentType,
+  pickupPersonName,
+  pickupPhone,
+  pickupVehiclePlate,
+  pickupNotes,
   requestingUser,
 }) {
   const warehouse = await prisma.warehouse.findFirst({
@@ -56,20 +67,21 @@ export async function createSalesOrder({
     throw new AppError("Warehouse not found or not active", 404);
   }
 
-  const pricing = await calculateSalesOrderPricing({
-    items,
-    customerId,
-    warehouseId,
-    requestingUser,
-    enforceQuota: true,
-  });
-
   const assignment = await assignSalesRepresentative({ warehouseId, customerId });
 
   let lastError;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const salesOrder = await prisma.$transaction(async (tx) => {
+        const pricing = await calculateSalesOrderPricing({
+          items,
+          customerId,
+          warehouseId,
+          requestingUser,
+          enforceQuota: true,
+          client: tx,
+        });
+
         const orderNumber = await generateOrderNumber(tx);
 
         const order = await tx.salesOrder.create({
@@ -83,6 +95,11 @@ export async function createSalesOrder({
             requiredDate: requiredDate ?? null,
             status: "PENDING_REVIEW",
             priceTierId: pricing.priceTier?.id ?? null,
+            fulfillmentType: fulfillmentType || "DELIVERY",
+            pickupPersonName: pickupPersonName || null,
+            pickupPhone: pickupPhone || null,
+            pickupVehiclePlate: pickupVehiclePlate || null,
+            pickupNotes: pickupNotes || null,
             deliveryLatitude: deliveryLocation?.latitude ? Number(deliveryLocation.latitude) : null,
             deliveryLongitude: deliveryLocation?.longitude ? Number(deliveryLocation.longitude) : null,
             deliveryAddressText: deliveryLocation?.addressText || null,
@@ -152,6 +169,7 @@ export async function createSalesOrder({
                 quotaId: quota.id,
                 customerId,
                 salesOrderId: order.id,
+                productId: item.productId,
                 quantity: item.quantity,
               },
             });
@@ -176,6 +194,31 @@ export async function createSalesOrder({
           itemCount: salesOrder.items.length,
         },
         req: null,
+      });
+      // Notify assigned sales rep and administrators
+      const customerLabel = salesOrder.customer?.organization?.name || salesOrder.customer?.person?.firstName || 'Customer';
+      if (salesOrder.salesRepId) {
+        sendNotificationToEmployee({
+          employeeId: salesOrder.salesRepId,
+          title: "New Sales Order Submitted",
+          message: `Order #${salesOrder.orderNumber} placed by ${customerLabel}. Pending review.`,
+          type: "SALES_ORDER_SUBMITTED",
+          createdById: requestingUser.id,
+        });
+      }
+      sendNotificationToRoles({
+        roleNames: ["ADMIN", "SUPER_ADMIN"],
+        title: "New Sales Order Created",
+        message: `Customer ${customerLabel} submitted order #${salesOrder.orderNumber}.`,
+        type: "SALES_ORDER_SUBMITTED",
+        createdById: requestingUser.id,
+      });
+      sendNotificationToCustomer({
+        customerId: salesOrder.customerId,
+        title: "Sales Order Submitted Successfully",
+        message: `Your order #${salesOrder.orderNumber} has been received and submitted for sales review.`,
+        type: "SALES_ORDER_SUBMITTED",
+        createdById: requestingUser.id,
       });
 
       return salesOrder;
@@ -223,6 +266,11 @@ export async function createSalesRepOrder({
   items,
   requiredDate,
   deliveryLocation,
+  fulfillmentType,
+  pickupPersonName,
+  pickupPhone,
+  pickupVehiclePlate,
+  pickupNotes,
   requestingUser,
 }) {
   const warehouse = await prisma.warehouse.findFirst({
@@ -288,6 +336,11 @@ export async function createSalesRepOrder({
             approvedBy: requestingUser.id,
             approvedAt: new Date(),
             priceTierId: pricing.priceTier?.id ?? null,
+            fulfillmentType: fulfillmentType || "DELIVERY",
+            pickupPersonName: pickupPersonName || null,
+            pickupPhone: pickupPhone || null,
+            pickupVehiclePlate: pickupVehiclePlate || null,
+            pickupNotes: pickupNotes || null,
             deliveryLatitude: deliveryLocation?.latitude ? Number(deliveryLocation.latitude) : null,
             deliveryLongitude: deliveryLocation?.longitude ? Number(deliveryLocation.longitude) : null,
             deliveryAddressText: deliveryLocation?.addressText || null,
@@ -358,6 +411,7 @@ export async function createSalesRepOrder({
                 quotaId: quota.id,
                 customerId: resolvedCustomerId,
                 salesOrderId: order.id,
+                productId: item.productId,
                 quantity: item.quantity,
               },
             });
@@ -427,6 +481,21 @@ export async function createSalesRepOrder({
             },
           },
         },
+      });
+
+      sendNotificationToCustomer({
+        customerId: salesOrder.customerId,
+        title: "Sales Order Approved & Commercial Invoice Issued",
+        message: `Your order #${salesOrder.orderNumber} was placed and approved. Commercial invoice is ready for payment.`,
+        type: "SALES_ORDER_APPROVED",
+        createdById: requestingUser.id,
+      });
+      sendNotificationToRoles({
+        roleNames: ["WAREHOUSE_MANAGER", "ADMIN", "SUPER_ADMIN"],
+        title: "Order Approved - Ready for Preparation",
+        message: `Sales order #${salesOrder.orderNumber} approved. Schedule warehouse preparation & staging.`,
+        type: "SALES_ORDER_APPROVED",
+        createdById: requestingUser.id,
       });
 
       return freshOrder || salesOrder;
@@ -601,6 +670,7 @@ export async function listSalesOrders(query = {}, requestingUser) {
 
   const userRoles = requestingUser?.userRoles?.map((ur) => ur.role?.name || ur.role) || [];
   const isSuperAdmin = userRoles.includes("SUPER_ADMIN") || userRoles.includes("ADMIN");
+  const canReadAllOrders = isSuperAdmin || hasPermission(requestingUser, "sales_orders:read_all");
   const isSalesRep = userRoles.includes("SALES_REPRESENTATIVE") || userRoles.includes("SALES_REP");
   const isWhManager = userRoles.includes("WAREHOUSE_MANAGER") || userRoles.includes("WH_MANAGER");
   const isStoreKeeper = userRoles.includes("STORE_KEEPER") || userRoles.includes("STOREKEEPER");
@@ -618,7 +688,7 @@ export async function listSalesOrders(query = {}, requestingUser) {
     where.warehouseId = query.warehouseId;
   }
 
-  if (isSuperAdmin) {
+  if (canReadAllOrders) {
     if (query.customerId) where.customerId = query.customerId;
     if (query.salesRepId) where.salesRepId = query.salesRepId;
   } else if (isSalesRep) {
@@ -667,7 +737,7 @@ export async function listSalesOrders(query = {}, requestingUser) {
     if (employee) {
       where.OR = [
         { deliveries: { some: { driverId: employee.id } } },
-        { status: { in: ["READY_FOR_DELIVERY", "DELIVERY_SCHEDULED", "DISPATCHED", "OUT_FOR_DELIVERY", "DELIVERED"] } },
+        { status: { in: ["READY_FOR_DELIVERY", "DELIVERY_SCHEDULED", "OUT_FOR_DELIVERY", "DELIVERED"] } },
       ];
     }
     if (query.customerId) where.customerId = query.customerId;

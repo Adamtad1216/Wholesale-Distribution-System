@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText, Printer, CheckCircle, Clock, AlertTriangle, Download, ArrowUpRight, Search, Zap } from 'lucide-react';
+import { FileText, Printer, CheckCircle, Clock, AlertTriangle, Download, ArrowUpRight, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
-import { salesOrdersApi } from '../../sales-orders/salesOrdersApi';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
@@ -22,20 +21,6 @@ export default function CustomerInvoices() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-
-  const skipPaymentMutation = useMutation({
-    mutationFn: (invoiceId) => salesOrdersApi.skipInvoicePayment(invoiceId),
-    onSuccess: () => {
-      toast.success('Invoice marked as PAID! Stock reserved for warehouse preparation.');
-      queryClient.invalidateQueries(['customerInvoices']);
-      queryClient.invalidateQueries(['salesOrders']);
-      queryClient.invalidateQueries(['salesOrder']);
-      setSelectedInvoice(null);
-    },
-    onError: (err) => {
-      toast.error(err?.response?.data?.message || 'Failed to settle invoice payment');
-    },
-  });
 
 
   const { data: invoicesData, isLoading, error } = useQuery({
@@ -230,17 +215,6 @@ export default function CustomerInvoices() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      {invoice.status !== 'PAID' && (
-                        <button
-                          onClick={() => skipPaymentMutation.mutate(invoice.id)}
-                          disabled={skipPaymentMutation.isPending}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition shadow-sm cursor-pointer"
-                          title="Skip payment and reserve stock for warehouse preparation"
-                        >
-                          <Zap className="w-3.5 h-3.5 fill-slate-950" />
-                          <span>{skipPaymentMutation.isPending ? 'Reserving...' : 'Skip Payment'}</span>
-                        </button>
-                      )}
                       <button
                         onClick={() => setSelectedInvoice(invoice)}
                         className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-secondary hover:bg-secondary/80 text-foreground border border-border transition cursor-pointer"
@@ -349,17 +323,6 @@ export default function CustomerInvoices() {
 
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-6 border-t border-border print:hidden">
-              {selectedInvoice.status !== 'PAID' && (
-                <Button
-                  size="sm"
-                  onClick={() => skipPaymentMutation.mutate(selectedInvoice.id)}
-                  disabled={skipPaymentMutation.isPending}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold flex items-center gap-1.5 shadow-sm cursor-pointer"
-                >
-                  <Zap className="w-4 h-4 fill-slate-950" />
-                  <span>{skipPaymentMutation.isPending ? 'Reserving Stock...' : 'Skip Payment (Reserve Stock)'}</span>
-                </Button>
-              )}
               <Button
                 variant="secondary"
                 size="sm"

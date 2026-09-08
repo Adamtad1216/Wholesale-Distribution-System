@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 /**
- * Reusable Workspace & Global Modal Component
+ * Reusable Global Modal Component
  *
  * @param {object} props
  * @param {boolean} props.isOpen - Controls modal visibility
@@ -10,7 +12,6 @@ import React, { useEffect } from 'react';
  * @param {React.ReactNode} [props.subtitle] - Modal header description
  * @param {React.ReactNode} [props.icon] - Optional header icon emoji/svg
  * @param {string} [props.maxWidth='max-w-md'] - Max width class (e.g. 'max-w-md', 'max-w-lg', 'max-w-2xl')
- * @param {'workspace' | 'screen'} [props.scope='workspace'] - 'workspace' centers within main content, 'screen' overlays entire viewport
  * @param {React.ReactNode} props.children - Modal inner content / form
  * @param {React.ReactNode} [props.footer] - Custom modal footer actions
  */
@@ -21,7 +22,6 @@ export default function Modal({
   subtitle,
   icon,
   maxWidth = 'max-w-md',
-  scope = 'workspace',
   children,
   footer,
 }) {
@@ -33,20 +33,19 @@ export default function Modal({
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
     }
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const backdropPositionClass =
-    scope === 'workspace'
-      ? 'absolute -inset-6 md:-inset-8'
-      : 'fixed inset-0';
-
-  return (
+  const modalContent = (
     <div
-      className={`${backdropPositionClass} z-50 flex items-center justify-center bg-black/25 backdrop-blur-[2px] p-4 animate-in fade-in duration-150`}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
       onClick={(e) => {
         if (e.target === e.currentTarget && onClose) {
           onClose();
@@ -54,48 +53,62 @@ export default function Modal({
       }}
     >
       <div
-        className={`border border-border rounded-2xl w-full ${maxWidth} p-6 space-y-5 shadow-2xl animate-in zoom-in-95 duration-150 relative -translate-y-8 md:-translate-y-12`}
-        style={{ backgroundColor: 'var(--color-card)' }}
+        className={`bg-card text-card-foreground border border-border rounded-2xl w-full ${maxWidth} max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-150 relative my-auto`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Section */}
         {(title || subtitle || onClose) && (
-          <div className="border-b border-border pb-3 flex items-start justify-between gap-4">
-            <div>
-              {title && (
-                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                  {icon && <span>{icon}</span>}
-                  {title}
-                </h3>
+          <div className="border-b border-border px-6 py-4 flex items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              {icon && (
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  {icon}
+                </div>
               )}
-              {subtitle && (
-                <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-              )}
+              <div className="min-w-0">
+                {title && (
+                  <h3 className="text-base font-bold text-foreground truncate">
+                    {title}
+                  </h3>
+                )}
+                {subtitle && (
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
             </div>
 
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted transition text-xs font-bold"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-xl hover:bg-muted transition text-xs font-bold shrink-0 cursor-pointer"
                 aria-label="Close Modal"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
         )}
 
         {/* Modal Body */}
-        <div className="space-y-4">{children}</div>
+        <div className="p-6 overflow-y-auto scrollbar-thin space-y-4 flex-1">
+          {children}
+        </div>
 
         {/* Modal Footer (Optional) */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-muted/20 rounded-b-2xl shrink-0">
             {footer}
           </div>
         )}
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }
+

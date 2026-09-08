@@ -6,6 +6,8 @@ import {
   sendPaginatedSuccess,
 } from "../../../utils/api-response.js";
 import prisma from "../../../config/prisma.js";
+import { hasPermission } from "../../../middleware/permission.middleware.js";
+
 import {
   salesQuotaQuerySchema,
   salesQuotaIdSchema,
@@ -84,8 +86,9 @@ export async function getQuotaConsumptionHandler(req, res, next) {
     const warehouseId = req.query.warehouseId || undefined;
     const priceTierId = req.query.priceTierId || undefined;
 
-    const isCustomerRole = req.user.userRoles.some((ur) => ur.role.name === "CUSTOMER");
-    if (isCustomerRole) {
+    const canReadAllQuotas = hasPermission(req.user, "sales_quotas:read_all");
+    const isCustomerRole = req.user.userRoles.some((ur) => ur.role?.name === "CUSTOMER");
+    if (isCustomerRole && !canReadAllQuotas) {
       const own = await prisma.customer.findFirst({
         where: {
           isArchived: false,
@@ -104,6 +107,7 @@ export async function getQuotaConsumptionHandler(req, res, next) {
         return next(new AppError("Customers can only view their own quota consumption", 403));
       }
     }
+
 
     const data = await getQuotaConsumptionForCustomer({ customerId, productId, warehouseId, priceTierId });
     sendSuccess(res, data);

@@ -13,7 +13,7 @@ import {
 } from "./warehouses.validation.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 import { authenticate } from "../../../middleware/auth.middleware.js";
-import { requirePermission } from "../../../middleware/permission.middleware.js";
+import { requirePermission, requireAnyPermission } from "../../../middleware/permission.middleware.js";
 
 const router = Router();
 
@@ -80,7 +80,7 @@ router.use(authenticate);
 router.get(
   "/",
   validate(warehouseQuerySchema),
-  requirePermission("warehouses:read"),
+  requireAnyPermission("warehouses:read", "sales_orders:create"),
   listWarehouses,
 );
 

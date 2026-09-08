@@ -31,10 +31,66 @@ const PRODUCTS = [
   { sku: 'PROD-TEST-005', name: 'Imported Dry Yeast (500g)', category: 'Baking Ingredients', brand: 'BakerChoice', unit: 'Box', abbreviation: 'BOX', sellingPrice: 380, wholesalePrice: 320, purchasePrice: 260 },
 ];
 
+async function ensureSchemaUpToDate(client) {
+  try {
+    await client.$executeRawUnsafe(`
+      DO $$ BEGIN
+        CREATE TYPE "FulfillmentType" AS ENUM ('DELIVERY', 'SELF_PICKUP');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      DO $$ BEGIN
+        ALTER TYPE "SalesOrderStatus" ADD VALUE IF NOT EXISTS 'READY_FOR_PICKUP';
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      DO $$ BEGIN
+        ALTER TYPE "SalesOrderHistoryAction" ADD VALUE IF NOT EXISTS 'READY_FOR_PICKUP';
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      DO $$ BEGIN
+        ALTER TYPE "SalesOrderHistoryAction" ADD VALUE IF NOT EXISTS 'PICKED_UP';
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "driver_confirmed_at" TIMESTAMP(3);
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "driver_notes" TEXT;
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_confirmed_at" TIMESTAMP(3);
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_confirmed_by" UUID;
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_recipient_name" TEXT;
+      ALTER TABLE "deliveries" ADD COLUMN IF NOT EXISTS "customer_notes" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "delivery_latitude" DECIMAL(10, 7);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "delivery_longitude" DECIMAL(10, 7);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "delivery_address_text" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "fulfillment_type" "FulfillmentType" DEFAULT 'DELIVERY';
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_person_name" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_phone" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_vehicle_plate" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "pickup_notes" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "picked_up_at" TIMESTAMP(3);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "picked_up_by" UUID;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_confirmed_at" TIMESTAMP(3);
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_confirmed_by" UUID;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_recipient_name" TEXT;
+      ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_notes" TEXT;
+    `);
+  } catch (err) {
+    console.warn("Schema self-heal note:", err?.message);
+  }
+}
+
 export async function seedAllWorkflowRolesAndUsers() {
   console.log('========================================================');
   console.log('Starting Complete End-to-End Sales & Fulfillment Seed...');
   console.log('========================================================');
+
+  await ensureSchemaUpToDate(prisma);
+
 
   // 1. Region, Company, Branch, Warehouse
   const region = await prisma.region.upsert({
@@ -114,10 +170,10 @@ export async function seedAllWorkflowRolesAndUsers() {
   // Grant role permissions
   const rolePermissionMap = {
     SALES_REPRESENTATIVE: ['sales_orders:create', 'sales_orders:read', 'sales_orders:update', 'customers:read', 'products:read', 'warehouses:read', 'deliveries:read', 'REPORT_VIEW_SALES', 'REPORT_VIEW_DASHBOARD'],
-    WAREHOUSE_MANAGER: ['sales_orders:read', 'preparation_tasks:create', 'preparation_tasks:read', 'preparation_tasks:update', 'deliveries:create', 'deliveries:read', 'deliveries:update', 'products:read', 'warehouses:read', 'branches:read'],
+    WAREHOUSE_MANAGER: ['sales_orders:read', 'preparation_tasks:create', 'preparation_tasks:read', 'preparation_tasks:update', 'deliveries:create', 'deliveries:read', 'deliveries:update', 'vehicles:read', 'vehicles:create', 'vehicles:update', 'vehicles:delete', 'vehicles:assign', 'products:read', 'warehouses:read', 'branches:read'],
     STORE_KEEPER: ['preparation_tasks:read', 'preparation_tasks:update', 'products:read', 'warehouses:read', 'deliveries:read'],
     DRIVER: ['deliveries:read', 'deliveries:update', 'sales_orders:read'],
-    CUSTOMER: ['sales_orders:create', 'sales_orders:read', 'products:read'],
+    CUSTOMER: ['sales_orders:create', 'sales_orders:read', 'products:read', 'warehouses:read'],
   };
 
   for (const [roleName, permNames] of Object.entries(rolePermissionMap)) {
@@ -548,6 +604,83 @@ export async function seedAllWorkflowRolesAndUsers() {
     });
     console.log(`✓ Product In Stock: ${product.name} (SKU: ${product.sku}) - 200 ${unit.name}s in ${warehouse.name}`);
   }
+
+  // 7. Seed Initial Sales Workflow Notifications for Demo Users
+  console.log('\nSeeding Initial Sales Workflow Notifications...');
+  const initialNotifications = [
+    {
+      userId: adminAccount.user.id,
+      title: 'New Sales Order Activity',
+      message: 'Customer Dawit Mengistu (Abyssinia Trading PLC) submitted Sales Order #SO-2026-0001.',
+      type: 'SALES_ORDER_SUBMITTED',
+      isRead: false,
+    },
+    {
+      userId: adminAccount.user.id,
+      title: 'Commercial Invoice Issued',
+      message: 'Commercial invoice #INV-2026-0001 generated for Sales Order #SO-2026-0001.',
+      type: 'INVOICE_CREATED',
+      isRead: false,
+    },
+    {
+      userId: salesRepAccount.user.id,
+      title: 'New Sales Order Submitted',
+      message: 'Order #SO-2026-0001 placed by Abyssinia Trading PLC requires review & stock confirmation.',
+      type: 'SALES_ORDER_SUBMITTED',
+      isRead: false,
+    },
+    {
+      userId: whManagerAccount.user.id,
+      title: 'Order Approved - Ready for Preparation',
+      message: 'Sales order #SO-2026-0001 approved by sales rep. Schedule warehouse preparation & staging.',
+      type: 'SALES_ORDER_APPROVED',
+      isRead: false,
+    },
+    {
+      userId: storekeeperAccount.user.id,
+      title: 'Warehouse Preparation Task Assigned',
+      message: 'Picking ticket for order #SO-2026-0001 assigned to you at Central Warehouse. Ready to stage.',
+      type: 'PREPARATION_TASK_ASSIGNED',
+      isRead: false,
+    },
+    {
+      userId: driverAccount.user.id,
+      title: 'Delivery Run Assigned',
+      message: 'Order #SO-2026-0001 assigned for route dispatch with vehicle ET-3-A10293.',
+      type: 'DELIVERY_ASSIGNED',
+      isRead: false,
+    },
+    {
+      userId: customerAccount.user.id,
+      title: 'Sales Order Approved & Commercial Invoice Issued',
+      message: 'Your order #SO-2026-0001 has been approved. Invoice #INV-2026-0001 is ready for payment.',
+      type: 'SALES_ORDER_APPROVED',
+      isRead: false,
+    },
+  ];
+
+  for (const notif of initialNotifications) {
+    const existing = await prisma.notification.findFirst({
+      where: {
+        userId: notif.userId,
+        title: notif.title,
+        isArchived: false,
+      },
+    });
+    if (!existing) {
+      await prisma.notification.create({
+        data: {
+          userId: notif.userId,
+          title: notif.title,
+          message: notif.message,
+          type: notif.type,
+          isRead: notif.isRead,
+          createdById: adminAccount.user.id,
+        },
+      });
+    }
+  }
+  console.log('✓ Initial Sales Workflow Notifications seeded for demo users.');
 
   console.log('\n========================================================');
   console.log('SEED SUMMARY: Complete Roles & User Accounts Ready:');

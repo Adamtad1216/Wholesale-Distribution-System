@@ -21,7 +21,7 @@ export const validate = (schema, source) => {
         errors: result.error.flatten().fieldErrors,
       });
     }
-    if (req.method !== 'GET' && req.method !== 'DELETE') {
+    if (source !== 'params' && source !== 'query' && req.method !== 'GET' && req.method !== 'DELETE') {
       req.body = result.data;
     }
     next();

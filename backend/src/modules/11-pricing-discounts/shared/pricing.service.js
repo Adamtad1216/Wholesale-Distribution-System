@@ -78,66 +78,157 @@ async function resolveCustomerPriceTier(customerId, requestingUser, client = pri
   );
 }
 
+export function getQuotaPeriodBounds(period, referenceDate = new Date()) {
+  const d = new Date(referenceDate);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const date = d.getDate();
+
+  switch (period) {
+    case "DAILY": {
+      const start = new Date(year, month, date, 0, 0, 0, 0);
+      const end = new Date(year, month, date, 23, 59, 59, 999);
+      return { start, end };
+    }
+    case "WEEKLY": {
+      const day = d.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      const monday = new Date(year, month, date + diffToMonday, 0, 0, 0, 0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      return { start: monday, end: sunday };
+    }
+    case "MONTHLY": {
+      const start = new Date(year, month, 1, 0, 0, 0, 0);
+      const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+    case "QUARTERLY": {
+      const quarterStartMonth = Math.floor(month / 3) * 3;
+      const start = new Date(year, quarterStartMonth, 1, 0, 0, 0, 0);
+      const end = new Date(year, quarterStartMonth + 3, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+    case "ANNUAL": {
+      const start = new Date(year, 0, 1, 0, 0, 0, 0);
+      const end = new Date(year, 11, 31, 23, 59, 59, 999);
+      return { start, end };
+    }
+    default: {
+      const start = new Date(year, month, 1, 0, 0, 0, 0);
+      const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+  }
+}
+
 async function findProductPrice(productId, priceTierId, warehouseId, client = prisma) {
-  if (!priceTierId || !warehouseId) return null;
+  if (!priceTierId) return null;
   const now = new Date();
-  const rows = await client.productPrice.findMany({
+
+  // 1. Try warehouse-specific tier price first if warehouseId is provided
+  if (warehouseId) {
+    const warehousePrices = await client.productPrice.findMany({
+      where: {
+        productId,
+        priceTierId,
+        warehouseId,
+        status: "ACTIVE",
+      },
+    });
+    const validWarehouse = warehousePrices.filter((r) => isActiveNow(r.startsAt, r.endsAt, now));
+    if (validWarehouse.length > 0) return validWarehouse[0];
+  }
+
+  // 2. Fall back to global/company-wide tier price (warehouseId: null)
+  const globalPrices = await client.productPrice.findMany({
     where: {
       productId,
       priceTierId,
-      warehouseId,
+      warehouseId: null,
       status: "ACTIVE",
     },
   });
-  const valid = rows.filter((r) => isActiveNow(r.startsAt, r.endsAt, now));
-  return valid[0] || null;
+  const validGlobal = globalPrices.filter((r) => isActiveNow(r.startsAt, r.endsAt, now));
+  if (validGlobal.length > 0) return validGlobal[0];
+
+  return null;
 }
 
-async function findBestDiscount({ productId, priceTierId, warehouseId, quantity }, client = prisma) {
+async function findBestDiscount({ productId, categoryId, priceTierId, warehouseId, quantity }, client = prisma) {
   if (!priceTierId || !warehouseId) return null;
   const now = new Date();
+
+  const orConditions = [{ productId: null, categoryId: null }];
+  if (productId) orConditions.push({ productId });
+  if (categoryId) orConditions.push({ categoryId, productId: null });
+
   const rows = await client.discountRule.findMany({
     where: {
       status: "ACTIVE",
-      OR: [{ productId: null }, { productId }],
+      OR: orConditions,
     },
   });
+
   const eligible = rows
     .filter((r) => isActiveNow(r.startsAt, r.endsAt, now))
     .filter((r) => (r.priceTierId ? r.priceTierId === priceTierId : true))
     .filter((r) => (r.warehouseId ? r.warehouseId === warehouseId : true))
     .filter((r) => (r.minQuantity ? Number(r.minQuantity) <= quantity : true))
     .sort((a, b) => {
+      // 1. Priority desc
       if (b.priority !== a.priority) return b.priority - a.priority;
+      // 2. Specificity desc: Product (3) > Category (2) > Global (1)
+      const specA = a.productId ? 3 : a.categoryId ? 2 : 1;
+      const specB = b.productId ? 3 : b.categoryId ? 2 : 1;
+      if (specB !== specA) return specB - specA;
+      // 3. Oldest rule breaks ties
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
+
   return eligible[0] || null;
 }
 
-function computeDiscountAmount(rule, subtotal) {
+function computeDiscountAmount(rule, unitPrice, quantity) {
   if (!rule) return 0;
+  const lineSubtotal = unitPrice * quantity;
   const v = Number(rule.discountValue);
   if (rule.discountType === "PERCENTAGE") {
-    return Math.max(0, subtotal * (v / 100));
+    return Math.max(0, lineSubtotal * (v / 100));
   }
-  return Math.max(0, Math.min(subtotal, v));
+  // FIXED_AMOUNT is per-unit wholesale discount (capped at unitPrice and lineSubtotal)
+  const perUnitDiscount = Math.min(unitPrice, v);
+  return Math.max(0, Math.min(lineSubtotal, perUnitDiscount * quantity));
 }
 
 async function getQuotaConsumed(quota, customerId, warehouseId, client = prisma) {
-  if (!quota || !customerId) return 0;
-  const start = new Date(quota.startsAt);
-  const end = new Date(quota.endsAt);
+  if (!quota) return 0;
+  const now = new Date();
+  const periodBounds = getQuotaPeriodBounds(quota.period, now);
 
-  const matching = await client.salesQuota.findMany({
-    where: {
-      OR: [{ id: quota.id }],
+  const quotaStart = quota.startsAt ? new Date(quota.startsAt) : null;
+  const quotaEnd = quota.endsAt ? new Date(quota.endsAt) : null;
+
+  const windowStart = quotaStart && quotaStart > periodBounds.start ? quotaStart : periodBounds.start;
+  const windowEnd = quotaEnd && quotaEnd < periodBounds.end ? quotaEnd : periodBounds.end;
+
+  const where = {
+    quotaId: quota.id,
+    createdAt: {
+      gte: windowStart,
+      lte: windowEnd,
     },
-    select: { id: true },
-  });
-  if (matching.length === 0) return 0;
+  };
+
+  // If quota is assigned to a specific customer, count that customer's usage.
+  // If customerId is null on quota, it's a shared pool quota across all buyers.
+  if (quota.customerId) {
+    where.customerId = customerId;
+  }
 
   const usages = await client.salesQuotaUsage.findMany({
-    where: { quotaId: { in: matching.map((m) => m.id) }, customerId },
+    where,
     select: { quantity: true },
   });
   return usages.reduce((s, u) => s + Number(u.quantity), 0);
@@ -215,14 +306,12 @@ export async function calculateSalesOrderPricing({
     let unitPrice;
 
     let productPrice = null;
-    if (priceTierId && warehouseId) {
+    if (priceTierId) {
       productPrice = await findProductPrice(it.productId, priceTierId, warehouseId, client);
     }
 
     if (productPrice) {
       unitPrice = Number(productPrice.unitPrice);
-    } else if (priceTierId && warehouseId) {
-      unitPrice = Number(product.sellingPrice);
     } else {
       unitPrice = Number(product.sellingPrice);
     }
@@ -234,11 +323,12 @@ export async function calculateSalesOrderPricing({
     if (priceTierId && warehouseId) {
       const discount = await findBestDiscount({
         productId: it.productId,
+        categoryId: product.categoryId,
         priceTierId,
         warehouseId,
         quantity,
       }, client);
-      discountAmount = computeDiscountAmount(discount, lineSubtotal);
+      discountAmount = computeDiscountAmount(discount, unitPrice, quantity);
       discountRuleId = discount?.id ?? null;
     }
     const lineAfterDiscount = lineSubtotal - discountAmount;

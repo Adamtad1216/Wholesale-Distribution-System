@@ -9,12 +9,14 @@ import {
   productPriceQuerySchema,
   productPriceIdSchema,
   createProductPriceSchema,
+  createBatchProductPricesSchema,
   updateProductPriceSchema,
 } from "./productPrices.validation.js";
 import {
   listProductPrices,
   getProductPrice,
   createProductPrice,
+  createBatchProductPrices,
   updateProductPrice,
   deleteProductPrice,
 } from "./productPrices.service.js";
@@ -45,6 +47,17 @@ export async function createProductPriceHandler(req, res, next) {
   try {
     const data = createProductPriceSchema.parse(req.body);
     const result = await createProductPrice(data, req.user);
+    sendCreated(res, result);
+  } catch (err) {
+    if (err.name === "ZodError") return next(new AppError("Validation failed: " + err.message, 400));
+    next(err);
+  }
+}
+
+export async function createBatchProductPricesHandler(req, res, next) {
+  try {
+    const data = createBatchProductPricesSchema.parse(req.body);
+    const result = await createBatchProductPrices(data, req.user);
     sendCreated(res, result);
   } catch (err) {
     if (err.name === "ZodError") return next(new AppError("Validation failed: " + err.message, 400));

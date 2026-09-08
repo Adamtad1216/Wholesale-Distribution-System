@@ -115,6 +115,11 @@ export default function CustomerDetailView({
                 <span className="px-2.5 py-0.5 rounded text-xs font-mono font-semibold badge-slate">
                   {selectedCustomer.customerCode || 'NO-CODE'}
                 </span>
+                {selectedCustomer.priceTier && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                    Tier: {selectedCustomer.priceTier.name}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -147,7 +152,7 @@ export default function CustomerDetailView({
       </Card>
 
       {/* Commercial Summary Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-5 border border-border bg-card shadow-sm rounded-2xl">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Credit Limit Allocation</p>
           <div className="text-2xl font-bold text-emerald-400 mt-2">
@@ -169,7 +174,19 @@ export default function CustomerDetailView({
         </Card>
 
         <Card className="p-5 border border-border bg-card shadow-sm rounded-2xl">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Assigned Sales Representative</p>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Pricing Tier</p>
+          <div className="text-2xl font-bold text-primary mt-2">
+            {selectedCustomer.priceTier?.name || 'Default'}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {selectedCustomer.priceTier?.isDefault
+              ? 'Standard default catalog bracket'
+              : 'Assigned customer pricing level'}
+          </p>
+        </Card>
+
+        <Card className="p-5 border border-border bg-card shadow-sm rounded-2xl">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sales Representative</p>
           <div className="text-2xl font-bold text-violet-400 mt-2">
             {selectedCustomer.salesRepresentative
               ? `${selectedCustomer.salesRepresentative.firstName} ${selectedCustomer.salesRepresentative.lastName}`

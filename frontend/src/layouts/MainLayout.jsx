@@ -8,12 +8,12 @@ export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="main-shell flex h-screen overflow-hidden">
+    <div className="main-shell flex h-full w-full overflow-hidden">
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Panel */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative main-panel">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative main-panel">
         {/* Glow details — dark mode only */}
         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-violet-650/5 blur-[130px] pointer-events-none z-0"></div>
         <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-indigo-650/5 blur-[130px] pointer-events-none z-0"></div>

@@ -17,6 +17,7 @@ const STATUS_TRANSITIONS = {
       "WAREHOUSE_PREPARATION_SCHEDULED",
       "PREPARING",
       "READY_FOR_DELIVERY",
+      "READY_FOR_PICKUP",
       "DELIVERY_SCHEDULED",
       "OUT_FOR_DELIVERY",
       "DELIVERED",
@@ -34,6 +35,7 @@ const STATUS_TRANSITIONS = {
       "WAREHOUSE_PREPARATION_SCHEDULED",
       "PREPARING",
       "READY_FOR_DELIVERY",
+      "READY_FOR_PICKUP",
       "DELIVERY_SCHEDULED",
       "OUT_FOR_DELIVERY",
       "DELIVERED",
@@ -47,6 +49,7 @@ const STATUS_TRANSITIONS = {
       "WAREHOUSE_PREPARATION_SCHEDULED",
       "PREPARING",
       "READY_FOR_DELIVERY",
+      "READY_FOR_PICKUP",
       "DELIVERY_SCHEDULED",
       "OUT_FOR_DELIVERY",
       "DELIVERED",
@@ -55,10 +58,11 @@ const STATUS_TRANSITIONS = {
     ],
   },
   WAREHOUSE_PREPARATION_SCHEDULED: {
-    STORE_KEEPER: ["PREPARING", "READY_FOR_DELIVERY", "DELIVERY_SCHEDULED"],
+    STORE_KEEPER: ["PREPARING", "READY_FOR_DELIVERY", "READY_FOR_PICKUP", "DELIVERY_SCHEDULED"],
     ADMIN: [
       "PREPARING",
       "READY_FOR_DELIVERY",
+      "READY_FOR_PICKUP",
       "DELIVERY_SCHEDULED",
       "OUT_FOR_DELIVERY",
       "DELIVERED",
@@ -67,10 +71,11 @@ const STATUS_TRANSITIONS = {
     ],
   },
   PREPARING: {
-    STORE_KEEPER: ["READY_FOR_DELIVERY", "DELIVERY_SCHEDULED"],
-    WAREHOUSE_MANAGER: ["READY_FOR_DELIVERY", "DELIVERY_SCHEDULED"],
+    STORE_KEEPER: ["READY_FOR_DELIVERY", "READY_FOR_PICKUP", "DELIVERY_SCHEDULED"],
+    WAREHOUSE_MANAGER: ["READY_FOR_DELIVERY", "READY_FOR_PICKUP", "DELIVERY_SCHEDULED"],
     ADMIN: [
       "READY_FOR_DELIVERY",
+      "READY_FOR_PICKUP",
       "DELIVERY_SCHEDULED",
       "OUT_FOR_DELIVERY",
       "DELIVERED",
@@ -85,6 +90,15 @@ const STATUS_TRANSITIONS = {
       "DELIVERY_SCHEDULED",
       "OUT_FOR_DELIVERY",
       "DELIVERED",
+      "COMPLETED",
+      "CANCELLED",
+    ],
+  },
+  READY_FOR_PICKUP: {
+    STORE_KEEPER: ["COMPLETED", "CANCELLED"],
+    WAREHOUSE_MANAGER: ["COMPLETED", "CANCELLED"],
+    CUSTOMER: ["COMPLETED"],
+    ADMIN: [
       "COMPLETED",
       "CANCELLED",
     ],
@@ -138,6 +152,16 @@ export async function recordStatusChange(salesOrderId, fromStatus, toStatus, act
       changedById: userId,
     },
   });
+
+  if (toStatus === "CANCELLED" || toStatus === "REJECTED") {
+    try {
+      await prisma.salesQuotaUsage.deleteMany({
+        where: { salesOrderId },
+      });
+    } catch (err) {
+      console.warn("Failed to release sales quota usage on cancellation/rejection:", err?.message);
+    }
+  }
 
   return history;
 }

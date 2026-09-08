@@ -1,5 +1,7 @@
 import invoiceService from './invoice.service.js';
 import prisma from '../../config/prisma.js';
+import { hasPermission } from '../../middleware/permission.middleware.js';
+
 
 function extractRoleNames(userOrRoles) {
   if (!userOrRoles) return [];
@@ -80,8 +82,12 @@ export const getInvoices = async (req, res, next) => {
       const isStaff = userRoles.some((r) =>
         ['ADMIN', 'SUPER_ADMIN', 'SALES_REPRESENTATIVE', 'SALES_REP', 'WAREHOUSE_MANAGER', 'ACCOUNTANT', 'FINANCE'].includes(r)
       );
+      const canReadAllInvoices =
+        isStaff ||
+        hasPermission(req.user, 'invoices:read_all') ||
+        hasPermission(req.user, 'sales_orders:read_all');
 
-      if (!isStaff) {
+      if (!canReadAllInvoices) {
         // Customer scoping
         const customer = await prisma.customer.findFirst({
           where: {
@@ -127,19 +133,6 @@ export const getInvoiceById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
     res.status(200).json({ success: true, data: invoice });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const skipPayment = async (req, res, next) => {
-  try {
-    const result = await invoiceService.skipPayment(req.params.id, req.user?.id);
-    res.status(200).json({
-      success: true,
-      data: result,
-      message: 'Invoice marked as paid and stock reserved successfully',
-    });
   } catch (error) {
     next(error);
   }

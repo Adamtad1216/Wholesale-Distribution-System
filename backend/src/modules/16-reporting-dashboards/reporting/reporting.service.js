@@ -5,6 +5,8 @@ import {
   getUserRoleNames,
   getEmployeeForUser,
 } from "./reporting.utils.js";
+import { hasPermission } from "../../../middleware/permission.middleware.js";
+
 
 function buildOrderWhere(filters = {}) {
   const { startDate, endDate, salesRepId, customerId, productId, status } = filters;
@@ -217,10 +219,11 @@ export async function getSalesRepReport(filters, requestingUser) {
 
   if (requestingUser) {
     const roles = getUserRoleNames(requestingUser);
-    const isManagement = roles.some((r) =>
-      ["ADMIN", "WAREHOUSE_MANAGER"].includes(r)
-    );
+    const isManagement =
+      roles.some((r) => ["ADMIN", "SUPER_ADMIN", "WAREHOUSE_MANAGER"].includes(r)) ||
+      hasPermission(requestingUser, "reports:view_all");
     if (!isManagement && roles.includes("SALES_REPRESENTATIVE")) {
+
       const employee = await getEmployeeForUser(requestingUser);
       if (!employee) {
         return { data: [], total: 0 };
@@ -353,10 +356,11 @@ export async function getDeliveryReport(filters, requestingUser) {
 
   if (requestingUser) {
     const roles = getUserRoleNames(requestingUser);
-    const isManagement = roles.some((r) =>
-      ["ADMIN", "WAREHOUSE_MANAGER"].includes(r)
-    );
+    const isManagement =
+      roles.some((r) => ["ADMIN", "SUPER_ADMIN", "WAREHOUSE_MANAGER"].includes(r)) ||
+      hasPermission(requestingUser, "reports:view_all");
     if (!isManagement && roles.includes("DRIVER")) {
+
       const employee = await getEmployeeForUser(requestingUser);
       if (!employee) {
         return {

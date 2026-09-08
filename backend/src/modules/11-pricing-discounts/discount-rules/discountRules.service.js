@@ -7,6 +7,7 @@ function serialize(dr) {
     id: dr.id,
     name: dr.name,
     productId: dr.productId,
+    categoryId: dr.categoryId,
     priceTierId: dr.priceTierId,
     warehouseId: dr.warehouseId,
     minQuantity: dr.minQuantity !== null && dr.minQuantity !== undefined ? Number(dr.minQuantity) : null,
@@ -19,6 +20,9 @@ function serialize(dr) {
     product: dr.product
       ? { id: dr.product.id, sku: dr.product.sku, name: dr.product.name }
       : null,
+    category: dr.category
+      ? { id: dr.category.id, name: dr.category.name }
+      : null,
     priceTier: dr.priceTier
       ? { id: dr.priceTier.id, name: dr.priceTier.name }
       : null,
@@ -30,9 +34,10 @@ function serialize(dr) {
   };
 }
 
-async function validateRefs(productId, priceTierId, warehouseId) {
+async function validateRefs(productId, categoryId, priceTierId, warehouseId) {
   const checks = [];
   if (productId) checks.push(prisma.product.findFirst({ where: { id: productId, isArchived: false } }).then((p) => p || "Product"));
+  if (categoryId) checks.push(prisma.category.findFirst({ where: { id: categoryId, isArchived: false } }).then((c) => c || "Category"));
   if (priceTierId) checks.push(prisma.priceTier.findFirst({ where: { id: priceTierId, isArchived: false } }).then((t) => t || "PriceTier"));
   if (warehouseId) checks.push(prisma.warehouse.findFirst({ where: { id: warehouseId, isArchived: false } }).then((w) => w || "Warehouse"));
   const res = await Promise.all(checks);
@@ -41,9 +46,10 @@ async function validateRefs(productId, priceTierId, warehouseId) {
   }
 }
 
-export async function listDiscountRules({ page, limit, productId, priceTierId, warehouseId, status }) {
+export async function listDiscountRules({ page, limit, productId, categoryId, priceTierId, warehouseId, status }) {
   const where = {};
   if (productId) where.productId = productId;
+  if (categoryId) where.categoryId = categoryId;
   if (priceTierId) where.priceTierId = priceTierId;
   if (warehouseId) where.warehouseId = warehouseId;
   if (status) where.status = status;
@@ -53,6 +59,7 @@ export async function listDiscountRules({ page, limit, productId, priceTierId, w
       where,
       include: {
         product: { select: { id: true, sku: true, name: true } },
+        category: { select: { id: true, name: true } },
         priceTier: { select: { id: true, name: true } },
         warehouse: { select: { id: true, code: true, name: true } },
       },
@@ -81,6 +88,7 @@ export async function getDiscountRule(id) {
     where: { id },
     include: {
       product: { select: { id: true, sku: true, name: true } },
+      category: { select: { id: true, name: true } },
       priceTier: { select: { id: true, name: true } },
       warehouse: { select: { id: true, code: true, name: true } },
     },
@@ -90,12 +98,18 @@ export async function getDiscountRule(id) {
 }
 
 export async function createDiscountRule(data, user) {
-  await validateRefs(data.productId ?? null, data.priceTierId ?? null, data.warehouseId ?? null);
+  await validateRefs(
+    data.productId ?? null,
+    data.categoryId ?? null,
+    data.priceTierId ?? null,
+    data.warehouseId ?? null
+  );
 
   const dr = await prisma.discountRule.create({
     data: {
       name: data.name,
       productId: data.productId ?? null,
+      categoryId: data.categoryId ?? null,
       priceTierId: data.priceTierId ?? null,
       warehouseId: data.warehouseId ?? null,
       minQuantity: data.minQuantity ?? null,
@@ -110,6 +124,7 @@ export async function createDiscountRule(data, user) {
     },
     include: {
       product: { select: { id: true, sku: true, name: true } },
+      category: { select: { id: true, name: true } },
       priceTier: { select: { id: true, name: true } },
       warehouse: { select: { id: true, code: true, name: true } },
     },
@@ -132,11 +147,13 @@ export async function updateDiscountRule(id, data, user) {
 
   if (
     data.productId !== undefined ||
+    data.categoryId !== undefined ||
     data.priceTierId !== undefined ||
     data.warehouseId !== undefined
   ) {
     await validateRefs(
       data.productId ?? existing.productId,
+      data.categoryId ?? existing.categoryId,
       data.priceTierId ?? existing.priceTierId,
       data.warehouseId ?? existing.warehouseId,
     );
@@ -147,6 +164,7 @@ export async function updateDiscountRule(id, data, user) {
     data: {
       ...(data.name !== undefined ? { name: data.name } : {}),
       ...(data.productId !== undefined ? { productId: data.productId } : {}),
+      ...(data.categoryId !== undefined ? { categoryId: data.categoryId } : {}),
       ...(data.priceTierId !== undefined ? { priceTierId: data.priceTierId } : {}),
       ...(data.warehouseId !== undefined ? { warehouseId: data.warehouseId } : {}),
       ...(data.minQuantity !== undefined ? { minQuantity: data.minQuantity } : {}),
@@ -160,6 +178,7 @@ export async function updateDiscountRule(id, data, user) {
     },
     include: {
       product: { select: { id: true, sku: true, name: true } },
+      category: { select: { id: true, name: true } },
       priceTier: { select: { id: true, name: true } },
       warehouse: { select: { id: true, code: true, name: true } },
     },

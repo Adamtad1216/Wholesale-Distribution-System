@@ -103,6 +103,11 @@ export default function CustomerListTable({
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium badge-slate">
                           {c.customerCode || 'NO-CODE'}
                         </span>
+                        {c.priceTier && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                            {c.priceTier.name}
+                          </span>
+                        )}
                         {isOrg && c.organization?.taxNumber && (
                           <span className="text-[11px] text-muted-foreground">TIN: {c.organization.taxNumber}</span>
                         )}

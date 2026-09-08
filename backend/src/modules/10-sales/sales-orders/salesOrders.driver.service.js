@@ -1,6 +1,11 @@
 import prisma from "../../../config/prisma.js";
 import { AppError } from "../../../utils/errors.js";
 import { validateStatusTransition, recordStatusChange } from "./salesOrders.status.service.js";
+import { hasPermission } from "../../../middleware/permission.middleware.js";
+import {
+  sendNotificationToCustomer,
+  sendNotificationToRoles,
+} from "../../../utils/notifications.js";
 
 async function resolveUserAndEmployee(user) {
   let dbUser;
@@ -29,9 +34,12 @@ async function resolveUserAndEmployee(user) {
     throw new AppError("User record not found", 404);
   }
 
-  const isPrivileged = dbUser.userRoles?.some((ur) =>
-    ["ADMIN", "SUPER_ADMIN", "WAREHOUSE_MANAGER"].includes(ur.role.name)
-  );
+  const isPrivileged =
+    dbUser.userRoles?.some((ur) =>
+      ["ADMIN", "SUPER_ADMIN", "WAREHOUSE_MANAGER"].includes(ur.role?.name || ur.role)
+    ) ||
+    hasPermission(dbUser, "deliveries:manage_all");
+
 
   let employee = null;
   if (dbUser.personId) {
@@ -209,6 +217,14 @@ export async function startDelivery(deliveryId, userArg) {
     return updated;
   });
 
+  sendNotificationToCustomer({
+    customerId: delivery.salesOrder.customerId,
+    title: "Order Out for Delivery",
+    message: `Your order #${delivery.salesOrder.orderNumber} is on the way! Driver has departed for delivery.`,
+    type: "DELIVERY_IN_TRANSIT",
+    createdById: dbUser.id,
+  });
+
   return updatedDelivery;
 }
 
@@ -299,6 +315,34 @@ export async function completeDelivery(deliveryId, proofData, userArg) {
     );
 
     return updated;
+  });
+
+  if (isCustomerAlreadyApproved) {
+    sendNotificationToCustomer({
+      customerId: delivery.salesOrder.customerId,
+      title: "Sales Order Completed",
+      message: `Delivery handover for order #${delivery.salesOrder.orderNumber} confirmed by both parties. Order completed!`,
+      type: "SALES_ORDER_COMPLETED",
+      createdById: dbUser.id,
+    });
+  } else {
+    sendNotificationToCustomer({
+      customerId: delivery.salesOrder.customerId,
+      title: "Delivery Handover Pending Confirmation",
+      message: `Driver has arrived and handed over order #${delivery.salesOrder.orderNumber}. Please confirm receipt in your portal to complete the order.`,
+      type: "HANDOVER_PENDING",
+      createdById: dbUser.id,
+    });
+  }
+
+  sendNotificationToRoles({
+    roleNames: ["WAREHOUSE_MANAGER", "ADMIN", "SUPER_ADMIN"],
+    title: isCustomerAlreadyApproved ? "Order Completed" : "Delivery Handover Recorded",
+    message: isCustomerAlreadyApproved
+      ? `Order #${delivery.salesOrder.orderNumber} dual-confirmed and completed.`
+      : `Driver confirmed handover for order #${delivery.salesOrder.orderNumber}. Awaiting customer sign-off.`,
+    type: isCustomerAlreadyApproved ? "SALES_ORDER_COMPLETED" : "DELIVERY_DELIVERED",
+    createdById: dbUser.id,
   });
 
   return updatedDelivery;
