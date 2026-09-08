@@ -131,11 +131,22 @@ export async function getAdjustmentById(id, user = null) {
     include: {
       items: {
         include: {
-          product: { select: { id: true, name: true, sku: true } },
+          product: { select: { id: true, name: true, sku: true, sellingPrice: true, wholesalePrice: true } },
         },
       },
-      warehouse: { select: { id: true, name: true, code: true } },
-      approver: { select: { id: true, person: { select: { firstName: true, lastName: true } } } },
+      warehouse: {
+        include: {
+          branch: { select: { id: true, name: true } },
+        },
+      },
+      createdBy: {
+        select: {
+          id: true,
+          username: true,
+          person: { select: { firstName: true, lastName: true } },
+        },
+      },
+      approver: { select: { id: true, username: true, person: { select: { firstName: true, lastName: true } } } },
     },
   });
 
@@ -153,11 +164,16 @@ export async function approveAdjustment(id, data, createdById, req, user = null)
   await enforceWarehouseScope(user, existing.warehouseId);
   if (existing.status !== 'PENDING') throw new AppError('Adjustment already processed', 400);
 
+  const status = data.status || (data.action === 'APPROVE' ? 'APPROVED' : data.action === 'REJECT' ? 'REJECTED' : null);
+  if (!['APPROVED', 'REJECTED'].includes(status)) {
+    throw new AppError('Status must be either APPROVED or REJECTED', 400);
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     const adjustment = await tx.stockAdjustment.update({
       where: { id },
       data: {
-        status: data.status,
+        status,
         approvedBy: createdById,
         approvedAt: new Date(),
         updatedById: createdById,

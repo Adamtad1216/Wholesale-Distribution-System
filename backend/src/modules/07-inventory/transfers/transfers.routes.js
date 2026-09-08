@@ -5,10 +5,12 @@ import {
   addTransfer,
   modifyTransfer,
   removeTransfer,
+  approveOrRejectTransferHandler,
 } from './transfers.controller.js';
 import {
   createTransferSchema,
   updateTransferSchema,
+  approveTransferSchema,
 } from './transfers.validation.js';
 import { validate } from '../../../middleware/validation.middleware.js';
 import { authenticate } from '../../../middleware/auth.middleware.js';
@@ -282,6 +284,13 @@ router.patch(
  *       404:
  *         description: Transfer not found
  */
+router.patch(
+  '/:id/approve',
+  validate(approveTransferSchema),
+  requirePermission(['inventory:transfers:approve', 'transfers:approve']),
+  approveOrRejectTransferHandler,
+);
+
 router.delete(
   '/:id',
   requirePermission('inventory:transfers:delete'),

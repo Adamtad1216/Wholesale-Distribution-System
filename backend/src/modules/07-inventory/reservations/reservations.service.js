@@ -100,9 +100,30 @@ export async function getReservations(filters, user = null) {
     prisma.stockReservation.findMany({
       where,
       include: {
-        warehouse: { select: { id: true, name: true, code: true } },
-        product: { select: { id: true, name: true, sku: true } },
-        salesOrder: { select: { id: true, orderNumber: true, status: true } },
+        warehouse: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            branch: { select: { id: true, name: true } },
+          },
+        },
+        product: { select: { id: true, name: true, sku: true, unit: true, sellingPrice: true, wholesalePrice: true } },
+        salesOrder: {
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+            customer: { select: { id: true, name: true } },
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+            person: { select: { firstName: true, lastName: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -241,3 +262,131 @@ export async function deleteReservation(id, deletedById, req, user = null) {
 
   return { id: result.id, deleted: true };
 }
+
+export async function getReservationById(id, user = null) {
+  const reservation = await prisma.stockReservation.findFirst({
+    where: { id, isArchived: false },
+    include: {
+      warehouse: {
+        include: {
+          branch: { select: { id: true, name: true } },
+          manager: { select: { id: true, person: { select: { firstName: true, lastName: true } } } },
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          unit: true,
+          sellingPrice: true,
+          wholesalePrice: true,
+        },
+      },
+      salesOrder: {
+        include: {
+          customer: { select: { id: true, name: true, phone: true, email: true } },
+        },
+      },
+      createdBy: {
+        select: {
+          id: true,
+          username: true,
+          person: { select: { firstName: true, lastName: true } },
+        },
+      },
+      updatedBy: {
+        select: {
+          id: true,
+          username: true,
+          person: { select: { firstName: true, lastName: true } },
+        },
+      },
+    },
+  });
+
+  if (!reservation) throw new AppError('Stock reservation not found', 404);
+  await enforceWarehouseScope(user, reservation.warehouseId);
+
+  const currentStock = await prisma.warehouseStock.findFirst({
+    where: { warehouseId: reservation.warehouseId, productId: reservation.productId, isArchived: false },
+  });
+
+  return {
+    ...reservation,
+    currentStock: currentStock
+      ? {
+          quantity: Number(currentStock.quantity),
+          availableQuantity: Number(currentStock.availableQuantity),
+          reservedQuantity: Number(currentStock.reservedQuantity),
+        }
+      : null,
+  };
+}
+
+export async function approveOrRejectReservation(id, data, createdById, req, user = null) {
+  const existing = await prisma.stockReservation.findFirst({
+    where: { id, isArchived: false },
+    include: { warehouse: true, product: true, salesOrder: true },
+  });
+
+  if (!existing) throw new AppError('Stock reservation not found', 404);
+  await enforceWarehouseScope(user, existing.warehouseId);
+
+  const action = data.action || (data.status === 'RELEASED' || data.status === 'CANCELLED' ? 'REJECT' : 'APPROVE');
+
+  if (action === 'REJECT' || action === 'RELEASE') {
+    return releaseReservation(id, existing.quantity, createdById, req, user);
+  }
+
+  const targetStatus = data.status || 'FULFILLED';
+  const result = await prisma.$transaction(async (tx) => {
+    const reservation = await tx.stockReservation.update({
+      where: { id },
+      data: {
+        status: targetStatus,
+        updatedById: createdById,
+        updatedAt: new Date(),
+      },
+      include: {
+        warehouse: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            branch: { select: { id: true, name: true } },
+          },
+        },
+        product: { select: { id: true, name: true, sku: true } },
+        salesOrder: { select: { id: true, orderNumber: true, status: true } },
+      },
+    });
+
+    if (existing.createdById) {
+      await tx.notification.create({
+        data: {
+          userId: existing.createdById,
+          title: 'Stock Reservation Confirmed',
+          message: `Stock reservation for ${existing.product.name} has been confirmed/fulfilled`,
+          type: 'INVENTORY_RESERVATION_CONFIRMED',
+          createdById,
+        },
+      });
+    }
+
+    return reservation;
+  });
+
+  await logAudit({
+    createdById,
+    action: 'RESERVATION_APPROVED',
+    entityType: 'StockReservation',
+    entityId: id,
+    oldValues: { status: existing.status },
+    newValues: { status: targetStatus, approvedBy: createdById, notes: data.notes },
+    req,
+  });
+
+  return result;
+}
+

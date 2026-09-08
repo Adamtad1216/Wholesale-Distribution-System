@@ -31,7 +31,11 @@ export const updateAdjustmentSchema = z.object({
 });
 
 export const approveAdjustmentSchema = z.object({
-  status: z.enum(['APPROVED', 'REJECTED']),
+  status: z.enum(['APPROVED', 'REJECTED']).optional(),
+  action: z.enum(['APPROVE', 'REJECT']).optional(),
+  notes: z.string().max(1000).optional().nullable(),
+}).refine((data) => data.status || data.action, {
+  message: 'Either status or action must be provided',
 });
 
 export const createAdjustmentItemSchema = z.object({

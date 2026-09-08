@@ -5,6 +5,7 @@ import {
   getTransferById,
   updateTransfer,
   deleteTransfer,
+  approveOrRejectTransfer,
 } from './transfers.service.js';
 
 export async function listTransfers(req, res, next) {
@@ -43,6 +44,15 @@ export async function modifyTransfer(req, res, next) {
   }
 }
 
+export async function approveOrRejectTransferHandler(req, res, next) {
+  try {
+    const transfer = await approveOrRejectTransfer(req.params.id, req.body, req.user.id, req, req.user);
+    sendUpdated(res, transfer, 'Stock transfer approval status updated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function removeTransfer(req, res, next) {
   try {
     await deleteTransfer(req.params.id, req.user.id, req, req.user);
@@ -51,4 +61,5 @@ export async function removeTransfer(req, res, next) {
     next(err);
   }
 }
+
 

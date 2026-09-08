@@ -60,3 +60,11 @@ export const updateTransferSchema = z.object({
   remark: z.string().max(500, { message: 'remark cannot exceed 500 characters' }).optional().nullable(),
 });
 
+export const approveTransferSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT']).optional(),
+  status: z.enum(['APPROVED', 'REJECTED']).optional(),
+  notes: z.string().max(1000).optional().nullable(),
+  rejectionReason: z.string().max(1000).optional().nullable(),
+});
+
+

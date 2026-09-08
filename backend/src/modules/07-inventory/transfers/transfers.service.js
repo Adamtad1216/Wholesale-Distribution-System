@@ -252,6 +252,13 @@ export async function getTransfers(filters, user = null) {
             person: { select: { firstName: true, lastName: true } },
           },
         },
+        approver: {
+          select: {
+            id: true,
+            username: true,
+            person: { select: { firstName: true, lastName: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -282,10 +289,39 @@ export async function getTransferById(id, filters = {}, user = null) {
   const transfer = await prisma.warehouseStockTransfer.findFirst({
     where,
     include: {
-      fromWarehouse: { select: { id: true, name: true, code: true } },
-      toWarehouse: { select: { id: true, name: true, code: true } },
-      product: { select: { id: true, name: true, sku: true } },
+      fromWarehouse: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          branch: { select: { id: true, name: true } },
+        },
+      },
+      toWarehouse: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          branch: { select: { id: true, name: true } },
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          sellingPrice: true,
+          wholesalePrice: true,
+        },
+      },
       createdBy: {
+        select: {
+          id: true,
+          username: true,
+          person: { select: { firstName: true, lastName: true } },
+        },
+      },
+      approver: {
         select: {
           id: true,
           username: true,
@@ -634,4 +670,196 @@ export async function deleteTransfer(id, deletedById, req, user = null) {
 
   return { id: result.id, deleted: true };
 }
+
+export async function approveOrRejectTransfer(id, data, approvedById, req, user = null) {
+  const existing = await prisma.warehouseStockTransfer.findFirst({
+    where: { id, isArchived: false },
+    include: {
+      fromWarehouse: { select: { id: true, name: true } },
+      toWarehouse: { select: { id: true, name: true } },
+      product: { select: { id: true, name: true } },
+    },
+  });
+
+  if (!existing) throw new AppError('Stock transfer not found', 404);
+
+  if (existing.status && existing.status !== 'PENDING') {
+    throw new AppError(`Stock transfer has already been ${existing.status.toLowerCase()}`, 400);
+  }
+
+  const action = data.action || (data.status === 'APPROVED' ? 'APPROVE' : data.status === 'REJECTED' ? 'REJECT' : null);
+  if (!['APPROVE', 'REJECT'].includes(action)) {
+    throw new AppError('Action must be either APPROVE or REJECT', 400);
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    if (action === 'APPROVE') {
+      const updated = await tx.warehouseStockTransfer.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          approvedBy: approvedById,
+          approvedAt: new Date(),
+          rejectionReason: data.notes || null,
+          updatedById: approvedById,
+          updatedAt: new Date(),
+        },
+        include: {
+          fromWarehouse: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              branch: { select: { id: true, name: true } },
+            },
+          },
+          toWarehouse: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              branch: { select: { id: true, name: true } },
+            },
+          },
+          product: { select: { id: true, name: true, sku: true } },
+          createdBy: {
+            select: {
+              id: true,
+              username: true,
+              person: { select: { firstName: true, lastName: true } },
+            },
+          },
+          approver: {
+            select: {
+              id: true,
+              username: true,
+              person: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      });
+
+      if (existing.createdById) {
+        await tx.notification.create({
+          data: {
+            userId: existing.createdById,
+            title: 'Stock Transfer Approved',
+            message: `Transfer of ${existing.quantity} units of ${existing.product.name} to ${existing.toWarehouse.name} was approved.`,
+            type: 'INVENTORY_TRANSFER_APPROVED',
+            createdById: approvedById,
+          },
+        });
+      }
+
+      return updated;
+    } else {
+      // REJECT action: reverse stock balance back from toWarehouse to fromWarehouse
+      const transferQty = Number(existing.quantity);
+
+      const destStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.toWarehouseId, productId: existing.productId, isArchived: false },
+      });
+
+      if (destStock) {
+        await tx.warehouseStock.update({
+          where: { id: destStock.id },
+          data: {
+            quantity: Math.max(0, Number(destStock.quantity) - transferQty),
+            availableQuantity: Math.max(0, Number(destStock.availableQuantity) - transferQty),
+            updatedById: approvedById,
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      const sourceStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.fromWarehouseId, productId: existing.productId, isArchived: false },
+      });
+
+      if (sourceStock) {
+        await tx.warehouseStock.update({
+          where: { id: sourceStock.id },
+          data: {
+            quantity: Number(sourceStock.quantity) + transferQty,
+            availableQuantity: Number(sourceStock.availableQuantity) + transferQty,
+            updatedById: approvedById,
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      const updated = await tx.warehouseStockTransfer.update({
+        where: { id },
+        data: {
+          status: 'REJECTED',
+          rejectionReason: data.notes || data.rejectionReason || 'Rejected by manager',
+          approvedBy: approvedById,
+          approvedAt: new Date(),
+          updatedById: approvedById,
+          updatedAt: new Date(),
+        },
+        include: {
+          fromWarehouse: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              branch: { select: { id: true, name: true } },
+            },
+          },
+          toWarehouse: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              branch: { select: { id: true, name: true } },
+            },
+          },
+          product: { select: { id: true, name: true, sku: true } },
+          createdBy: {
+            select: {
+              id: true,
+              username: true,
+              person: { select: { firstName: true, lastName: true } },
+            },
+          },
+          approver: {
+            select: {
+              id: true,
+              username: true,
+              person: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      });
+
+      if (existing.createdById) {
+        await tx.notification.create({
+          data: {
+            userId: existing.createdById,
+            title: 'Stock Transfer Rejected',
+            message: `Transfer of ${existing.quantity} units of ${existing.product.name} was rejected. Reason: ${data.notes || 'Not specified'}`,
+            type: 'INVENTORY_TRANSFER_REJECTED',
+            createdById: approvedById,
+          },
+        });
+      }
+
+      return updated;
+    }
+  });
+
+  await logAudit({
+    createdById: approvedById,
+    action: action === 'APPROVE' ? 'TRANSFER_APPROVED' : 'TRANSFER_REJECTED',
+    entityType: 'WarehouseStockTransfer',
+    entityId: id,
+    oldValues: { status: existing.status || 'PENDING' },
+    newValues: { status: result.status, approvedBy: approvedById, notes: data.notes },
+    req,
+  });
+
+  return sanitizeTransfer(result);
+}
+
 

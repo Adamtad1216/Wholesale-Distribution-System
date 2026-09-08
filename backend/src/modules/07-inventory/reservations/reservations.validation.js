@@ -23,3 +23,10 @@ export const createReservationSchema = z.object({
 export const releaseReservationSchema = z.object({
   quantity: z.coerce.number().positive().optional(),
 });
+
+export const approveReservationSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT', 'RELEASE']).optional(),
+  status: z.enum(['FULFILLED', 'RELEASED', 'CANCELLED', 'RESERVED']).optional(),
+  notes: z.string().max(1000).optional().nullable(),
+});
+

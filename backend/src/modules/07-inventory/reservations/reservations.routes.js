@@ -1,14 +1,17 @@
 import { Router } from 'express';
 import {
   listReservations,
+  getReservation,
   addReservation,
   releaseStockReservation,
+  approveOrRejectReservationHandler,
   removeReservation,
 } from './reservations.controller.js';
 import {
   reservationQuerySchema,
   createReservationSchema,
   releaseReservationSchema,
+  approveReservationSchema,
 } from './reservations.validation.js';
 import { validate } from '../../../middleware/validation.middleware.js';
 import { authenticate } from '../../../middleware/auth.middleware.js';
@@ -245,6 +248,13 @@ router.post(
   releaseStockReservation,
 );
 
+router.patch(
+  '/:id/release',
+  validate(releaseReservationSchema),
+  requirePermission('inventory:reservations:release'),
+  releaseStockReservation,
+);
+
 /**
  * @swagger
  * /api/v1/inventory/reservations/{id}:
@@ -295,6 +305,19 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+router.get(
+  '/:id',
+  requirePermission('inventory:reservations:read'),
+  getReservation,
+);
+
+router.patch(
+  '/:id/approve',
+  validate(approveReservationSchema),
+  requirePermission(['inventory:reservations:approve', 'reservations:approve', 'inventory:reservations:release']),
+  approveOrRejectReservationHandler,
+);
+
 router.delete(
   '/:id',
   requirePermission('inventory:reservations:delete'),

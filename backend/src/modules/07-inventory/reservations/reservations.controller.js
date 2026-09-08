@@ -3,14 +3,38 @@ import { reservationIdSchema } from './reservations.validation.js';
 import {
   createReservation,
   getReservations,
+  getReservationById,
   releaseReservation,
   deleteReservation,
+  approveOrRejectReservation,
 } from './reservations.service.js';
 
 export async function listReservations(req, res, next) {
   try {
     const { reservations, meta } = await getReservations(req.query, req.user);
     sendPaginatedSuccess(res, reservations, meta);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getReservation(req, res, next) {
+  try {
+    const idResult = reservationIdSchema.safeParse({ id: req.params.id });
+    if (!idResult.success) return sendError(res, 'Invalid reservation ID', 400);
+    const reservation = await getReservationById(idResult.data.id, req.user);
+    sendSuccess(res, reservation);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function approveOrRejectReservationHandler(req, res, next) {
+  try {
+    const idResult = reservationIdSchema.safeParse({ id: req.params.id });
+    if (!idResult.success) return sendError(res, 'Invalid reservation ID', 400);
+    const reservation = await approveOrRejectReservation(idResult.data.id, req.body, req.user.id, req, req.user);
+    sendUpdated(res, reservation, 'Stock reservation approval status updated successfully');
   } catch (err) {
     next(err);
   }
