@@ -38,6 +38,16 @@ const sanitizeCompany = (company) => {
 };
 
 export async function createCompany(data, createdById, req) {
+  const existingCount = await prisma.company.count({
+    where: { isArchived: false },
+  });
+  if (existingCount > 0) {
+    throw new AppError(
+      'An enterprise company profile already exists. Only one enterprise profile is permitted. You can edit the existing profile as needed.',
+      400
+    );
+  }
+
   const region = await prisma.region.findFirst({
     where: { id: data.regionId, isActive: true },
   });
