@@ -142,19 +142,9 @@ export default function ProductsPage() {
     navigate(`/products/${product.id}/edit`);
   };
 
-  const handleOpenDetailModal = async (product) => {
-    if (!product) return;
-    setSelectedProductForDetail(product);
-    setIsDetailModalOpen(true);
-    try {
-      const res = await productsApi.getProductById(product.id);
-      const full = res?.data || res;
-      if (full && full.id === product.id) {
-        setSelectedProductForDetail(full);
-      }
-    } catch {
-      // Non-blocking fallback to table product data
-    }
+  const handleOpenDetailModal = (product) => {
+    if (!product?.id) return;
+    navigate(`/products/${product.id}`);
   };
 
   const handleDeleteProductConfirm = async () => {
