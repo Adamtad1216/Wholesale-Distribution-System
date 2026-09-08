@@ -33,6 +33,7 @@ import CompaniesPage from './features/companies/pages/CompaniesPage';
 import Customers from './features/customers/pages/Customers';
 import ProductsPage from './features/products/pages/ProductsPage';
 import ProductFormPage from './features/products/pages/ProductFormPage';
+import ProductDetailPage from './features/products/pages/ProductDetailPage';
 import CategoriesPage from './features/products/pages/CategoriesPage';
 import BrandsPage from './features/products/pages/BrandsPage';
 import UnitsPage from './features/products/pages/UnitsPage';
@@ -41,6 +42,13 @@ import Payments from './features/payments/pages/payments/Payments';
 import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
 import MySalesOrders from './features/sales-orders/pages/MySalesOrders';
 import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
+
+// Inventory & Operations
+import InventoryPage from './features/inventory/pages/InventoryPage';
+import StockDetailPage from './features/inventory/pages/StockDetailPage';
+import TransferDetailPage from './features/inventory/pages/TransferDetailPage';
+import AdjustmentDetailPage from './features/inventory/pages/AdjustmentDetailPage';
+import ReservationDetailPage from './features/inventory/pages/ReservationDetailPage';
 
 /**
  * AppRoutes — inner component mounted inside <Router>.
@@ -119,11 +127,20 @@ function AppRoutes() {
         <Route element={<PermissionRoute permission="products:read" />}>
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/products/new" element={<ProductFormPage />} />
+          <Route path="/products/:id" element={<ProductDetailPage />} />
           <Route path="/products/:id/edit" element={<ProductFormPage />} />
           <Route path="/product-catalog" element={<ProductsPage />} />
           <Route path="/product-catalog/new" element={<ProductFormPage />} />
+          <Route path="/product-catalog/:id" element={<ProductDetailPage />} />
           <Route path="/product-catalog/:id/edit" element={<ProductFormPage />} />
         </Route>
+
+        {/* Inventory Management & Detail Pages */}
+        <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/inventory/stocks/:id" element={<StockDetailPage />} />
+        <Route path="/inventory/transfers/:id" element={<TransferDetailPage />} />
+        <Route path="/inventory/adjustments/:id" element={<AdjustmentDetailPage />} />
+        <Route path="/inventory/reservations/:id" element={<ReservationDetailPage />} />
 
         <Route element={<PermissionRoute permission="categories:read" />}>
           <Route path="/categories" element={<CategoriesPage />} />
