@@ -28,7 +28,8 @@ export default function PaymentsTab() {
     'payment-options:read',
     'payment-option:read',
     'payments:update',
-    'payment:view_all',
+    'payments:read_all',
+    'payment:read_all',
   ]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');

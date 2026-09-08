@@ -74,7 +74,7 @@ router.post('/from-delivery', requirePermission('invoices:create'), createFromDe
  *       200:
  *         description: List of all invoices
  */
-router.get('/', requirePermission(['invoice:view_all', 'invoice:view_own', 'invoices:read']), getInvoices);
+router.get('/', requirePermission(['invoices:read_all', 'invoices:read', 'invoice:read_all', 'invoice:read']), getInvoices);
 
 /**
  * @openapi
@@ -93,6 +93,6 @@ router.get('/', requirePermission(['invoice:view_all', 'invoice:view_own', 'invo
  *       200:
  *         description: Detailed invoice data
  */
-router.get('/:id', requirePermission(['invoice:view_all', 'invoice:view_own', 'invoices:read']), getInvoiceById);
+router.get('/:id', requirePermission(['invoices:read_all', 'invoices:read', 'invoice:read_all', 'invoice:read']), getInvoiceById);
 
 export default router;

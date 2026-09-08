@@ -47,16 +47,16 @@ router.use(authenticate);
  *       201:
  *         description: Payment provider created successfully
  */
-router.get('/providers', requirePermission(['payment:view_all', 'payment:view_own', 'payments:read']), (req, res) => paymentController.getProviders(req, res));
+router.get('/providers', requirePermission(['payments:read_all', 'payments:read', 'payment:read_all', 'payment:read']), (req, res) => paymentController.getProviders(req, res));
 router.post('/providers', requirePermission(['payment-options:create', 'payment-options:manage', 'payment-option:manage', 'payments:create']), (req, res) => paymentController.createProvider(req, res));
 
 // Chapa Transfers & Payouts Routes
-router.get('/chapa/banks', requirePermission(['payment:view_all', 'payment:view_own', 'payments:read']), (req, res) => paymentController.getChapaBanks(req, res));
+router.get('/chapa/banks', requirePermission(['payments:read_all', 'payments:read', 'payment:read_all', 'payment:read']), (req, res) => paymentController.getChapaBanks(req, res));
 router.post('/chapa/transfers', requirePermission('payments:create'), (req, res) => paymentController.initiateChapaTransfer(req, res));
-router.get('/chapa/transfers/verify/:reference', requirePermission(['payment:view_all', 'payment:view_own', 'payments:read']), (req, res) => paymentController.verifyChapaTransfer(req, res));
+router.get('/chapa/transfers/verify/:reference', requirePermission(['payments:read_all', 'payments:read', 'payment:read_all', 'payment:read']), (req, res) => paymentController.verifyChapaTransfer(req, res));
 
 // List all payments
-router.get('/', requirePermission(['payment:view_all', 'payment:view_own', 'payments:read']), (req, res) => paymentController.getPayments(req, res));
+router.get('/', requirePermission(['payments:read_all', 'payments:read', 'payment:read_all', 'payment:read']), (req, res) => paymentController.getPayments(req, res));
 
 /**
  * @openapi
@@ -287,7 +287,7 @@ router.post('/initialize', requirePermission('payments:create'), (req, res) => p
  *       200:
  *         description: Payment status verification
  */
-router.get('/verify/:txRef', requirePermission(['payment:view_all', 'payment:view_own', 'payments:read']), (req, res) => paymentController.verify(req, res));
+router.get('/verify/:txRef', requirePermission(['payments:read_all', 'payments:read', 'payment:read_all', 'payment:read']), (req, res) => paymentController.verify(req, res));
 
 /**
  * @openapi
@@ -421,7 +421,7 @@ router.post('/:id/refund', requirePermission('payments:create'), (req, res) => p
  *       200:
  *         description: Detailed payment entity history
  */
-router.get('/:id/history', requirePermission(['payment:view_all', 'payment:view_own', 'payments:read']), (req, res) => paymentController.getHistory(req, res));
+router.get('/:id/history', requirePermission(['payments:read_all', 'payments:read', 'payment:read_all', 'payment:read']), (req, res) => paymentController.getHistory(req, res));
 router.patch('/:id/approve', requirePermission('payments:update'), (req, res) => paymentController.approvePayment(req, res));
 
 export default router;

@@ -7,6 +7,7 @@ import {
   getCurrentUser,
   forgotPassword,
   resetPasswordController,
+  verifyInvitationController,
   acceptInvitationController,
   updateProfileController,
   changePasswordController,
@@ -399,6 +400,8 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+router.get("/verify-invitation/:token", verifyInvitationController);
+
 router.post(
   "/accept-invitation",
   validate(acceptInvitationSchema),

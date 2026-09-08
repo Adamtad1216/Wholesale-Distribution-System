@@ -19,6 +19,7 @@ export async function getUsers(filters, _requesterId) {
                 paymentTerms: true,
               },
             },
+            employee: true,
           },
         },
         userRoles: {

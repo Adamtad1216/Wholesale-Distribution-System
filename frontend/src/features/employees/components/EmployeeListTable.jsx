@@ -116,18 +116,35 @@ export default function EmployeeListTable({
 
               {/* Status */}
               <TableCell>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
-                  emp.status === 'ACTIVE'
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : emp.status === 'SUSPENDED'
-                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    emp.status === 'ACTIVE' ? 'bg-emerald-400' : emp.status === 'SUSPENDED' ? 'bg-rose-400' : 'bg-amber-400'
-                  }`}></span>
-                  {emp.status || 'ACTIVE'}
-                </span>
+                {(() => {
+                  const isInvited = emp.status === 'INVITED' || emp.person?.user?.accountStatus === 'INVITED';
+                  const isSuspended = emp.status === 'SUSPENDED';
+                  const isActive = emp.status === 'ACTIVE' && !isInvited;
+
+                  if (isInvited) {
+                    return (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        INVITED
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : isSuspended
+                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        : 'bg-muted-foreground/10 text-muted-foreground border border-border'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        isActive ? 'bg-emerald-400' : isSuspended ? 'bg-rose-400' : 'bg-muted-foreground'
+                      }`}></span>
+                      {emp.status || 'ACTIVE'}
+                    </span>
+                  );
+                })()}
               </TableCell>
 
               {/* Actions */}

@@ -50,6 +50,7 @@ export function useEmployees() {
 
   const [formData, setFormData] = useState(INITIAL_EMPLOYEE_FORM_STATE);
   const [submitting, setSubmitting] = useState(false);
+  const [invitationBanner, setInvitationBanner] = useState(null);
 
   // Fetch Employees List
   const fetchEmployees = useCallback(async () => {
@@ -60,7 +61,12 @@ export function useEmployees() {
       const list = Array.isArray(data) ? data : data.items || data.employees || [];
 
       const filteredList = statusFilter
-        ? list.filter((e) => e.status === statusFilter)
+        ? list.filter((e) => {
+            const isInvited = e.status === 'INVITED' || e.person?.user?.accountStatus === 'INVITED';
+            if (statusFilter === 'INVITED') return isInvited;
+            if (statusFilter === 'ACTIVE') return e.status === 'ACTIVE' && !isInvited;
+            return e.status === statusFilter;
+          })
         : list;
 
       setEmployees(filteredList);
@@ -139,8 +145,15 @@ export function useEmployees() {
   // Calculated Stats
   const stats = useMemo(() => {
     const total = employees.length;
-    const activeCount = employees.filter((e) => e.status === 'ACTIVE').length;
-    const inactiveCount = employees.filter((e) => e.status !== 'ACTIVE').length;
+    const invitedCount = employees.filter(
+      (e) => e.status === 'INVITED' || e.person?.user?.accountStatus === 'INVITED'
+    ).length;
+    const activeCount = employees.filter(
+      (e) => e.status === 'ACTIVE' && e.person?.user?.accountStatus !== 'INVITED'
+    ).length;
+    const inactiveCount = employees.filter(
+      (e) => e.status !== 'ACTIVE' && e.status !== 'INVITED' && e.person?.user?.accountStatus !== 'INVITED'
+    ).length;
     const rolesCount = new Set(
       employees.map((e) => e.jobSpecification?.title || e.jobTitle || 'Staff').filter(Boolean)
     ).size;
@@ -149,6 +162,7 @@ export function useEmployees() {
       total,
       activeCount,
       inactiveCount,
+      invitedCount,
       rolesCount,
     };
   }, [employees]);
@@ -217,6 +231,17 @@ export function useEmployees() {
     if (!formData.branchId) {
       toast.error('Please select an assigned branch');
       return;
+    }
+
+    if (formData.needsUserAccount) {
+      if (!formData.roleId) {
+        toast.error('Please select a system security role for the user account');
+        return;
+      }
+      if (!formData.password && !formData.email?.trim()) {
+        toast.error('Email address is required to send an account invitation link');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -312,8 +337,25 @@ export function useEmployees() {
           roleIds: formData.needsUserAccount && formData.roleId ? [formData.roleId] : undefined,
         };
 
-        await employeesApi.createEmployee(createPayload);
-        toast.success('Employee created successfully');
+        const res = await employeesApi.createEmployee(createPayload);
+        const createdData = res?.data?.data || res?.data || res;
+
+        if (formData.needsUserAccount && !formData.password) {
+          const recipientEmail = createdData?.person?.email || formData.email;
+          if (createdData?.invitationLink) {
+            setInvitationBanner({
+              link: createdData.invitationLink,
+              email: recipientEmail,
+              name: getEmployeeName(createdData),
+            });
+            navigator.clipboard?.writeText(createdData.invitationLink).catch(() => {});
+            toast.success(`Employee created! Invitation link sent to ${recipientEmail}`);
+          } else {
+            toast.success(`Employee created! Invitation email sent to ${recipientEmail}`);
+          }
+        } else {
+          toast.success('Employee created successfully');
+        }
       }
 
       handleBackToList();
@@ -428,5 +470,7 @@ export function useEmployees() {
     getEmployeeEmail,
     getEmployeePhone,
     isSelfSuperAdminEmployee,
+    invitationBanner,
+    setInvitationBanner,
   };
 }

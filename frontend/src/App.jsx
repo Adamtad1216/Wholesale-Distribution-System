@@ -16,6 +16,7 @@ import { useTokenExpiry } from './hooks/useTokenExpiry';
 // Public pages
 import Login from './features/auth/pages/login/Login';
 import Register from './features/auth/pages/register/Register';
+import AcceptInvitation from './features/auth/pages/invitation/AcceptInvitation';
 
 // Auth API & Slice
 import { authApi } from './features/auth/authApi';
@@ -80,6 +81,7 @@ function AppRoutes() {
       {/* ── Public Routes ─────────────────────────────────────── */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
       {/* ── Protected App Shell (auth required) ───────────────── */}
       <Route
@@ -123,11 +125,11 @@ function AppRoutes() {
           <Route path="/documents" element={<Documents />} />
         </Route>
 
-        <Route element={<PermissionRoute permission={['payments:read', 'payment:view_all', 'payment:view_own', 'invoices:read', 'invoice:view_all', 'invoice:view_own', 'credits:read', 'payment-terms:read']} />}>
+        <Route element={<PermissionRoute permission={['payments:read', 'payments:read_all', 'invoices:read', 'invoices:read_all', 'credits:read', 'credits:read_all', 'payment-terms:read', 'payment-terms:read_all']} />}>
           <Route path="/finance" element={<FinanceDashboard />} />
         </Route>
 
-        <Route element={<PermissionRoute permission={['payment-options:manage', 'payment-option:manage', 'payment-options:read', 'payment-option:read', 'payments:update', 'payment:view_all']} />}>
+        <Route element={<PermissionRoute permission={['payment-options:manage', 'payment-option:manage', 'payment-options:read', 'payment-option:read', 'payments:update', 'payments:read_all', 'payment:read_all']} />}>
           <Route path="/finance/payment-options" element={<PaymentOptionsPage />} />
         </Route>
 

@@ -97,7 +97,7 @@ router.post('/from-return', requirePermission('credits:create'), creditControlle
  *       200:
  *         description: List of credits
  */
-router.get('/', requirePermission('credits:read'), creditController.getAllCredits);
+router.get('/', requirePermission(['credits:read_all', 'credits:read', 'credit:read_all', 'credit:read']), creditController.getAllCredits);
 
 /**
  * @swagger
@@ -118,7 +118,7 @@ router.get('/', requirePermission('credits:read'), creditController.getAllCredit
  *       200:
  *         description: Customer store credit summary
  */
-router.get('/customer/:customerId', requirePermission('credits:read'), creditController.getCustomerCredits);
+router.get('/customer/:customerId', requirePermission(['credits:read_all', 'credits:read', 'credit:read_all', 'credit:read']), creditController.getCustomerCredits);
 
 /**
  * @swagger
@@ -178,7 +178,7 @@ router.post('/:id/apply', requirePermission('credits:create'), creditController.
  *       404:
  *         description: Credit not found
  */
-router.get('/:id/history', requirePermission('credits:read'), creditController.getCreditHistory);
+router.get('/:id/history', requirePermission(['credits:read_all', 'credits:read', 'credit:read_all', 'credit:read']), creditController.getCreditHistory);
 
 /**
  * @swagger
@@ -199,7 +199,7 @@ router.get('/:id/history', requirePermission('credits:read'), creditController.g
  *       200:
  *         description: Complete customer credit facility summary
  */
-router.get('/customer/:customerId/summary', requirePermission('credits:read'), creditController.getCustomerCreditSummary);
+router.get('/customer/:customerId/summary', requirePermission(['credits:read_all', 'credits:read', 'credit:read_all', 'credit:read']), creditController.getCustomerCreditSummary);
 
 /**
  * @swagger
@@ -234,6 +234,6 @@ router.get('/customer/:customerId/summary', requirePermission('credits:read'), c
  *       400:
  *         description: Purchase exceeds credit limit
  */
-router.post('/customer/:customerId/validate-limit', requirePermission('credits:read'), creditController.validateCreditLimit);
+router.post('/customer/:customerId/validate-limit', requirePermission(['credits:read_all', 'credits:read', 'credit:read_all', 'credit:read']), creditController.validateCreditLimit);
 
 export default router;

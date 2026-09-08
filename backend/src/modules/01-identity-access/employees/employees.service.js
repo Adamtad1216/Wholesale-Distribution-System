@@ -172,7 +172,7 @@ export async function createEmployee(data, createdById, req) {
         employeeCode,
         hireDate: new Date(data.hireDate),
         department: data.department || null,
-        status: data.status || 'ACTIVE',
+        status: (data.needsUserAccount && !data.password) ? 'INVITED' : (data.status || 'ACTIVE'),
         commissionRate: data.commissionRate || null,
         salesTerritory: data.salesTerritory || null,
         driverLicenseNumber: data.driverLicenseNumber || null,
@@ -227,8 +227,13 @@ export async function createEmployee(data, createdById, req) {
     });
 
     let user = null;
+    let invitationLink = null;
+    let invitationToken = null;
     if (data.needsUserAccount) {
-      const assignedRoleId = data.roleId || data.roleIds?.[0];
+      const assignedRoleIds = (data.roleIds && data.roleIds.length > 0)
+        ? data.roleIds
+        : (data.roleId ? [data.roleId] : []);
+
       if (data.username && data.password) {
         const existingUsername = await tx.user.findUnique({
           where: { username: data.username },
@@ -253,17 +258,27 @@ export async function createEmployee(data, createdById, req) {
           },
         });
 
-        if (assignedRoleId) {
+        for (const rId of assignedRoleIds) {
           await tx.userRole.create({
             data: {
               userId: user.id,
               createdById,
-              roleId: assignedRoleId,
+              roleId: rId,
             },
           });
         }
       } else {
-        const invitationToken = crypto.randomBytes(32).toString('hex');
+        // Pre-validate username if optionally supplied by admin
+        if (data.username) {
+          const existingUsername = await tx.user.findUnique({
+            where: { username: data.username },
+          });
+          if (existingUsername) {
+            throw new AppError('Username already taken', 409);
+          }
+        }
+
+        invitationToken = crypto.randomBytes(32).toString('hex');
         const invitationTokenHash = crypto
           .createHash('sha256')
           .update(invitationToken)
@@ -273,6 +288,7 @@ export async function createEmployee(data, createdById, req) {
         user = await tx.user.create({
           data: {
             personId: person.id,
+            username: data.username || null,
             accountStatus: 'INVITED',
             invitationTokenHash,
             invitationTokenExpiresAt,
@@ -285,14 +301,35 @@ export async function createEmployee(data, createdById, req) {
           },
         });
 
-        if (data.email) {
-          await sendInvitationEmail(data.email, invitationToken, `${data.firstName} ${data.lastName}`);
+        // Assign selected role(s) so employee has them once invitation is accepted
+        for (const rId of assignedRoleIds) {
+          await tx.userRole.create({
+            data: {
+              userId: user.id,
+              createdById,
+              roleId: rId,
+            },
+          });
         }
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        invitationLink = `${frontendUrl}/accept-invitation?token=${invitationToken}`;
       }
     }
 
-    return { employee, user };
+    return { employee, user, invitationLink, invitationToken: user?.accountStatus === 'INVITED' ? invitationToken : null };
+  }, {
+    timeout: 15000,
+    maxWait: 10000,
   });
+
+  // Dispatch invitation email asynchronously after transaction commits successfully
+  if (result.invitationToken && data.email) {
+    sendInvitationEmail(data.email, result.invitationToken, `${data.firstName} ${data.lastName}`)
+      .catch((mailErr) => {
+        console.error('[Employee Invitation] Mail send failed:', mailErr.message);
+      });
+  }
 
   await logAudit({
     createdById,
@@ -303,7 +340,11 @@ export async function createEmployee(data, createdById, req) {
     req,
   });
 
-  return sanitizeEmployee(result.employee);
+  const sanitized = sanitizeEmployee(result.employee);
+  if (result.invitationLink) {
+    sanitized.invitationLink = result.invitationLink;
+  }
+  return sanitized;
 }
 
 export async function getEmployees(filters) {
@@ -659,9 +700,7 @@ export async function updateEmployee(id, data, createdById, req) {
         where: { id: existingEmployee.personId },
       });
 
-      if (person?.email) {
-        await sendInvitationEmail(person.email, invitationToken, `${person.firstName} ${person.lastName}`);
-      }
+      return { employee, user, invitationToken, person };
     } else if (!data.needsUserAccount && existingUser) {
       await tx.user.update({
         where: { id: existingUser.id },
@@ -673,8 +712,14 @@ export async function updateEmployee(id, data, createdById, req) {
       });
     }
 
-    return { employee, user };
+    return { employee, user, invitationToken: null, person: null };
   });
+
+  if (result.invitationToken && result.person?.email) {
+    sendInvitationEmail(result.person.email, result.invitationToken, `${result.person.firstName} ${result.person.lastName}`)
+      .then((info) => console.log(`[INFO] Invitation email sent to ${result.person.email}:`, info?.messageId))
+      .catch((err) => console.error(`[ERROR] Failed to send invitation email to ${result.person.email}:`, err.message));
+  }
 
   await logAudit({
     createdById,
@@ -796,6 +841,18 @@ export async function acceptInvitation(token, username, password) {
     },
   });
 
+  if (user.personId) {
+    await prisma.employee.updateMany({
+      where: {
+        personId: user.personId,
+        status: 'INVITED',
+      },
+      data: {
+        status: 'ACTIVE',
+      },
+    });
+  }
+
   return updatedUser;
 }
 
@@ -811,7 +868,19 @@ function buildEmployeeWhere(filters) {
   }
 
   if (filters.status) {
-    where.status = filters.status;
+    if (filters.status === 'INVITED') {
+      where.OR = [
+        { status: 'INVITED' },
+        { person: { user: { accountStatus: 'INVITED' } } },
+      ];
+    } else if (filters.status === 'ACTIVE') {
+      where.status = 'ACTIVE';
+      where.NOT = {
+        person: { user: { accountStatus: 'INVITED' } },
+      };
+    } else {
+      where.status = filters.status;
+    }
   }
 
   if (filters.hasUserAccount !== undefined) {

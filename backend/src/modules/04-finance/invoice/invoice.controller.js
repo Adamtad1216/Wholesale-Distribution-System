@@ -60,13 +60,13 @@ export const getInvoices = async (req, res, next) => {
     const roles = req.user?.userRoles?.map((ur) => ur.role.name) || [];
     const isSuperOrAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN') || permissions.includes('*');
 
-    const hasViewAll = isSuperOrAdmin || permissions.includes('invoice:view_all');
-    const hasViewOwn = permissions.includes('invoice:view_own') || roles.includes('CUSTOMER');
+    const hasReadAll = isSuperOrAdmin || permissions.includes('invoices:read_all') || permissions.includes('invoice:read_all');
+    const hasRead = permissions.includes('invoices:read') || permissions.includes('invoice:read') || roles.includes('CUSTOMER');
 
-    if (hasViewAll && !roles.includes('CUSTOMER')) {
+    if (hasReadAll && !roles.includes('CUSTOMER')) {
       // Allowed to view all invoices across the system
       if (req.query.customerId) filters.customerId = req.query.customerId;
-    } else if (hasViewOwn || roles.includes('CUSTOMER')) {
+    } else if (hasRead || roles.includes('CUSTOMER')) {
       // Scoped strictly to own invoices
       // 1. Check if user is a customer or customer contact
       const customer = await prisma.customer.findFirst({
@@ -96,9 +96,6 @@ export const getInvoices = async (req, res, next) => {
 
         filters.OR = ownConditions;
       }
-    } else if (permissions.includes('invoices:read')) {
-      // Legacy invoices:read fallback
-      if (req.query.customerId) filters.customerId = req.query.customerId;
     } else {
       return res.status(403).json({
         success: false,
@@ -127,10 +124,10 @@ export const getInvoiceById = async (req, res, next) => {
     const roles = req.user?.userRoles?.map((ur) => ur.role.name) || [];
     const isSuperOrAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN') || permissions.includes('*');
 
-    const hasViewAll = isSuperOrAdmin || permissions.includes('invoice:view_all');
-    const hasViewOwn = permissions.includes('invoice:view_own') || roles.includes('CUSTOMER');
+    const hasReadAll = isSuperOrAdmin || permissions.includes('invoices:read_all') || permissions.includes('invoice:read_all');
+    const hasRead = permissions.includes('invoices:read') || permissions.includes('invoice:read') || roles.includes('CUSTOMER');
 
-    if (!hasViewAll && (hasViewOwn || roles.includes('CUSTOMER'))) {
+    if (!hasReadAll && (hasRead || roles.includes('CUSTOMER'))) {
       const customer = await prisma.customer.findFirst({
         where: {
           isArchived: false,
@@ -157,7 +154,7 @@ export const getInvoiceById = async (req, res, next) => {
           message: 'Access denied: You can only view your own invoices'
         });
       }
-    } else if (!hasViewAll && !permissions.includes('invoices:read')) {
+    } else if (!hasReadAll) {
       return res.status(403).json({
         success: false,
         message: 'Access denied: You do not have permission to view this invoice'

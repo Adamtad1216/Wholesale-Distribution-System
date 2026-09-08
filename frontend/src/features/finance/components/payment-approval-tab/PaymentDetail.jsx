@@ -46,7 +46,7 @@ function DetailField({ label, value, valueClass = '' }) {
 
 export default function PaymentDetail({ paymentId, onBack }) {
   const queryClient = useQueryClient();
-  const { can: canApprove } = usePermission(['payments:update', 'payment:view_all']);
+  const { can: canApprove } = usePermission(['payments:update', 'payments:read_all', 'payment:read_all']);
 
   // Approval state
   const [paymentType, setPaymentType] = useState(null);

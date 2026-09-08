@@ -275,10 +275,10 @@ class PaymentController {
       const roles = req.user?.userRoles?.map((ur) => ur.role.name) || [];
       const isSuperOrAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN') || permissions.includes('*');
 
-      const hasViewAll = isSuperOrAdmin || permissions.includes('payment:view_all');
-      const hasViewOwn = permissions.includes('payment:view_own') || roles.includes('CUSTOMER');
+      const hasReadAll = isSuperOrAdmin || permissions.includes('payments:read_all') || permissions.includes('payment:read_all');
+      const hasRead = permissions.includes('payments:read') || permissions.includes('payment:read') || roles.includes('CUSTOMER');
 
-      if (!hasViewAll && (hasViewOwn || roles.includes('CUSTOMER'))) {
+      if (!hasReadAll && (hasRead || roles.includes('CUSTOMER'))) {
         const customer = await prisma.customer.findFirst({
           where: {
             isArchived: false,
@@ -306,7 +306,7 @@ class PaymentController {
             message: 'Access denied: You can only view your own payment details'
           });
         }
-      } else if (!hasViewAll && !permissions.includes('payments:read')) {
+      } else if (!hasReadAll) {
         return res.status(403).json({
           message: 'Access denied: You do not have permission to view this payment'
         });
@@ -433,14 +433,14 @@ class PaymentController {
       const roles = req.user?.userRoles?.map((ur) => ur.role.name) || [];
       const isSuperOrAdmin = roles.includes('ADMIN') || roles.includes('SUPER_ADMIN') || permissions.includes('*');
 
-      const hasViewAll = isSuperOrAdmin || permissions.includes('payment:view_all');
-      const hasViewOwn = permissions.includes('payment:view_own') || roles.includes('CUSTOMER');
+      const hasReadAll = isSuperOrAdmin || permissions.includes('payments:read_all') || permissions.includes('payment:read_all');
+      const hasRead = permissions.includes('payments:read') || permissions.includes('payment:read') || roles.includes('CUSTOMER');
 
-      if (hasViewAll && !roles.includes('CUSTOMER')) {
+      if (hasReadAll && !roles.includes('CUSTOMER')) {
         // Allowed to view all payments across the system
         if (req.query.customerId) where.customerId = req.query.customerId;
         if (req.query.supplierId) where.supplierId = req.query.supplierId;
-      } else if (hasViewOwn || roles.includes('CUSTOMER')) {
+      } else if (hasRead || roles.includes('CUSTOMER')) {
         // Scoped strictly to own payments
         // 1. Check if user is linked to a customer record
         const customer = await prisma.customer.findFirst({
@@ -475,10 +475,6 @@ class PaymentController {
 
           where.OR = ownConditions;
         }
-      } else if (permissions.includes('payments:read')) {
-        // Legacy payments:read fallback
-        if (req.query.customerId) where.customerId = req.query.customerId;
-        if (req.query.supplierId) where.supplierId = req.query.supplierId;
       } else {
         return res.status(403).json({
           message: 'Access denied: You do not have permission to view payments'

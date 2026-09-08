@@ -104,6 +104,9 @@ export default function EmployeeDetailView({
     if (s === 'ACTIVE') {
       return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
     }
+    if (s === 'INVITED') {
+      return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+    }
     if (s === 'SUSPENDED' || s === 'TERMINATED') {
       return 'bg-rose-500/10 text-rose-400 border border-rose-500/20';
     }

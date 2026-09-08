@@ -261,14 +261,12 @@ const ALL_PERMISSIONS = [
   // Finance Module
   { name: "invoices:create", module: "finance", action: "create", description: "Create invoices" },
   { name: "invoices:read", module: "finance", action: "read", description: "Read invoices" },
-  { name: "invoice:view_all", module: "finance", action: "view_all", description: "View all invoices across the system" },
-  { name: "invoice:view_own", module: "finance", action: "view_own", description: "View own invoices" },
+  { name: "invoices:read_all", module: "finance", action: "read_all", description: "View all invoices across the system" },
   { name: "invoices:update", module: "finance", action: "update", description: "Update invoices" },
   { name: "invoices:delete", module: "finance", action: "delete", description: "Delete invoices" },
   { name: "payments:create", module: "finance", action: "create", description: "Create payments" },
   { name: "payments:read", module: "finance", action: "read", description: "Read payments" },
-  { name: "payment:view_all", module: "finance", action: "view_all", description: "View all payments and disbursement transactions" },
-  { name: "payment:view_own", module: "finance", action: "view_own", description: "View own payment transactions" },
+  { name: "payments:read_all", module: "finance", action: "read_all", description: "View all payments and disbursement transactions" },
   { name: "payments:update", module: "finance", action: "update", description: "Update payments" },
   { name: "payments:delete", module: "finance", action: "delete", description: "Delete payments" },
   { name: "credits:create", module: "finance", action: "create", description: "Create credits" },
@@ -348,9 +346,7 @@ async function ensureCustomerPermissions() {
     "products:read",
     "sales_orders:create",
     "invoices:read",
-    "invoice:view_own",
-    "payments:read",
-    "payment:view_own"
+    "payments:read"
   ];
 
   for (const permName of customerPermissions) {

@@ -31,9 +31,15 @@ export default function EmployeeDetailHero({
               <span className="px-2.5 py-1 rounded-md text-xs font-mono font-semibold bg-violet-500/10 text-violet-300 border border-violet-500/20 shadow-sm">
                 {selectedEmployee?.employeeCode || `EMP-${selectedEmployee?.id?.substring(0, 6)}`}
               </span>
-              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 ${getStatusBadge(selectedEmployee?.status)}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${selectedEmployee?.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                {selectedEmployee?.status || 'ACTIVE'}
+              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 ${getStatusBadge(selectedEmployee?.status || (userAccount?.accountStatus === 'INVITED' ? 'INVITED' : 'ACTIVE'))}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  (selectedEmployee?.status === 'ACTIVE' && userAccount?.accountStatus !== 'INVITED')
+                    ? 'bg-emerald-400 animate-pulse'
+                    : 'bg-amber-400 animate-pulse'
+                }`} />
+                {(selectedEmployee?.status === 'INVITED' || userAccount?.accountStatus === 'INVITED')
+                  ? 'INVITED'
+                  : selectedEmployee?.status || 'ACTIVE'}
               </span>
             </div>
 

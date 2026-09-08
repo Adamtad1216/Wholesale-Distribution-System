@@ -26,7 +26,7 @@ router.use(authenticate);
  *       200:
  *         description: List of payment terms
  */
-router.get('/', requirePermission('payment-terms:read'), paymentTermsController.getAllPaymentTerms);
+router.get('/', requirePermission(['payment-terms:read_all', 'payment-terms:read', 'payment-term:read_all', 'payment-term:read']), paymentTermsController.getAllPaymentTerms);
 
 /**
  * @swagger
@@ -49,7 +49,7 @@ router.get('/', requirePermission('payment-terms:read'), paymentTermsController.
  *       404:
  *         description: Payment term not found
  */
-router.get('/:id', requirePermission('payment-terms:read'), paymentTermsController.getPaymentTermById);
+router.get('/:id', requirePermission(['payment-terms:read_all', 'payment-terms:read', 'payment-term:read_all', 'payment-term:read']), paymentTermsController.getPaymentTermById);
 
 /**
  * @swagger
