@@ -76,6 +76,16 @@ async function main() {
     'REPORT_VIEW_SALES',
     'REPORT_VIEW_PRODUCTS',
     'REPORT_VIEW_WAREHOUSE',
+    'inventory:transfers:read',
+    'inventory:transfers:create',
+    'inventory:transfers:approve',
+    'inventory:adjustments:read',
+    'inventory:adjustments:create',
+    'inventory:adjustments:approve',
+    'inventory:reservations:read',
+    'inventory:reservations:create',
+    'inventory:reservations:approve',
+    'inventory:reservations:release',
   ];
 
   for (const permName of salesManagerPermNames) {

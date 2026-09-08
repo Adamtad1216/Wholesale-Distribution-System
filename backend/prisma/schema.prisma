@@ -369,6 +369,7 @@ model User {
   updatedSalesQuotas              SalesQuota[]              @relation("SalesQuotaUpdater")
   createdStockTransfers           WarehouseStockTransfer[]  @relation("WarehouseStockTransferCreator")
   updatedStockTransfers           WarehouseStockTransfer[]  @relation("WarehouseStockTransferUpdater")
+  approvedStockTransfers          WarehouseStockTransfer[]  @relation("WarehouseStockTransferApprover")
   createdWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceCreator")
   updatedWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceUpdater")
   createdCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressCreator")
@@ -2179,9 +2180,14 @@ model WarehouseStockTransfer {
   transferReason  TransferReason @map("transfer_reason")
   quantity        Decimal        @db.Decimal(15, 3)
   remark          String?
+  status          String         @default("PENDING")
+  approvedBy      String?        @map("approved_by") @db.Uuid
+  approvedAt      DateTime?      @map("approved_at")
+  rejectionReason String?        @map("rejection_reason")
 
   createdBy     User?     @relation("WarehouseStockTransferCreator", fields: [createdById], references: [id])
   updatedBy     User?     @relation("WarehouseStockTransferUpdater", fields: [updatedById], references: [id])
+  approver      User?     @relation("WarehouseStockTransferApprover", fields: [approvedBy], references: [id])
   product       Product   @relation(fields: [productId], references: [id])
   fromWarehouse Warehouse @relation("StockTransferFrom", fields: [fromWarehouseId], references: [id])
   toWarehouse   Warehouse @relation("StockTransferTo", fields: [toWarehouseId], references: [id])
