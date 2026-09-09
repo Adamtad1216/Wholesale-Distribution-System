@@ -7,6 +7,7 @@ import {
   getMe,
   createPasswordResetToken,
   resetPassword,
+  verifyInvitation,
   acceptInvitation,
   updateProfile,
   changePassword,
@@ -79,6 +80,15 @@ export async function resetPasswordController(req, res, next) {
   try {
     await resetPassword(req.body.token, req.body.password);
     sendSuccess(res, { message: 'Password reset successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function verifyInvitationController(req, res, next) {
+  try {
+    const data = await verifyInvitation(req.params.token);
+    sendSuccess(res, data);
   } catch (err) {
     next(err);
   }

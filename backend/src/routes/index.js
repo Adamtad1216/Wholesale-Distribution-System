@@ -10,10 +10,10 @@ import vehiclesRoutes from "../modules/12-delivery-logistics/vehicles/vehicles.r
 import notificationsRoutes from "../modules/14-notifications/notifications/notifications.routes.js";
 import reportingRoutes from "../modules/16-reporting-dashboards/reporting/reporting.routes.js";
 import aiRoutes from "../modules/17-ai/ai/ai.routes.js";
-import paymentRoutes from "../modules/04-finance/payment.routes.js";
-import invoiceRoutes from "../modules/04-finance/invoice.routes.js";
-import creditRoutes from "../modules/04-finance/credit.routes.js";
-import paymentTermsRoutes from "../modules/04-finance/payment-terms.routes.js";
+import paymentRoutes from "../modules/04-finance/payment/payment.routes.js";
+import invoiceRoutes from "../modules/04-finance/invoice/invoice.routes.js";
+import creditRoutes from "../modules/04-finance/credit/credit.routes.js";
+import paymentTermsRoutes from "../modules/04-finance/payment-terms/payment-terms.routes.js";
 import supplierRoutes from "../modules/02-suppliers/supplier.routes.js";
 import purchaseOrderRoutes from "../modules/03-procurement/purchase-order.routes.js";
 import goodsReceiptRoutes from "../modules/03-procurement/goods-receipt.routes.js";

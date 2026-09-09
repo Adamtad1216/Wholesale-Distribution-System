@@ -86,3 +86,30 @@ export const removePermission = async (req, res, next) => {
     next(error);
   }
 };
+
+export const assignUser = async (req, res, next) => {
+  try {
+    await rolesService.assignUser(req.params.id, req.body.userId, req.user?.id);
+    res.json({ success: true, message: 'User assigned successfully' });
+  } catch (error) {
+    if (error.message === 'Role not found' || error.message === 'User not found') {
+      return res.status(404).json({ success: false, error: error.message });
+    }
+    if (error.message === 'User is already assigned to this role') {
+      return res.status(409).json({ success: false, error: error.message });
+    }
+    next(error);
+  }
+};
+
+export const removeUser = async (req, res, next) => {
+  try {
+    await rolesService.removeUser(req.params.id, req.params.userId, req.user?.id);
+    res.json({ success: true, message: 'User removed successfully' });
+  } catch (error) {
+    if (error.message === 'User is not assigned to this role') {
+      return res.status(404).json({ success: false, error: error.message });
+    }
+    next(error);
+  }
+};

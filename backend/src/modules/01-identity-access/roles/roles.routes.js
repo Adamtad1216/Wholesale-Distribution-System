@@ -240,4 +240,65 @@ router.delete(
   rolesController.removePermission
 );
 
+/**
+ * @swagger
+ * /api/v1/roles/{id}/users:
+ *   post:
+ *     tags: ["01 - Roles"]
+ *     summary: Assign a user to a role
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ */
+router.post(
+  '/:id/users',
+  requirePermission('roles:write'),
+  rolesController.assignUser
+);
+
+/**
+ * @swagger
+ * /api/v1/roles/{id}/users/{userId}:
+ *   delete:
+ *     tags: ["01 - Roles"]
+ *     summary: Remove a user from a role
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ */
+router.delete(
+  '/:id/users/:userId',
+  requirePermission('roles:write'),
+  rolesController.removeUser
+);
+
 export default router;

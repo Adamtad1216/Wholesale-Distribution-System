@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import { usersApi } from '../usersApi';
 import { rolesApi } from '../../roles-job-specifications/rolesApi';
@@ -45,6 +46,9 @@ export function useUserManager() {
   const { can: canCreate } = usePermission('users:create');
   const { can: canUpdate } = usePermission('users:update');
   const { can: canDelete } = usePermission('users:delete');
+
+  const currentUser = useSelector((state) => state.auth?.user);
+  const currentRole = useSelector((state) => state.auth?.role);
 
   // Fetch Roles for Selection
   const fetchRoles = async () => {
@@ -157,6 +161,27 @@ export function useUserManager() {
     setSubmitting(true);
     try {
       if (editingUser) {
+        const isSelf = Boolean(currentUser && String(currentUser.id) === String(editingUser.id));
+        const isSuperAdmin = Boolean(
+          currentRole === 'SUPER_ADMIN' ||
+          currentUser?.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN' || r === 'SUPER_ADMIN')
+        );
+
+        if (isSelf && isSuperAdmin && formData.isActive === false) {
+          toast.error('A Super Admin cannot deactivate their own account');
+          setSubmitting(false);
+          return;
+        }
+
+        if (isSelf && isSuperAdmin && Array.isArray(formData.roleIds)) {
+          const superAdminRole = rolesList.find((r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN');
+          if (superAdminRole && !formData.roleIds.includes(superAdminRole.id)) {
+            toast.error('A Super Admin cannot revoke their own Super Admin role');
+            setSubmitting(false);
+            return;
+          }
+        }
+
         const updatePayload = {
           username: formData.username,
           isActive: formData.isActive,
@@ -186,12 +211,36 @@ export function useUserManager() {
 
   // Request Delete User
   const handleDeleteRequest = (id, username) => {
+    const isSelf = Boolean(currentUser && String(currentUser.id) === String(id));
+    const isSuperAdmin = Boolean(
+      currentRole === 'SUPER_ADMIN' ||
+      currentUser?.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN' || r === 'SUPER_ADMIN')
+    );
+
+    if (isSelf && isSuperAdmin) {
+      toast.error('A Super Admin cannot delete their own account');
+      return;
+    }
+
     setDeleteUserTarget({ id, username });
   };
 
   // Confirm Delete User Action
   const handleConfirmDelete = async () => {
     if (!deleteUserTarget) return;
+
+    const isSelf = Boolean(currentUser && String(currentUser.id) === String(deleteUserTarget.id));
+    const isSuperAdmin = Boolean(
+      currentRole === 'SUPER_ADMIN' ||
+      currentUser?.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN' || r === 'SUPER_ADMIN')
+    );
+
+    if (isSelf && isSuperAdmin) {
+      toast.error('A Super Admin cannot delete their own account');
+      setDeleteUserTarget(null);
+      return;
+    }
+
     setSubmitting(true);
     try {
       await usersApi.deleteUser(deleteUserTarget.id);
@@ -219,6 +268,17 @@ export function useUserManager() {
 
   // Change User Status (ACTIVE, INACTIVE, SUSPENDED)
   const handleStatusChange = async (userId, isNowActive, newStatus) => {
+    const isSelf = Boolean(currentUser && String(currentUser.id) === String(userId));
+    const isSuperAdmin = Boolean(
+      currentRole === 'SUPER_ADMIN' ||
+      currentUser?.roles?.some((r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN' || r === 'SUPER_ADMIN')
+    );
+
+    if (isSelf && isSuperAdmin && (newStatus === 'INACTIVE' || newStatus === 'SUSPENDED' || !isNowActive)) {
+      toast.error('A Super Admin cannot deactivate or suspend their own account');
+      return;
+    }
+
     try {
       await usersApi.updateUser(userId, {
         isActive: isNowActive,

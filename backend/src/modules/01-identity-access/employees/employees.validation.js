@@ -61,7 +61,7 @@ export const createEmployeeSchema = z.preprocess(
     isAvailableForSales: z.boolean().default(true),
   }).refine(
     (data) => {
-      if (data.needsUserAccount && data.username) {
+      if (data.needsUserAccount) {
         return (!!data.roleIds && data.roleIds.length > 0) || !!data.roleId;
       }
       return true;

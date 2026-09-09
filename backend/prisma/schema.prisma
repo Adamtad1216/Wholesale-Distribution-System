@@ -746,22 +746,23 @@ model Customer {
 }
 
 model Supplier {
-  id               String            @id @default(uuid()) @db.Uuid
-  createdById      String?           @map("created_by_id") @db.Uuid
-  updatedById      String?           @map("updated_by_id") @db.Uuid
-  createdAt        DateTime          @default(now()) @map("created_at")
-  updatedAt        DateTime          @updatedAt @map("updated_at")
-  isArchived       Boolean           @default(false) @map("is_archived")
-  archivedAt       DateTime?         @map("archived_at")
-  supplierCode     String            @unique @map("supplier_code")
-  personId         String?           @map("person_id") @db.Uuid
-  organizationId   String?           @map("organization_id") @db.Uuid
-  paymentTermsId   String?           @map("payment_terms_id") @db.Uuid
-  status           String            @default("ACTIVE")
+  id               String                  @id @default(uuid()) @db.Uuid
+  createdById      String?                 @map("created_by_id") @db.Uuid
+  updatedById      String?                 @map("updated_by_id") @db.Uuid
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+  isArchived       Boolean                 @default(false) @map("is_archived")
+  archivedAt       DateTime?               @map("archived_at")
+  supplierCode     String                  @unique @map("supplier_code")
+  personId         String?                 @map("person_id") @db.Uuid
+  organizationId   String?                 @map("organization_id") @db.Uuid
+  paymentTermsId   String?                 @map("payment_terms_id") @db.Uuid
+  status           String                  @default("ACTIVE")
   purchaseOrders   PurchaseOrder[]
   supplierInvoices SupplierInvoice[]
   purchaseReturns  PurchaseReturn[]
   payments         Payment[]
+  payoutChannels   SupplierPayoutChannel[]
 
   createdBy    User?         @relation("SupplierCreator", fields: [createdById], references: [id])
   updatedBy    User?         @relation("SupplierUpdater", fields: [updatedById], references: [id])
@@ -770,6 +771,22 @@ model Supplier {
   paymentTerms PaymentTerms? @relation(fields: [paymentTermsId], references: [id])
 
   @@map("suppliers")
+}
+
+model SupplierPayoutChannel {
+  id            String   @id @default(uuid()) @db.Uuid
+  supplierId    String   @map("supplier_id") @db.Uuid
+  channelType   String   @default("BANK") @map("channel_type")
+  bankName      String?  @map("bank_name")
+  accountNumber String   @map("account_number")
+  accountName   String?  @map("account_name")
+  isPrimary     Boolean  @default(false) @map("is_primary")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_payout_channels")
 }
 
 model PaymentTerms {

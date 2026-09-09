@@ -278,8 +278,15 @@ function generateCustomerCode() {
 }
 
 export async function login(data, req) {
-  const user = await prisma.user.findUnique({
-    where: { username: data.username },
+  const identifier = (data.username || data.email || '').trim();
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { username: { equals: identifier, mode: 'insensitive' } },
+        { person: { email: { equals: identifier, mode: 'insensitive' } } }
+      ]
+    },
     include: {
       person: {
         include: {
@@ -311,10 +318,12 @@ export async function login(data, req) {
         orderBy: { createdAt: 'desc' },
       },
       userRoles: {
+        where: { isArchived: false },
         include: {
           role: {
             include: {
               rolePermissions: {
+                where: { isArchived: false },
                 include: {
                   permission: true,
                 },
@@ -400,12 +409,13 @@ export async function login(data, req) {
     throw new AppError('Invalid username or password', 401);
   }
 
-  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const activeUserRoles = (user.userRoles || []).filter((ur) => !ur.isArchived && !ur.role?.isArchived);
+  const roles = activeUserRoles.map((ur) => ur.role?.name).filter(Boolean);
   const permissionsSet = new Set();
 
-  user.userRoles?.forEach((ur) => {
-    ur.role?.rolePermissions?.forEach((rp) => {
-      if (rp.permission?.name) {
+  activeUserRoles.forEach((ur) => {
+    (ur.role?.rolePermissions || []).forEach((rp) => {
+      if (!rp.isArchived && rp.permission && !rp.permission.isArchived && rp.permission.name) {
         permissionsSet.add(rp.permission.name);
       }
     });
@@ -605,10 +615,12 @@ export async function getMe(userId) {
         orderBy: { createdAt: 'desc' },
       },
       userRoles: {
+        where: { isArchived: false },
         include: {
           role: {
             include: {
               rolePermissions: {
+                where: { isArchived: false },
                 include: {
                   permission: true,
                 },
@@ -624,12 +636,13 @@ export async function getMe(userId) {
     throw new AppError('User not found', 404);
   }
 
-  const roles = user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [];
+  const activeUserRoles = (user.userRoles || []).filter((ur) => !ur.isArchived && !ur.role?.isArchived);
+  const roles = activeUserRoles.map((ur) => ur.role?.name).filter(Boolean);
   const permissionsSet = new Set();
 
-  user.userRoles?.forEach((ur) => {
-    ur.role?.rolePermissions?.forEach((rp) => {
-      if (rp.permission?.name) {
+  activeUserRoles.forEach((ur) => {
+    (ur.role?.rolePermissions || []).forEach((rp) => {
+      if (!rp.isArchived && rp.permission && !rp.permission.isArchived && rp.permission.name) {
         permissionsSet.add(rp.permission.name);
       }
     });
@@ -879,19 +892,67 @@ export async function resetPassword(token, newPassword) {
   return user;
 }
 
-export async function acceptInvitation(token, username, password) {
+export async function verifyInvitation(token) {
+  if (!token) {
+    throw new AppError('Invitation token is required', 400);
+  }
+
+  const trimmedToken = String(token).trim();
   const invitationTokenHash = crypto
     .createHash('sha256')
-    .update(token)
+    .update(trimmedToken)
     .digest('hex');
 
   const user = await prisma.user.findFirst({
     where: {
       invitationTokenHash,
-      accountStatus: 'INVITED',
-      invitationTokenExpiresAt: {
-        gt: new Date(),
+    },
+    include: {
+      person: true,
+      userRoles: {
+        include: {
+          role: true,
+        },
       },
+    },
+  });
+
+  if (!user) {
+    throw new AppError('Invalid invitation token. The link may have been corrupted or replaced by a new invitation.', 400);
+  }
+
+  if (user.accountStatus !== 'INVITED') {
+    throw new AppError('This invitation has already been accepted. You can log in directly.', 400);
+  }
+
+  if (user.invitationTokenExpiresAt && new Date(user.invitationTokenExpiresAt) < new Date()) {
+    throw new AppError('This invitation link has expired. Please ask your administrator to send a new invitation.', 400);
+  }
+
+  return {
+    valid: true,
+    email: user.person?.email || null,
+    firstName: user.person?.firstName || null,
+    lastName: user.person?.lastName || null,
+    suggestedUsername: user.username || '',
+    roles: user.userRoles?.map((ur) => ur.role?.name).filter(Boolean) || [],
+  };
+}
+
+export async function acceptInvitation(token, username, password) {
+  if (!token) {
+    throw new AppError('Invitation token is required', 400);
+  }
+
+  const trimmedToken = String(token).trim();
+  const invitationTokenHash = crypto
+    .createHash('sha256')
+    .update(trimmedToken)
+    .digest('hex');
+
+  const user = await prisma.user.findFirst({
+    where: {
+      invitationTokenHash,
     },
     include: {
       person: true,
@@ -899,11 +960,22 @@ export async function acceptInvitation(token, username, password) {
   });
 
   if (!user) {
-    throw new AppError('Invalid or expired invitation token', 400);
+    throw new AppError('Invalid invitation token. The link may have been corrupted or replaced.', 400);
   }
 
-  const existingUsername = await prisma.user.findUnique({
-    where: { username },
+  if (user.accountStatus !== 'INVITED') {
+    throw new AppError('This invitation has already been accepted. You can log in directly.', 400);
+  }
+
+  if (user.invitationTokenExpiresAt && new Date(user.invitationTokenExpiresAt) < new Date()) {
+    throw new AppError('This invitation link has expired. Please ask your administrator for a new invitation.', 400);
+  }
+
+  const existingUsername = await prisma.user.findFirst({
+    where: {
+      username,
+      NOT: { id: user.id },
+    },
   });
   if (existingUsername) {
     throw new AppError('Username already taken', 409);
@@ -939,6 +1011,19 @@ export async function acceptInvitation(token, username, password) {
       },
     },
   });
+
+  // Also activate the employee record associated with this person
+  if (user.personId) {
+    await prisma.employee.updateMany({
+      where: {
+        personId: user.personId,
+        status: 'INVITED',
+      },
+      data: {
+        status: 'ACTIVE',
+      },
+    });
+  }
 
   await logAudit({
     userId: user.id,

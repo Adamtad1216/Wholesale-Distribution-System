@@ -14,6 +14,7 @@ export default function EmployeeListTable({
   getEmployeeName,
   getEmployeeEmail,
   getEmployeePhone,
+  isSelfSuperAdminEmployee,
 }) {
   if (loading) {
     return (
@@ -57,6 +58,7 @@ export default function EmployeeListTable({
           const email = getEmployeeEmail(emp);
           const phone = getEmployeePhone(emp);
           const jobTitle = emp.jobSpecification?.title || emp.jobTitle || 'Staff Member';
+          const isRowSelfSuperAdmin = Boolean(isSelfSuperAdminEmployee?.(emp));
 
           return (
             <TableRow key={emp.id}>
@@ -114,18 +116,35 @@ export default function EmployeeListTable({
 
               {/* Status */}
               <TableCell>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
-                  emp.status === 'ACTIVE'
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                    : emp.status === 'SUSPENDED'
-                    ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    emp.status === 'ACTIVE' ? 'bg-emerald-400' : emp.status === 'SUSPENDED' ? 'bg-rose-400' : 'bg-amber-400'
-                  }`}></span>
-                  {emp.status || 'ACTIVE'}
-                </span>
+                {(() => {
+                  const isInvited = emp.status === 'INVITED' || emp.person?.user?.accountStatus === 'INVITED';
+                  const isSuspended = emp.status === 'SUSPENDED';
+                  const isActive = emp.status === 'ACTIVE' && !isInvited;
+
+                  if (isInvited) {
+                    return (
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        INVITED
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : isSuspended
+                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                        : 'bg-muted-foreground/10 text-muted-foreground border border-border'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        isActive ? 'bg-emerald-400' : isSuspended ? 'bg-rose-400' : 'bg-muted-foreground'
+                      }`}></span>
+                      {emp.status || 'ACTIVE'}
+                    </span>
+                  );
+                })()}
               </TableCell>
 
               {/* Actions */}
@@ -159,7 +178,7 @@ export default function EmployeeListTable({
                   )}
 
                   {/* Delete Button */}
-                  {canDelete && (
+                  {canDelete && !isRowSelfSuperAdmin && (
                     <button
                       onClick={() => handleDelete(emp.id, fullName)}
                       title="Delete Employee"
@@ -170,6 +189,17 @@ export default function EmployeeListTable({
                       </svg>
                       <span>Delete</span>
                     </button>
+                  )}
+                  {canDelete && isRowSelfSuperAdmin && (
+                    <span
+                      title="A Super Admin cannot delete their own profile"
+                      className="px-2.5 py-1.5 bg-muted800 border border-border rounded-xl text-muted-foreground text-xs font-semibold inline-flex items-center gap-1 cursor-not-allowed opacity-50"
+                    >
+                      <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span>Locked</span>
+                    </span>
                   )}
                 </div>
               </TableCell>

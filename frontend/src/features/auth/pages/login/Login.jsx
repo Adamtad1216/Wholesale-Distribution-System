@@ -39,19 +39,26 @@ export default function Login() {
 
   const mutation = useMutation({
     mutationFn: authApi.login,
-    onSuccess: (response) => {
-      console.log('🔑 [LOGIN RESPONSE FROM SERVER]:', response?.data || response);
-      if (response && response.data) {
-        dispatch(loginSuccess(response.data));
-        toast.success('Successfully logged in!', { duration: 6000 });
+    onSuccess: (res) => {
+      console.log('🔑 [LOGIN RESPONSE FROM SERVER]:', res);
+      const payload = res?.data || res;
+      if (payload && (payload.accessToken || payload.user)) {
+        dispatch(loginSuccess(payload));
+        toast.success('Successfully logged in!', { duration: 4000 });
         navigate('/dashboard');
       } else {
-        toast.error('Login failed: Invalid server response', { duration: 6000 });
+        toast.error('Login failed: Invalid server response', { duration: 4000 });
       }
     },
+    onError: (err) => {
+      console.error('🚨 [LOGIN ERROR]:', err);
+      const errMsg = err?.message || err?.response?.data?.message || 'Login failed. Please check your credentials.';
+      toast.error(errMsg, { duration: 5000 });
+    }
   });
 
   const onSubmit = (data) => {
+    console.log('Submit login clicked with data:', data);
     mutation.mutate(data);
   };
 

@@ -3,7 +3,7 @@
  * Always grants access to SUPER_ADMIN and ADMIN roles
  *
  * @param {Object} user - The req.user object with userRoles
- * @param {string} permissionName - The permission name to check
+ * @param {string|string[]} permissionName - The permission name or array of permission names to check
  * @returns {boolean}
  */
 export function hasPermission(user, permissionName) {
@@ -68,4 +68,3 @@ export const requireAnyPermission = (...permissions) => {
   const permList = permissions.flat();
   return requirePermission(permList);
 };
-

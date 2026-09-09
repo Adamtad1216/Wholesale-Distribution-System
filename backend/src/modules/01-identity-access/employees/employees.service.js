@@ -28,7 +28,20 @@ export const ensureUniqueEmployeeCode = async (tx, code) => {
 
 const sanitizeEmployee = (employee) => {
   if (!employee) return employee;
-  const { person, jobSpecifications, branch, createdBy, updatedBy, ...rest } = employee;
+  const { person, jobSpecifications, branch, createdBy, updatedBy, managedBranches, managedWarehouses, _count, ...rest } = employee;
+  const specs = jobSpecifications
+    ? jobSpecifications.map((js) => ({
+      id: js.jobSpecification?.id || js.id,
+      code: js.jobSpecification?.code || js.code,
+      title: js.jobSpecification?.title || js.title,
+      department: js.jobSpecification?.department || js.department,
+      description: js.jobSpecification?.description || js.description || null,
+      status: js.jobSpecification?.status || js.status,
+      createdAt: js.jobSpecification?.createdAt || js.createdAt,
+      updatedAt: js.jobSpecification?.updatedAt || js.updatedAt,
+    }))
+    : [];
+
   return {
     ...rest,
     person: person
@@ -41,24 +54,48 @@ const sanitizeEmployee = (employee) => {
         email: person.email,
         address: person.address,
         status: person.status,
+        user: person.user
+          ? {
+            id: person.user.id,
+            username: person.user.username,
+            accountStatus: person.user.accountStatus,
+            isActive: person.user.isActive,
+            lastLoginAt: person.user.lastLoginAt,
+            roles: person.user.userRoles?.map((ur) => ur.role).filter(Boolean) || [],
+            role: person.user.userRoles?.[0]?.role || null,
+            userRoles: person.user.userRoles || [],
+          }
+          : null,
       }
       : null,
-    jobSpecifications: jobSpecifications
-      ? jobSpecifications.map((js) => ({
-        id: js.jobSpecification.id,
-        code: js.jobSpecification.code,
-        title: js.jobSpecification.title,
-        department: js.jobSpecification.department,
-        status: js.jobSpecification.status,
-      }))
-      : [],
+    jobSpecifications: specs,
+    jobSpecification: specs[0] || null,
     branch: branch
       ? {
         id: branch.id,
         name: branch.name,
         branchCode: branch.branchCode,
+        isHeadOffice: branch.isHeadOffice || false,
+        city: branch.city || null,
+        subCity: branch.subCity || null,
+        woreda: branch.woreda || null,
+        kebele: branch.kebele || null,
+        houseNumber: branch.houseNumber || null,
+        landmark: branch.landmark || null,
+        phone: branch.phone || null,
+        email: branch.email || null,
+        status: branch.status || null,
       }
       : null,
+    managedBranches: managedBranches || [],
+    managedWarehouses: managedWarehouses || [],
+    counts: _count || {
+      salesOrders: 0,
+      deliveries: 0,
+      preparationTasks: 0,
+      managedWarehouses: 0,
+      managedBranches: 0,
+    },
     createdBy: createdBy
       ? {
         id: createdBy.id,
@@ -135,7 +172,7 @@ export async function createEmployee(data, createdById, req) {
         employeeCode,
         hireDate: new Date(data.hireDate),
         department: data.department || null,
-        status: data.status || 'ACTIVE',
+        status: (data.needsUserAccount && !data.password) ? 'INVITED' : (data.status || 'ACTIVE'),
         commissionRate: data.commissionRate || null,
         salesTerritory: data.salesTerritory || null,
         driverLicenseNumber: data.driverLicenseNumber || null,
@@ -190,8 +227,13 @@ export async function createEmployee(data, createdById, req) {
     });
 
     let user = null;
+    let invitationLink = null;
+    let invitationToken = null;
     if (data.needsUserAccount) {
-      const assignedRoleId = data.roleId || data.roleIds?.[0];
+      const assignedRoleIds = (data.roleIds && data.roleIds.length > 0)
+        ? data.roleIds
+        : (data.roleId ? [data.roleId] : []);
+
       if (data.username && data.password) {
         const existingUsername = await tx.user.findUnique({
           where: { username: data.username },
@@ -216,17 +258,27 @@ export async function createEmployee(data, createdById, req) {
           },
         });
 
-        if (assignedRoleId) {
+        for (const rId of assignedRoleIds) {
           await tx.userRole.create({
             data: {
               userId: user.id,
               createdById,
-              roleId: assignedRoleId,
+              roleId: rId,
             },
           });
         }
       } else {
-        const invitationToken = crypto.randomBytes(32).toString('hex');
+        // Pre-validate username if optionally supplied by admin
+        if (data.username) {
+          const existingUsername = await tx.user.findUnique({
+            where: { username: data.username },
+          });
+          if (existingUsername) {
+            throw new AppError('Username already taken', 409);
+          }
+        }
+
+        invitationToken = crypto.randomBytes(32).toString('hex');
         const invitationTokenHash = crypto
           .createHash('sha256')
           .update(invitationToken)
@@ -236,6 +288,7 @@ export async function createEmployee(data, createdById, req) {
         user = await tx.user.create({
           data: {
             personId: person.id,
+            username: data.username || null,
             accountStatus: 'INVITED',
             invitationTokenHash,
             invitationTokenExpiresAt,
@@ -248,14 +301,35 @@ export async function createEmployee(data, createdById, req) {
           },
         });
 
-        if (data.email) {
-          await sendInvitationEmail(data.email, invitationToken, `${data.firstName} ${data.lastName}`);
+        // Assign selected role(s) so employee has them once invitation is accepted
+        for (const rId of assignedRoleIds) {
+          await tx.userRole.create({
+            data: {
+              userId: user.id,
+              createdById,
+              roleId: rId,
+            },
+          });
         }
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        invitationLink = `${frontendUrl}/accept-invitation?token=${invitationToken}`;
       }
     }
 
-    return { employee, user };
+    return { employee, user, invitationLink, invitationToken: user?.accountStatus === 'INVITED' ? invitationToken : null };
+  }, {
+    timeout: 15000,
+    maxWait: 10000,
   });
+
+  // Dispatch invitation email asynchronously after transaction commits successfully
+  if (result.invitationToken && data.email) {
+    sendInvitationEmail(data.email, result.invitationToken, `${data.firstName} ${data.lastName}`)
+      .catch((mailErr) => {
+        console.error('[Employee Invitation] Mail send failed:', mailErr.message);
+      });
+  }
 
   await logAudit({
     createdById,
@@ -266,7 +340,11 @@ export async function createEmployee(data, createdById, req) {
     req,
   });
 
-  return sanitizeEmployee(result.employee);
+  const sanitized = sanitizeEmployee(result.employee);
+  if (result.invitationLink) {
+    sanitized.invitationLink = result.invitationLink;
+  }
+  return sanitized;
 }
 
 export async function getEmployees(filters) {
@@ -277,12 +355,25 @@ export async function getEmployees(filters) {
     prisma.employee.findMany({
       where,
       include: {
-        person: true,
+        person: {
+          include: {
+            user: {
+              include: {
+                userRoles: {
+                  include: {
+                    role: true,
+                  },
+                },
+              },
+            },
+          },
+        },
         jobSpecifications: {
           include: {
             jobSpecification: true,
           },
         },
+        branch: true,
         createdBy: {
           include: {
             person: {
@@ -325,17 +416,49 @@ export async function getEmployeeById(id) {
   const employee = await prisma.employee.findFirst({
     where: { id, isArchived: false },
     include: {
-      person: true,
+      person: {
+        include: {
+          user: {
+            include: {
+              userRoles: {
+                include: {
+                  role: true,
+                },
+              },
+            },
+          },
+        },
+      },
       jobSpecifications: {
         include: {
           jobSpecification: true,
         },
       },
-      branch: {
+      branch: true,
+      managedBranches: {
         select: {
           id: true,
           name: true,
           branchCode: true,
+          city: true,
+          status: true,
+        },
+      },
+      managedWarehouses: {
+        select: {
+          id: true,
+          name: true,
+          warehouseCode: true,
+          status: true,
+        },
+      },
+      _count: {
+        select: {
+          salesOrders: true,
+          deliveries: true,
+          preparationTasks: true,
+          managedWarehouses: true,
+          managedBranches: true,
         },
       },
       createdBy: {
@@ -374,7 +497,19 @@ export async function updateEmployee(id, data, createdById, req) {
   const existingEmployee = await prisma.employee.findFirst({
     where: { id, isArchived: false },
     include: {
-      person: true,
+      person: {
+        include: {
+          user: {
+            include: {
+              userRoles: {
+                include: {
+                  role: true,
+                },
+              },
+            },
+          },
+        },
+      },
       jobSpecifications: {
         include: {
           jobSpecification: true,
@@ -386,6 +521,21 @@ export async function updateEmployee(id, data, createdById, req) {
 
   if (!existingEmployee) {
     throw new AppError('Employee not found', 404);
+  }
+
+  // Prevent Super Admin from deactivating or suspending their own profile
+  const isSelf = existingEmployee.person?.user?.id === createdById;
+  const isSuperAdmin = existingEmployee.person?.user?.userRoles?.some(
+    (ur) => ur.role?.name === 'SUPER_ADMIN' || ur.role?.code === 'SUPER_ADMIN'
+  );
+
+  if (isSelf && isSuperAdmin) {
+    if (data.status === 'INACTIVE' || data.status === 'SUSPENDED') {
+      throw new AppError('A Super Admin cannot set their own employment status to inactive or suspended', 400);
+    }
+    if (data.needsUserAccount === false) {
+      throw new AppError('A Super Admin cannot deactivate their own user account', 400);
+    }
   }
 
   if (data.jobSpecificationIds) {
@@ -550,9 +700,7 @@ export async function updateEmployee(id, data, createdById, req) {
         where: { id: existingEmployee.personId },
       });
 
-      if (person?.email) {
-        await sendInvitationEmail(person.email, invitationToken, `${person.firstName} ${person.lastName}`);
-      }
+      return { employee, user, invitationToken, person };
     } else if (!data.needsUserAccount && existingUser) {
       await tx.user.update({
         where: { id: existingUser.id },
@@ -564,8 +712,14 @@ export async function updateEmployee(id, data, createdById, req) {
       });
     }
 
-    return { employee, user };
+    return { employee, user, invitationToken: null, person: null };
   });
+
+  if (result.invitationToken && result.person?.email) {
+    sendInvitationEmail(result.person.email, result.invitationToken, `${result.person.firstName} ${result.person.lastName}`)
+      .then((info) => console.log(`[INFO] Invitation email sent to ${result.person.email}:`, info?.messageId))
+      .catch((err) => console.error(`[ERROR] Failed to send invitation email to ${result.person.email}:`, err.message));
+  }
 
   await logAudit({
     createdById,
@@ -584,12 +738,33 @@ export async function deleteEmployee(id, createdById, req) {
   const existingEmployee = await prisma.employee.findFirst({
     where: { id, isArchived: false },
     include: {
-      person: true,
+      person: {
+        include: {
+          user: {
+            include: {
+              userRoles: {
+                include: {
+                  role: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
   if (!existingEmployee) {
     throw new AppError('Employee not found', 404);
+  }
+
+  const isSelf = existingEmployee.person?.user?.id === createdById;
+  const isSuperAdmin = existingEmployee.person?.user?.userRoles?.some(
+    (ur) => ur.role?.name === 'SUPER_ADMIN' || ur.role?.code === 'SUPER_ADMIN'
+  );
+
+  if (isSelf && isSuperAdmin) {
+    throw new AppError('A Super Admin cannot delete their own employee profile', 400);
   }
 
   await prisma.employee.update({
@@ -666,6 +841,18 @@ export async function acceptInvitation(token, username, password) {
     },
   });
 
+  if (user.personId) {
+    await prisma.employee.updateMany({
+      where: {
+        personId: user.personId,
+        status: 'INVITED',
+      },
+      data: {
+        status: 'ACTIVE',
+      },
+    });
+  }
+
   return updatedUser;
 }
 
@@ -681,7 +868,19 @@ function buildEmployeeWhere(filters) {
   }
 
   if (filters.status) {
-    where.status = filters.status;
+    if (filters.status === 'INVITED') {
+      where.OR = [
+        { status: 'INVITED' },
+        { person: { user: { accountStatus: 'INVITED' } } },
+      ];
+    } else if (filters.status === 'ACTIVE') {
+      where.status = 'ACTIVE';
+      where.NOT = {
+        person: { user: { accountStatus: 'INVITED' } },
+      };
+    } else {
+      where.status = filters.status;
+    }
   }
 
   if (filters.hasUserAccount !== undefined) {

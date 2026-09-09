@@ -13,18 +13,26 @@ export async function getUsers(filters, _requesterId) {
       where,
       include: {
         person: {
-          select: {
-            id: true,
-            firstName: true,
-            middleName: true,
-            lastName: true,
-            phone: true,
-            email: true,
+          include: {
+            customers: {
+              include: {
+                paymentTerms: true,
+              },
+            },
+            employee: true,
           },
         },
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -44,7 +52,15 @@ export async function getUserById(id) {
   const user = await prisma.user.findFirst({
     where: { id, isArchived: false },
     include: {
-      person: true,
+      person: {
+        include: {
+          customers: {
+            include: {
+              paymentTerms: true,
+            },
+          },
+        },
+      },
       userRoles: {
         include: {
           role: {
@@ -151,8 +167,9 @@ export async function createUser(data, createdById, req) {
 
     await tx.userRole.createMany({
       data: data.roleIds.map((roleId) => ({
-        createdById: userRecord.id,
+        userId: userRecord.id,
         roleId,
+        createdById,
       })),
     });
 
@@ -174,11 +191,37 @@ export async function createUser(data, createdById, req) {
 export async function updateUser(id, data, createdById, req) {
   const existingUser = await prisma.user.findUnique({
     where: { id },
-    include: { person: true },
+    include: {
+      person: true,
+      userRoles: {
+        include: {
+          role: true,
+        },
+      },
+    },
   });
 
   if (!existingUser) {
     throw new AppError('User not found', 404);
+  }
+
+  // Prevent Super Admin from deactivating or suspending their own account
+  const isSelf = id === createdById;
+  const isSuperAdmin = existingUser.userRoles?.some(
+    (ur) => ur.role?.name === 'SUPER_ADMIN' || ur.role?.code === 'SUPER_ADMIN'
+  );
+
+  if (isSelf && isSuperAdmin) {
+    if (
+      data.isActive === false ||
+      data.status === 'INACTIVE' ||
+      data.status === 'SUSPENDED' ||
+      data.accountStatus === 'INACTIVE' ||
+      data.accountStatus === 'SUSPENDED' ||
+      data.accountStatus === 'DEACTIVATED'
+    ) {
+      throw new AppError('A Super Admin cannot deactivate or suspend their own account', 400);
+    }
   }
 
   if (data.username && data.username !== existingUser.username) {
@@ -205,6 +248,14 @@ export async function updateUser(id, data, createdById, req) {
     });
     if (roles.length !== data.roleIds.length) {
       throw new AppError('One or more roles not found', 400);
+    }
+    if (isSelf && isSuperAdmin) {
+      const hasSuperAdminRole = roles.some(
+        (r) => r.name === 'SUPER_ADMIN' || r.code === 'SUPER_ADMIN'
+      );
+      if (!hasSuperAdminRole) {
+        throw new AppError('A Super Admin cannot revoke their own Super Admin role', 400);
+      }
     }
   }
 
@@ -238,9 +289,17 @@ export async function updateUser(id, data, createdById, req) {
     }
 
     const updateData = {
-      isActive: data.isActive,
       updatedById: createdById,
     };
+
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+    if (data.accountStatus !== undefined) {
+      updateData.accountStatus = data.accountStatus;
+    } else if (data.status !== undefined) {
+      updateData.accountStatus = data.status;
+    }
 
     if (data.username) {
       updateData.username = data.username;
@@ -256,12 +315,13 @@ export async function updateUser(id, data, createdById, req) {
 
     if (data.roleIds) {
       await tx.userRole.deleteMany({
-        where: { createdById: id },
+        where: { userId: id },
       });
       await tx.userRole.createMany({
         data: data.roleIds.map((roleId) => ({
-          createdById: id,
+          userId: id,
           roleId,
+          createdById,
         })),
       });
     }
@@ -361,11 +421,27 @@ function buildUserWhere(filters) {
 export async function deleteUser(id, createdById, req) {
   const existingUser = await prisma.user.findFirst({
     where: { id, isArchived: false },
-    include: { person: true },
+    include: {
+      person: true,
+      userRoles: {
+        include: {
+          role: true,
+        },
+      },
+    },
   });
 
   if (!existingUser) {
     throw new AppError('User not found', 404);
+  }
+
+  const isSelf = id === createdById;
+  const isSuperAdmin = existingUser.userRoles?.some(
+    (ur) => ur.role?.name === 'SUPER_ADMIN' || ur.role?.code === 'SUPER_ADMIN'
+  );
+
+  if (isSelf && isSuperAdmin) {
+    throw new AppError('A Super Admin cannot delete their own account', 400);
   }
 
   await prisma.user.update({

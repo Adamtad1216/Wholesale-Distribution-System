@@ -38,3 +38,7 @@ Thumbs.db
 temp/
 tmp/
 uploads/
+
+# Seed scripts
+scripts/*
+!scripts/.gitkeep

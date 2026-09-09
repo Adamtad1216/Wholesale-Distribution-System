@@ -2,6 +2,12 @@ import React from 'react';
 import Card from '../../../components/ui/Card';
 
 export default function UserOverviewTab({ user, person, currentStatus, fullName }) {
+  const customer = person?.customers?.[0] || user?.customer || person?.customer;
+  const paymentTerm = customer?.paymentTerms || person?.paymentTerms;
+  const paymentTermDisplay = paymentTerm?.name
+    ? `${paymentTerm.name} (${paymentTerm.days} Days)`
+    : 'COD (0 Days)';
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Account Credentials */}
@@ -53,9 +59,15 @@ export default function UserOverviewTab({ user, person, currentStatus, fullName 
             <span className="text-muted-foreground">Phone Number</span>
             <span className="font-medium text-foreground">{person.phone || 'N/A'}</span>
           </div>
-          <div className="flex justify-between py-2">
+          <div className="flex justify-between py-2 border-b border-border/50">
             <span className="text-muted-foreground">Address</span>
             <span className="font-medium text-foreground">{person.address || 'N/A'}</span>
+          </div>
+          <div className="flex justify-between py-2">
+            <span className="text-muted-foreground">Payment Terms</span>
+            <span className="font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20 inline-flex items-center gap-1">
+              💳 {paymentTermDisplay}
+            </span>
           </div>
         </div>
       </Card>

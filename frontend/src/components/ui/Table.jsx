@@ -51,9 +51,9 @@ export function TableHead({ children, className = '' }) {
   );
 }
 
-export function TableCell({ children, className = '' }) {
+export function TableCell({ children, className = '', colSpan, ...props }) {
   return (
-    <td className={`px-6 py-4 text-foreground ${className}`}>
+    <td colSpan={colSpan} className={`px-6 py-4 text-foreground ${className}`} {...props}>
       {children}
     </td>
   );

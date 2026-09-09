@@ -6,58 +6,10 @@ const router = Router();
 
 router.use(requireAuth);
 
-/**
- * @swagger
- * /api/v1/goods-receipts:
- *   post:
- *     summary: Create a Goods Receipt (Receiving Items)
- *     tags: [03 - Procurement]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       201:
- *         description: Goods Receipt created and stock updated
- */
 router.post('/', grController.createGoodsReceipt);
-
-/**
- * @swagger
- * /api/v1/goods-receipts:
- *   get:
- *     summary: Get all Goods Receipts
- *     tags: [03 - Procurement]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: List of goods receipts
- */
 router.get('/', grController.getGoodsReceipts);
-
-/**
- * @swagger
- * /api/v1/goods-receipts/{id}:
- *   get:
- *     summary: Get Goods Receipt by ID
- *     tags: [03 - Procurement]
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Goods Receipt details
- */
 router.get('/:id', grController.getGoodsReceiptById);
+router.patch('/:id/approve', grController.approveGoodsReceipt);
+router.patch('/:id/status', grController.updateStatus);
 
 export default router;

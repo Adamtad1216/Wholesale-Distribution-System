@@ -43,6 +43,7 @@ export default function EmployeeFilters({
         >
           <option value="">All Statuses</option>
           <option value="ACTIVE">Active</option>
+          <option value="INVITED">Invited (Pending)</option>
           <option value="INACTIVE">Inactive</option>
           <option value="SUSPENDED">Suspended</option>
         </select>

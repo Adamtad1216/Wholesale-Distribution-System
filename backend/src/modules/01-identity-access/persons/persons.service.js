@@ -7,13 +7,24 @@ export async function getPersons(filters = {}) {
 
   if (hasUserAccount !== undefined) {
     const hasAcc = String(hasUserAccount) === 'true';
+    
+    // Fetch all personIds linked to ANY User record
+    const allUsers = await prisma.user.findMany({
+      select: { personId: true },
+    });
+    const userPersonIds = allUsers.map((u) => u.personId).filter(Boolean);
+
     if (hasAcc) {
       AND.push({
-        user: { isNot: null },
+        OR: [
+          { user: { isNot: null } },
+          { id: { in: userPersonIds } },
+        ],
       });
     } else {
       AND.push({
-        user: null, // Strictly guarantees Person does NOT have a user account
+        user: null, // 1. Prisma relation check
+        id: { notIn: userPersonIds }, // 2. SQL ID exclusion
       });
     }
   }
@@ -29,7 +40,10 @@ export async function getPersons(filters = {}) {
         { phone: { contains: query, mode: 'insensitive' } },
         {
           employee: {
-            employeeCode: { contains: query, mode: 'insensitive' },
+            OR: [
+              { employeeCode: { contains: query, mode: 'insensitive' } },
+              { department: { contains: query, mode: 'insensitive' } },
+            ],
           },
         },
       ],
@@ -62,6 +76,11 @@ export async function getPersons(filters = {}) {
     take: Number(limit) || 20,
     orderBy: { createdAt: 'desc' },
   });
+
+  // Layer 3 Defense: Post-filter in JavaScript if hasUserAccount is false
+  if (hasUserAccount !== undefined && String(hasUserAccount) === 'false') {
+    return persons.filter((p) => !p.user);
+  }
 
   return persons;
 }

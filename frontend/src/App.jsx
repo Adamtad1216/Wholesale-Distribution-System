@@ -16,6 +16,7 @@ import { useTokenExpiry } from './hooks/useTokenExpiry';
 // Public pages
 import Login from './features/auth/pages/login/Login';
 import Register from './features/auth/pages/register/Register';
+import AcceptInvitation from './features/auth/pages/invitation/AcceptInvitation';
 
 // Auth API & Slice
 import { authApi } from './features/auth/authApi';
@@ -31,7 +32,20 @@ import EmployeesPage from './features/employees/pages/EmployeesPage';
 import BranchesPage from './features/branches/pages/branches/BranchesPage';
 import Customers from './features/customers/pages/Customers';
 import Documents from './features/documents/pages/Documents';
-import Payments from './features/payments/pages/payments/Payments';
+import Checkout from './features/payments/pages/checkout/Checkout';
+import Receipt from './features/payments/pages/receipt/Receipt';
+import FinanceDashboard from './features/finance/pages/FinanceDashboard';
+import PaymentOptionsPage from './features/finance/components/payment-tab/PaymentOptionsPage';
+import ProcurementDashboard from './features/procurement/pages/procurement-dashboard/ProcurementDashboard';
+import PurchaseOrderCartPage from './features/procurement/pages/purchase-order-cart/PurchaseOrderCartPage';
+import PurchaseOrderDetailPage from './features/procurement/pages/purchase-order-detail/PurchaseOrderDetailPage';
+import RecordGoodsReceiptPage from './features/procurement/pages/record-goods-receipt/RecordGoodsReceiptPage';
+import GoodsReceiptDetailPage from './features/procurement/pages/goods-receipt-detail/GoodsReceiptDetailPage';
+import SettleSupplierPaymentPage from './features/procurement/pages/settle-supplier-payment/SettleSupplierPaymentPage';
+import TransferReceiptPage from './features/procurement/pages/transfer-receipt/TransferReceiptPage';
+import SuppliersPage from './features/suppliers/pages/suppliers-list/SuppliersPage';
+import SupplierDetailPage from './features/suppliers/pages/supplier-detail/SupplierDetailPage';
+import NewSupplierPage from './features/suppliers/pages/new-supplier/NewSupplierPage';
 import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
 import MySalesOrders from './features/sales-orders/pages/MySalesOrders';
 import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
@@ -86,6 +100,7 @@ function AppRoutes() {
       {/* ── Public Routes ─────────────────────────────────────── */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
       {/* ── Protected App Shell (auth required) ───────────────── */}
       <Route
@@ -129,8 +144,8 @@ function AppRoutes() {
           <Route path="/documents" element={<Documents />} />
         </Route>
 
-        <Route element={<PermissionRoute permission="payments:read" />}>
-          <Route path="/payments" element={<Payments />} />
+        <Route element={<PermissionRoute permission={['payments:read', 'payments:read_all', 'invoices:read', 'invoices:read_all', 'credits:read', 'credits:read_all', 'payment-terms:read', 'payment-terms:read_all']} />}>
+          <Route path="/finance" element={<FinanceDashboard />} />
         </Route>
 
         <Route element={<PermissionRoute permission="deliveries:read" />}>
@@ -166,10 +181,28 @@ function AppRoutes() {
         <Route path="/catalog" element={<CustomerCatalog />} />
         <Route path="/invoices" element={<CustomerInvoices />} />
         <Route path="/account/credit" element={<CustomerCredit />} />
+        <Route element={<PermissionRoute permission={['payment-options:manage', 'payment-option:manage', 'payment-options:read', 'payment-option:read', 'payments:update', 'payments:read_all', 'payment:read_all']} />}>
+          <Route path="/finance/payment-options" element={<PaymentOptionsPage />} />
+        </Route>
+
+        <Route path="/procurement" element={<ProcurementDashboard />} />
+        <Route path="/procurement/cart" element={<PurchaseOrderCartPage />} />
+        <Route path="/procurement/orders/:id" element={<PurchaseOrderDetailPage />} />
+        <Route path="/procurement/receipts/new" element={<RecordGoodsReceiptPage />} />
+        <Route path="/procurement/receipts/:id" element={<GoodsReceiptDetailPage />} />
+        <Route path="/procurement/receipts/:id/settle" element={<SettleSupplierPaymentPage />} />
+        <Route path="/procurement/receipts/:id/transfer-receipt" element={<TransferReceiptPage />} />
+        <Route path="/procurement/transfer-receipt" element={<TransferReceiptPage />} />
+        <Route path="/suppliers" element={<SuppliersPage />} />
+        <Route path="/suppliers/new" element={<NewSupplierPage />} />
+        <Route path="/suppliers/:id/edit" element={<NewSupplierPage />} />
+        <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
         <Route path="/sales-orders/new" element={<NewSalesOrder />} />
         <Route path="/sales-orders" element={<MySalesOrders />} />
         <Route path="/sales-orders/:id/schedule-preparation" element={<SchedulePreparationPage />} />
         <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
+        <Route path="/checkout/:id" element={<Checkout />} />
+        <Route path="/receipt" element={<Receipt />} />
 
         {/* Default redirect inside the shell */}
         <Route index element={<Navigate to="/dashboard" replace />} />

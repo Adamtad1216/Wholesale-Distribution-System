@@ -234,6 +234,67 @@ export async function createSalesOrder({
   throw lastError;
 }
 
+
+export async function getSalesOrdersList({ page = 1, limit = 10, customerId, salesRepId, warehouseId, status }) {
+  const skip = (Number(page) - 1) * Number(limit);
+  const where = {};
+  if (customerId) where.customerId = customerId;
+  if (salesRepId) where.salesRepId = salesRepId;
+  if (warehouseId) where.warehouseId = warehouseId;
+  if (status) where.status = status;
+
+  const [items, total] = await Promise.all([
+    prisma.salesOrder.findMany({
+      where,
+      skip,
+      take: Number(limit),
+      orderBy: { createdAt: "desc" },
+      include: {
+        customer: { include: { person: true, organization: true } },
+        salesRep: { include: { person: true } },
+        warehouse: true,
+        items: { include: { product: true } },
+      },
+    }),
+    prisma.salesOrder.count({ where }),
+  ]);
+
+  return {
+    items,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      pages: Math.ceil(total / Number(limit)) || 1,
+    },
+  };
+}
+
+export async function getSalesOrderById(id) {
+  const order = await prisma.salesOrder.findUnique({
+    where: { id },
+    include: {
+      customer: { include: { person: true, organization: true } },
+      salesRep: { include: { person: true } },
+      warehouse: true,
+      priceTier: true,
+      items: {
+        include: {
+          product: { include: { category: true, brand: true, unit: true } },
+          priceTier: true,
+          discountRule: true,
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    throw new AppError("Sales order not found", 404);
+  }
+
+  return order;
+}
+
 async function generateOrderNumber(tx) {
   const year = new Date().getFullYear();
   const prefix = `SO-${year}-`;

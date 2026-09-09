@@ -11,4 +11,6 @@ export const authApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
   logout: () => api.post('/auth/logout'),
+  verifyInvitation: (token) => api.get(`/auth/verify-invitation/${token}`),
+  acceptInvitation: (payload) => api.post('/auth/accept-invitation', payload),
 };

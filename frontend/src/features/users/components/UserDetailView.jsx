@@ -86,25 +86,23 @@ export default function UserDetailView({
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-foreground tracking-tight">{fullName}</h1>
-                
+
                 {/* Status Badge */}
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-extrabold flex items-center gap-1.5 ${
-                    currentStatus === 'ACTIVE'
+                  className={`px-3 py-1 rounded-full text-xs font-extrabold flex items-center gap-1.5 ${currentStatus === 'ACTIVE'
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       : currentStatus === 'SUSPENDED'
-                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  }`}
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}
                 >
                   <span
-                    className={`w-2 h-2 rounded-full ${
-                      currentStatus === 'ACTIVE'
+                    className={`w-2 h-2 rounded-full ${currentStatus === 'ACTIVE'
                         ? 'bg-emerald-400'
                         : currentStatus === 'SUSPENDED'
-                        ? 'bg-amber-400'
-                        : 'bg-rose-400'
-                    }`}
+                          ? 'bg-amber-400'
+                          : 'bg-rose-400'
+                      }`}
                   ></span>
                   {currentStatus}
                 </span>
@@ -139,22 +137,20 @@ export default function UserDetailView({
       <div className="flex border-b border-border space-x-6">
         <button
           onClick={() => setActiveTab('OVERVIEW')}
-          className={`pb-3 text-xs font-bold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'OVERVIEW'
+          className={`pb-3 text-xs font-bold border-b-2 transition flex items-center gap-2 ${activeTab === 'OVERVIEW'
               ? 'border-indigo-500 text-indigo-400'
               : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
+            }`}
         >
           👤 Account & Personnel Profile
         </button>
 
         <button
           onClick={() => setActiveTab('PERMISSIONS')}
-          className={`pb-3 text-xs font-bold border-b-2 transition flex items-center gap-2 ${
-            activeTab === 'PERMISSIONS'
+          className={`pb-3 text-xs font-bold border-b-2 transition flex items-center gap-2 ${activeTab === 'PERMISSIONS'
               ? 'border-indigo-500 text-indigo-400'
               : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
+            }`}
         >
           🛡️ Assigned Roles & Security
         </button>

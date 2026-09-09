@@ -4,7 +4,28 @@ export const createGoodsReceipt = async (req, res, next) => {
   try {
     const createdById = req.user?.id;
     const receipt = await goodsReceiptService.createGoodsReceipt(req.body, createdById);
-    res.status(201).json({ success: true, data: receipt, message: 'Goods Receipt created successfully and stock updated' });
+    res.status(201).json({ success: true, data: receipt, message: 'Goods Receipt created successfully in PENDING status' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveGoodsReceipt = async (req, res, next) => {
+  try {
+    const approvedById = req.user?.id;
+    const receipt = await goodsReceiptService.approveGoodsReceipt(req.params.id, approvedById, req.body);
+    res.status(200).json({ success: true, data: receipt, message: 'Goods Receipt approved, payment recorded, and inventory updated' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateStatus = async (req, res, next) => {
+  try {
+    const updatedById = req.user?.id;
+    const { status } = req.body;
+    const receipt = await goodsReceiptService.updateStatus(req.params.id, status, updatedById);
+    res.status(200).json({ success: true, data: receipt, message: 'Goods Receipt status updated' });
   } catch (error) {
     next(error);
   }

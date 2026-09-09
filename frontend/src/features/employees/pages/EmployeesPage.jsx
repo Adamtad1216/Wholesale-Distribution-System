@@ -1,327 +1,56 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
-import { employeesApi } from '../employeesApi';
-import { usePermission } from '../../../hooks/usePermission';
-import Button from '../../../components/ui/Button';
-
-// Sub-components
+import React, { useState } from 'react';
+import { CheckCircle2, Copy, Check, ExternalLink, X } from 'lucide-react';
+import { useEmployees } from '../hooks/useEmployees';
+import EmployeeHeader from '../components/EmployeeHeader';
 import EmployeeStats from '../components/EmployeeStats';
 import EmployeeFilters from '../components/EmployeeFilters';
 import EmployeeListTable from '../components/EmployeeListTable';
 import EmployeeFormView from '../components/EmployeeFormView';
 import EmployeeDetailView from '../components/EmployeeDetailView';
+import Button from '../../../components/ui/Button';
 
 export default function EmployeesPage() {
-  const location = useLocation();
-  const [employees, setEmployees] = useState([]);
-  const [jobSpecifications, setJobSpecifications] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [systemRoles, setSystemRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [copied, setCopied] = useState(false);
+  const {
+    employees,
+    jobSpecifications,
+    branches,
+    systemRoles,
+    loading,
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    viewMode,
+    editingEmployee,
+    canCreate,
+    canUpdate,
+    canDelete,
+    formData,
+    setFormData,
+    submitting,
+    stats,
+    fetchEmployees,
+    handleOpenCreate,
+    handleOpenEdit,
+    handleOpenDetail,
+    handleBackToList,
+    handleSubmit,
+    handleDelete,
+    getEmployeeName,
+    getEmployeeEmail,
+    getEmployeePhone,
+    isSelfSuperAdminEmployee,
+    invitationBanner,
+    setInvitationBanner,
+  } = useEmployees();
 
-  // View state: 'LIST' | 'CREATE' | 'EDIT' | 'DETAIL'
-  const [viewMode, setViewMode] = useState('LIST');
-  const [editingEmployee, setEditingEmployee] = useState(null);
-
-  // Permissions
-  const { can: canCreate } = usePermission('employees:create');
-  const { can: canUpdate } = usePermission('employees:update');
-  const { can: canDelete } = usePermission('employees:delete');
-
-  const getTodayFormatted = () => new Date().toISOString().split('T')[0];
-
-  const initialFormState = {
-    employeeCode: '',
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    hireDate: getTodayFormatted(),
-    department: '',
-    jobSpecificationId: '',
-    jobTitle: '',
-    branchId: '',
-    status: 'ACTIVE',
-    needsUserAccount: false,
-    username: '',
-    password: '',
-    roleId: '',
-  };
-
-  const [formData, setFormData] = useState(initialFormState);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Fetch Employees List
-  const fetchEmployees = async () => {
-    try {
-      setLoading(true);
-      const res = await employeesApi.getEmployees({ search });
-      const data = res?.data || res || [];
-      const list = Array.isArray(data) ? data : data.items || data.employees || [];
-      
-      const filteredList = statusFilter
-        ? list.filter((e) => e.status === statusFilter)
-        : list;
-
-      setEmployees(filteredList);
-    } catch (err) {
-      toast.error(err?.message || 'Failed to fetch employees');
-      setEmployees([]);
-    } finally {
-      setLoading(false);
+  const handleCopyLink = () => {
+    if (invitationBanner?.link) {
+      navigator.clipboard.writeText(invitationBanner.link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  // Fetch Job Specifications, Branches & Roles options
-  const fetchOptions = async () => {
-    try {
-      const [jobSpecsRes, branchesRes, rolesRes] = await Promise.allSettled([
-        employeesApi.getJobSpecifications(),
-        employeesApi.getBranches(),
-        employeesApi.getRoles(),
-      ]);
-
-      if (jobSpecsRes.status === 'fulfilled') {
-        const data = jobSpecsRes.value?.data || jobSpecsRes.value || [];
-        setJobSpecifications(Array.isArray(data) ? data : data.items || data.jobSpecifications || []);
-      }
-
-      if (branchesRes.status === 'fulfilled') {
-        const data = branchesRes.value?.data || branchesRes.value || [];
-        setBranches(Array.isArray(data) ? data : data.items || data.branches || []);
-      }
-
-      if (rolesRes.status === 'fulfilled') {
-        const data = rolesRes.value?.data || rolesRes.value || [];
-        setSystemRoles(Array.isArray(data) ? data : data.items || data.roles || []);
-      }
-    } catch (err) {
-      console.warn('Could not load dropdown options:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchOptions();
-  }, []);
-
-  // Handle return state from Job Specification creation
-  useEffect(() => {
-    if (location.state?.autoOpenCreate) {
-      fetchOptions();
-      if (location.state?.isEditMode) {
-        setViewMode('EDIT');
-      } else {
-        setViewMode('CREATE');
-      }
-
-      if (location.state?.draftFormData) {
-        setFormData({
-          ...location.state.draftFormData,
-          jobSpecificationId: location.state.newlyCreatedJobSpecId || location.state.draftFormData.jobSpecificationId,
-        });
-      } else if (location.state?.newlyCreatedJobSpecId) {
-        setFormData((prev) => ({
-          ...prev,
-          jobSpecificationId: location.state.newlyCreatedJobSpecId,
-        }));
-      }
-    }
-  }, [location.state]);
-
-  useEffect(() => {
-    if (viewMode === 'LIST') {
-      fetchEmployees();
-    }
-  }, [search, statusFilter, viewMode]);
-
-  // Calculated Stats
-  const stats = useMemo(() => {
-    const total = employees.length;
-    const activeCount = employees.filter((e) => e.status === 'ACTIVE').length;
-    const inactiveCount = employees.filter((e) => e.status !== 'ACTIVE').length;
-    const rolesCount = new Set(
-      employees.map((e) => e.jobSpecification?.title || e.jobTitle || 'Staff').filter(Boolean)
-    ).size;
-
-    return {
-      total,
-      activeCount,
-      inactiveCount,
-      rolesCount,
-    };
-  }, [employees]);
-
-  // Navigation Handlers
-  const handleOpenCreate = () => {
-    setEditingEmployee(null);
-    setFormData({
-      ...initialFormState,
-      jobSpecificationId: jobSpecifications.length > 0 ? jobSpecifications[0].id : '',
-      branchId: branches.length > 0 ? branches[0].id : '',
-      roleId: systemRoles.length > 0 ? systemRoles[0].id : '',
-    });
-    setViewMode('CREATE');
-  };
-
-  const handleOpenEdit = (employee) => {
-    setEditingEmployee(employee);
-    setFormData({
-      employeeCode: employee.employeeCode || '',
-      firstName: employee.person?.firstName || employee.firstName || '',
-      middleName: employee.person?.middleName || employee.middleName || '',
-      lastName: employee.person?.lastName || employee.lastName || '',
-      email: employee.person?.email || employee.email || '',
-      phone: employee.person?.phone || employee.phone || '',
-      address: employee.person?.address || employee.address || '',
-      hireDate: employee.hireDate ? new Date(employee.hireDate).toISOString().split('T')[0] : getTodayFormatted(),
-      department: employee.department || employee.jobSpecification?.department || '',
-      jobSpecificationId: employee.jobSpecificationId || employee.jobSpecification?.id || '',
-      jobTitle: employee.jobSpecification?.title || employee.jobTitle || '',
-      branchId: employee.branchId || employee.branch?.id || '',
-      status: employee.status || 'ACTIVE',
-      needsUserAccount: Boolean(employee.person?.user || employee.user),
-      username: employee.person?.user?.username || '',
-      password: '',
-      roleId: employee.person?.user?.userRoles?.[0]?.roleId || '',
-    });
-    setViewMode('EDIT');
-  };
-
-  const handleOpenDetail = (employee) => {
-    setEditingEmployee(employee);
-    setViewMode('DETAIL');
-  };
-
-  const handleBackToList = () => {
-    setViewMode('LIST');
-    setEditingEmployee(null);
-  };
-
-  // Submit Handler
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.branchId) {
-      toast.error('Please select an assigned branch');
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      let targetJobSpecId = formData.jobSpecificationId;
-
-      // Auto-create or select Job Specification
-      if (!targetJobSpecId) {
-        if (jobSpecifications.length > 0) {
-          targetJobSpecId = jobSpecifications[0].id;
-        } else {
-          const specTitle = formData.jobTitle.trim() || 'General Staff';
-          const newSpecRes = await employeesApi.createJobSpecification({
-            title: specTitle,
-            department: formData.department.trim() || 'Operations',
-          });
-          const newSpec = newSpecRes?.data || newSpecRes;
-          targetJobSpecId = newSpec.id;
-          fetchOptions();
-        }
-      }
-
-      if (editingEmployee) {
-        // Update Payload
-        const updatePayload = {
-          firstName: formData.firstName.trim() || undefined,
-          middleName: formData.middleName.trim() || undefined,
-          lastName: formData.lastName.trim() || undefined,
-          email: formData.email.trim() || undefined,
-          phone: formData.phone.trim() || undefined,
-          address: formData.address.trim() || undefined,
-          employeeCode: formData.employeeCode.trim() || undefined,
-          hireDate: formData.hireDate || undefined,
-          department: formData.department.trim() || undefined,
-          jobSpecificationId: targetJobSpecId || undefined,
-          jobSpecificationIds: targetJobSpecId ? [targetJobSpecId] : undefined,
-          branchId: formData.branchId || undefined,
-          status: formData.status,
-          needsUserAccount: formData.needsUserAccount,
-          username: formData.needsUserAccount ? formData.username.trim() || undefined : undefined,
-          password: formData.needsUserAccount && formData.password ? formData.password : undefined,
-          roleId: formData.needsUserAccount ? formData.roleId || undefined : undefined,
-          roleIds: formData.needsUserAccount && formData.roleId ? [formData.roleId] : undefined,
-        };
-
-        await employeesApi.updateEmployee(editingEmployee.id, updatePayload);
-        toast.success('Employee updated successfully');
-      } else {
-        // Create Payload
-        const createPayload = {
-          firstName: formData.firstName.trim(),
-          middleName: formData.middleName.trim() || undefined,
-          lastName: formData.lastName.trim(),
-          email: formData.email.trim() || undefined,
-          phone: formData.phone.trim() || undefined,
-          address: formData.address.trim() || undefined,
-          employeeCode: formData.employeeCode.trim() || undefined,
-          hireDate: formData.hireDate || getTodayFormatted(),
-          department: formData.department.trim() || undefined,
-          jobSpecificationId: targetJobSpecId || undefined,
-          jobSpecificationIds: targetJobSpecId ? [targetJobSpecId] : undefined,
-          branchId: formData.branchId || undefined,
-          status: formData.status || 'ACTIVE',
-          needsUserAccount: formData.needsUserAccount,
-          username: formData.needsUserAccount ? formData.username.trim() || undefined : undefined,
-          password: formData.needsUserAccount ? formData.password || undefined : undefined,
-          roleId: formData.needsUserAccount ? formData.roleId || undefined : undefined,
-          roleIds: formData.needsUserAccount && formData.roleId ? [formData.roleId] : undefined,
-        };
-
-        await employeesApi.createEmployee(createPayload);
-        toast.success('Employee created successfully');
-      }
-
-      handleBackToList();
-    } catch (err) {
-      toast.error(err?.message || 'Failed to save employee profile');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Delete Handler
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to delete employee "${name || 'this record'}"?`)) return;
-    try {
-      await employeesApi.deleteEmployee(id);
-      toast.success('Employee deleted successfully');
-      if (viewMode !== 'LIST') {
-        handleBackToList();
-      } else {
-        fetchEmployees();
-      }
-    } catch (err) {
-      toast.error(err?.message || 'Failed to delete employee');
-    }
-  };
-
-  // Helper getters
-  const getEmployeeName = (emp) => {
-    if (!emp) return '-';
-    if (emp.person) return `${emp.person.firstName || ''} ${emp.person.middleName || ''} ${emp.person.lastName || ''}`.replace(/\s+/g, ' ').trim() || 'Unnamed';
-    if (emp.firstName) return `${emp.firstName} ${emp.middleName || ''} ${emp.lastName || ''}`.replace(/\s+/g, ' ').trim();
-    return 'Unnamed Staff';
-  };
-
-  const getEmployeeEmail = (emp) => {
-    return emp?.person?.email || emp?.email || '-';
-  };
-
-  const getEmployeePhone = (emp) => {
-    return emp?.person?.phone || emp?.phone || '-';
   };
 
   // ═════════════════════════════════════════════════════════════════
@@ -360,6 +89,7 @@ export default function EmployeesPage() {
         getEmployeeName={getEmployeeName}
         getEmployeeEmail={getEmployeeEmail}
         getEmployeePhone={getEmployeePhone}
+        isSelfSuperAdminEmployee={isSelfSuperAdminEmployee}
       />
     );
   }
@@ -369,29 +99,70 @@ export default function EmployeesPage() {
   // ═════════════════════════════════════════════════════════════════
   return (
     <div className="space-y-6">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Employee Directory</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage workforce profiles, job specifications, and employment statuses.
-          </p>
-        </div>
+      {/* Non-modal Invitation Success Banner */}
+      {invitationBanner && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-600/15 via-indigo-600/10 to-violet-600/15 border border-violet-500/30 text-foreground shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-fadeIn">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="p-2 rounded-xl bg-violet-500/20 text-violet-400 shrink-0 mt-0.5">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-1.5">
+              <div className="text-sm font-bold flex items-center gap-2 flex-wrap">
+                <span>Invitation Link Successfully Created!</span>
+                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Email Dispatched
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                An invitation email has been sent to <strong className="text-foreground">{invitationBanner.email}</strong> for {invitationBanner.name}. You can also copy or test the link directly:
+              </p>
+              <div className="flex items-center gap-2 max-w-2xl pt-0.5">
+                <input
+                  type="text"
+                  readOnly
+                  value={invitationBanner.link}
+                  onClick={(e) => e.target.select()}
+                  className="w-full px-3 py-2 rounded-xl bg-card border border-border text-xs font-mono text-foreground select-all outline-none focus:ring-1 focus:ring-violet-500 cursor-pointer"
+                  title="Click to select full URL"
+                />
+                <Button
+                  size="sm"
+                  variant={copied ? 'success' : 'primary'}
+                  onClick={handleCopyLink}
+                  icon={copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  className="shrink-0 font-semibold"
+                >
+                  {copied ? 'Copied!' : 'Copy Link'}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.open(invitationBanner.link, '_blank')}
+                  iconRight={<ExternalLink className="w-3.5 h-3.5" />}
+                  className="shrink-0"
+                >
+                  Open Page
+                </Button>
+              </div>
+            </div>
+          </div>
 
-        {canCreate && (
-          <Button
-            variant="primary"
-            onClick={handleOpenCreate}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-            }
+          <button
+            type="button"
+            onClick={() => setInvitationBanner(null)}
+            className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition shrink-0 self-start md:self-center cursor-pointer"
+            title="Dismiss banner"
           >
-            Add Employee
-          </Button>
-        )}
-      </div>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Header Bar */}
+      <EmployeeHeader
+        canCreate={canCreate}
+        onAddEmployee={handleOpenCreate}
+      />
 
       {/* Summary KPI Cards */}
       <EmployeeStats stats={stats} />
@@ -418,6 +189,7 @@ export default function EmployeesPage() {
         getEmployeeName={getEmployeeName}
         getEmployeeEmail={getEmployeeEmail}
         getEmployeePhone={getEmployeePhone}
+        isSelfSuperAdminEmployee={isSelfSuperAdminEmployee}
       />
     </div>
   );
