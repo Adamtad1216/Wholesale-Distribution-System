@@ -5,7 +5,7 @@ import {
   recordStatusChange,
   getSalesOrderWithHistory,
 } from "./salesOrders.status.service.js";
-import invoiceService from "../../04-finance/invoice.service.js";
+import invoiceService from "../../04-finance/invoice/invoice.service.js";
 import {
   sendNotificationToCustomer,
   sendNotificationToRoles,

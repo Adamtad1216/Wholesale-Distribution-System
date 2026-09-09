@@ -8,7 +8,7 @@ import {
   ensureUniqueCode,
 } from "../../09-customers/customers/customers.service.js";
 import { recordStatusChange } from "./salesOrders.status.service.js";
-import invoiceService from "../../04-finance/invoice.service.js";
+import invoiceService from "../../04-finance/invoice/invoice.service.js";
 import { hasPermission } from "../../../middleware/permission.middleware.js";
 import {
   sendNotificationToEmployee,
