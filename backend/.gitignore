@@ -42,3 +42,5 @@ uploads/
 # Seed scripts
 scripts/*
 !scripts/.gitkeep
+prisma/seed.sales.js
+seed.sales.js
