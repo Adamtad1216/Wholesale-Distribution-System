@@ -78,6 +78,15 @@ async function ensureSchemaUpToDate(client) {
       ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_confirmed_by" UUID;
       ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_recipient_name" TEXT;
       ALTER TABLE "sales_orders" ADD COLUMN IF NOT EXISTS "customer_pickup_notes" TEXT;
+
+      ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "make" TEXT;
+      ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "model" TEXT;
+      ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "year" INTEGER;
+      ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "notes" TEXT;
+      ALTER TABLE "vehicles" ADD COLUMN IF NOT EXISTS "assigned_driver_id" UUID;
+
+      ALTER TABLE "discount_rules" ADD COLUMN IF NOT EXISTS "category_id" UUID;
+      CREATE INDEX IF NOT EXISTS "discount_rules_category_id_status_idx" ON "discount_rules"("category_id", "status");
     `);
   } catch (err) {
     console.warn("Schema self-heal note:", err?.message);
@@ -528,6 +537,7 @@ export async function seedAllWorkflowRolesAndUsers() {
       where: { plateNumber: v.plateNumber },
       update: { vehicleType: v.vehicleType, capacity: v.capacity, status: 'ACTIVE', isArchived: false },
       create: { plateNumber: v.plateNumber, vehicleType: v.vehicleType, capacity: v.capacity, status: 'ACTIVE' },
+      select: { plateNumber: true, vehicleType: true },
     });
     console.log(`✓ Fleet Vehicle: ${vehicle.plateNumber} (${vehicle.vehicleType})`);
   }

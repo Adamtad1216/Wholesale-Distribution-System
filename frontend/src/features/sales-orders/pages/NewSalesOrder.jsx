@@ -443,6 +443,13 @@ export default function NewSalesOrder() {
     },
   });
 
+  // Auto-select first active warehouse by default if not set
+  useEffect(() => {
+    if (!warehouseId && warehousesData && warehousesData.length > 0) {
+      setWarehouseId(warehousesData[0].id);
+    }
+  }, [warehousesData, warehouseId]);
+
   const {
     data: productsData,
     isLoading: productsLoading,

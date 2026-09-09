@@ -50,9 +50,7 @@ import NewSalesOrder from './features/sales-orders/pages/NewSalesOrder';
 import MySalesOrders from './features/sales-orders/pages/MySalesOrders';
 import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
 import SchedulePreparationPage from './features/sales-orders/pages/SchedulePreparationPage';
-import CustomerCatalog from './features/customer-portal/pages/CustomerCatalog';
-import CustomerInvoices from './features/customer-portal/pages/CustomerInvoices';
-import CustomerCredit from './features/customer-portal/pages/CustomerCredit';
+
 import DeliveriesPage from './features/deliveries/pages/DeliveriesPage';
 import VehiclesListPage from './features/vehicles/pages/VehiclesListPage';
 import VehicleFormPage from './features/vehicles/pages/VehicleFormPage';
@@ -135,8 +133,8 @@ function AppRoutes() {
           <Route path="/branches" element={<BranchesPage />} />
         </Route>
 
-        {/* Other module routes - customer management restricted to staff & sales only */}
-        <Route element={<PermissionRoute permission="customers:read" roles={['ADMIN', 'SUPER_ADMIN', 'SALES_REPRESENTATIVE', 'SALES_REP', 'MANAGER', 'USER']} />}>
+        {/* Customer management route */}
+        <Route element={<PermissionRoute permission="customers:read" />}>
           <Route path="/customers" element={<Customers />} />
         </Route>
 
@@ -178,9 +176,8 @@ function AppRoutes() {
           <Route path="/pricing/quotas/:id/edit" element={<SalesQuotaFormPage />} />
         </Route>
 
-        <Route path="/catalog" element={<CustomerCatalog />} />
-        <Route path="/invoices" element={<CustomerInvoices />} />
-        <Route path="/account/credit" element={<CustomerCredit />} />
+        <Route path="/catalog" element={<Navigate to="/sales-orders/new" replace />} />
+
         <Route element={<PermissionRoute permission={['payment-options:manage', 'payment-option:manage', 'payment-options:read', 'payment-option:read', 'payments:update', 'payments:read_all', 'payment:read_all']} />}>
           <Route path="/finance/payment-options" element={<PaymentOptionsPage />} />
         </Route>

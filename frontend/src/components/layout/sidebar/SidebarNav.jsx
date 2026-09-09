@@ -1,25 +1,13 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import SidebarNavItem from './SidebarNavItem';
-import {
-  navigationSections,
-  customerNavigationSections,
-  salesRepNavigationSections,
-  warehouseManagerNavigationSections,
-  storeKeeperNavigationSections,
-  driverNavigationSections,
-} from './navigationData';
+import { navigationSections } from './navigationData';
 
 export default function SidebarNav({ onClose }) {
   const { permissions = [], role } = useSelector((state) => state.auth);
 
-  const isCustomer = role === 'CUSTOMER';
+  // Super Admin bypass and wildcard permission overrides
   const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
-  const isSalesRep = role === 'SALES_REPRESENTATIVE' || role === 'SALES_REP';
-  const isWhManager = role === 'WAREHOUSE_MANAGER' || role === 'WH_MANAGER';
-  const isStoreKeeper = role === 'STORE_KEEPER' || role === 'STOREKEEPER';
-  const isDriver = role === 'DRIVER';
-
   const hasWildcard =
     isSuperAdmin ||
     permissions.includes('*') ||
@@ -30,24 +18,11 @@ export default function SidebarNav({ onClose }) {
     if (onClose) onClose();
   };
 
-  const sectionsToRender = isCustomer
-    ? customerNavigationSections
-    : isSalesRep
-    ? salesRepNavigationSections
-    : isWhManager
-    ? warehouseManagerNavigationSections
-    : isStoreKeeper
-    ? storeKeeperNavigationSections
-    : isDriver
-    ? driverNavigationSections
-    : navigationSections;
-
   return (
     <nav className="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin space-y-5">
       {/* Navigation Sections */}
-      {sectionsToRender.map((section) => {
-        let visibleItems = section.items.filter((item) => {
-          if (isCustomer && item.href === '/customers') return false;
+      {navigationSections.map((section) => {
+        const visibleItems = section.items.filter((item) => {
           if (!item.permission) return true;
           if (hasWildcard) return true;
           const required = Array.isArray(item.permission) ? item.permission : [item.permission];
@@ -62,33 +37,13 @@ export default function SidebarNav({ onClose }) {
               {section.title}
             </h3>
             <div className="space-y-0.5">
-              {visibleItems.map((item) => {
-                let displayName = item.name;
-
-                if (item.href === '/sales-orders') {
-                  if (isSalesRep) {
-                    displayName = 'Sales Orders';
-                  } else if (isWhManager) {
-                    displayName = 'Preparation Queue';
-                  } else if (isStoreKeeper) {
-                    displayName = 'Preparation Tasks';
-                  } else if (isSuperAdmin) {
-                    displayName = 'Sales Orders';
-                  }
-                } else if (item.href === '/deliveries') {
-                  if (isDriver) {
-                    displayName = 'My Deliveries';
-                  }
-                }
-
-                return (
-                  <SidebarNavItem
-                    key={item.name}
-                    item={{ ...item, name: displayName }}
-                    onClick={() => handleItemClick(item)}
-                  />
-                );
-              })}
+              {visibleItems.map((item) => (
+                <SidebarNavItem
+                  key={item.href || item.name}
+                  item={item}
+                  onClick={handleItemClick}
+                />
+              ))}
             </div>
           </div>
         );
@@ -96,4 +51,3 @@ export default function SidebarNav({ onClose }) {
     </nav>
   );
 }
-

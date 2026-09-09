@@ -261,7 +261,7 @@ export default function CustomerDashboard() {
             </button>
 
             <button
-              onClick={() => navigate('/catalog')}
+              onClick={() => navigate('/sales-orders/new')}
               className="px-4 py-3 bg-secondary hover:bg-secondary/80 border border-border text-foreground rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer active:scale-95 shadow-sm"
             >
               <ShoppingBag className="w-4 h-4 text-violet-400" />
