@@ -374,6 +374,10 @@ model User {
   updatedWarehouseSellingPrices   WarehouseSellingPrice[]   @relation("WarehouseSellingPriceUpdater")
   createdCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressCreator")
   updatedCustomerAddresses        CustomerAddress[]         @relation("CustomerAddressUpdater")
+  createdWarehouseManagers        WarehouseManager[]        @relation("WarehouseManagerCreator")
+  updatedWarehouseManagers        WarehouseManager[]        @relation("WarehouseManagerUpdater")
+  createdBranchManagers           BranchManager[]           @relation("BranchManagerCreator")
+  updatedBranchManagers           BranchManager[]           @relation("BranchManagerUpdater")
 
   @@map("users")
 }
@@ -496,7 +500,8 @@ model Employee {
   driverLicenseExpiry DateTime? @map("driver_license_expiry")
 
   managedWarehouses   Warehouse[]    @relation("ManagedWarehouses")
-  managedBranches     Branch[]       @relation("ManagedBranches")
+  branchManagerAssignments BranchManager[] @relation("BranchManagerAssignments")
+  warehouseManagerAssignments WarehouseManager[] @relation("WarehouseManagerAssignments")
   salesOrders         SalesOrder[]
   deliveries          Delivery[]
   preparationTasks    PreparationTask[]
@@ -575,7 +580,6 @@ model Branch {
   branchCode   String    @unique @map("branch_code")
   name         String
   isHeadOffice Boolean   @default(false) @map("is_head_office")
-  managerId    String?   @map("manager_id") @db.Uuid
   phone        String?
   email        String?
 
@@ -592,13 +596,38 @@ model Branch {
   warehouses  Warehouse[]
   employees   Employee[]   @relation("EmployeeBranch")
   salesQuotas SalesQuota[]
+  managerAssignments BranchManager[]
 
   company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  manager   Employee? @relation("ManagedBranches", fields: [managerId], references: [id])
   createdBy User?     @relation("BranchCreator", fields: [createdById], references: [id])
   updatedBy User?     @relation("BranchUpdater", fields: [updatedById], references: [id])
 
   @@map("branches")
+}
+
+model BranchManager {
+  id           String    @id @default(uuid()) @db.Uuid
+  branchId     String    @map("branch_id") @db.Uuid
+  employeeId   String    @map("employee_id") @db.Uuid
+  isCurrent    Boolean   @default(true) @map("is_current")
+  assignedAt   DateTime  @default(now()) @map("assigned_at")
+  unassignedAt DateTime? @map("unassigned_at")
+  notes        String?
+  isArchived   Boolean   @default(false) @map("is_archived")
+  archivedAt   DateTime? @map("archived_at")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  branch       Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  employee     Employee  @relation("BranchManagerAssignments", fields: [employeeId], references: [id], onDelete: Cascade)
+  createdBy    User?     @relation("BranchManagerCreator", fields: [createdById], references: [id])
+  updatedBy    User?     @relation("BranchManagerUpdater", fields: [updatedById], references: [id])
+
+  @@index([branchId])
+  @@index([employeeId])
+  @@map("branch_managers")
 }
 
 model Warehouse {
@@ -644,8 +673,34 @@ model Warehouse {
   createdBy User?     @relation("WarehouseCreator", fields: [createdById], references: [id])
   updatedBy User?     @relation("WarehouseUpdater", fields: [updatedById], references: [id])
   manager   Employee? @relation("ManagedWarehouses", fields: [managerId], references: [id])
+  managerAssignments WarehouseManager[]
 
   @@map("warehouses")
+}
+
+model WarehouseManager {
+  id           String    @id @default(uuid()) @db.Uuid
+  warehouseId  String    @map("warehouse_id") @db.Uuid
+  employeeId   String    @map("employee_id") @db.Uuid
+  isCurrent    Boolean   @default(true) @map("is_current")
+  assignedAt   DateTime  @default(now()) @map("assigned_at")
+  unassignedAt DateTime? @map("unassigned_at")
+  notes        String?
+  isArchived   Boolean   @default(false) @map("is_archived")
+  archivedAt   DateTime? @map("archived_at")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  employee     Employee  @relation("WarehouseManagerAssignments", fields: [employeeId], references: [id], onDelete: Cascade)
+  createdBy    User?     @relation("WarehouseManagerCreator", fields: [createdById], references: [id])
+  updatedBy    User?     @relation("WarehouseManagerUpdater", fields: [updatedById], references: [id])
+
+  @@index([warehouseId])
+  @@index([employeeId])
+  @@map("warehouse_managers")
 }
 
 // ============================================================
