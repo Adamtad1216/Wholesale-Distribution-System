@@ -3,6 +3,7 @@ import { logAudit } from "../../../middleware/audit.middleware.js";
 import { createNotification } from "../../14-notifications/notifications/notifications.service.js";
 import { AppError } from "../../../utils/errors.js";
 import { getPaginationParams, buildPaginationMeta } from "../../../utils/pagination.js";
+import { getUserScope } from "../../../utils/warehouse-scope.js";
 
 export const generateProductCode = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -28,12 +29,24 @@ const sanitizeProduct = (product) => {
   if (!product) return product;
   return {
     ...product,
+    sellingPrice: Number(product.sellingPrice ?? 0),
+    wholesalePrice: Number(product.wholesalePrice ?? 0),
+    costPrice: Number(product.costPrice ?? 0),
     warehouseStocks: product.warehouseStocks
       ? product.warehouseStocks.map((s) => ({
         ...s,
-        quantity: Number(s.quantity),
-        availableQuantity: Number(s.availableQuantity),
-        reservedQuantity: Number(s.reservedQuantity),
+        quantity: Number(s.quantity ?? 0),
+        availableQuantity: Number(s.availableQuantity ?? 0),
+        reservedQuantity: Number(s.reservedQuantity ?? 0),
+        minimumStock: Number(s.minimumStock ?? 0),
+        reorderLevel: Number(s.reorderLevel ?? 0),
+      }))
+      : undefined,
+    warehouseSellingPrices: product.warehouseSellingPrices
+      ? product.warehouseSellingPrices.map((sp) => ({
+        ...sp,
+        sellingPrice: Number(sp.sellingPrice ?? 0),
+        wholesalePrice: Number(sp.wholesalePrice ?? 0),
       }))
       : undefined,
     updatedAt: product.updatedById ? product.updatedAt : null,
@@ -216,6 +229,7 @@ export async function createProduct(data, createdById, req) {
 export async function getProducts(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
   const where = await buildProductWhere(filters, user);
+  const scope = user ? await getUserScope(user) : { isGlobal: true };
 
   const [products, total] = await Promise.all([
     prisma.product.findMany({
@@ -249,30 +263,52 @@ export async function getProducts(filters, user = null) {
           },
         },
         warehouseSellingPrices: {
-          where: { isArchived: false },
+          where: {
+            isArchived: false,
+            ...(!scope.isGlobal ? { warehouseId: { in: scope.warehouseIds || [] } } : {}),
+          },
           include: {
             warehouse: {
               select: {
                 id: true,
                 code: true,
                 name: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true,
+                    branchCode: true,
+                  },
+                },
               },
             },
           },
         },
         warehouseStocks: {
-          where: { isArchived: false },
+          where: {
+            isArchived: false,
+            ...(!scope.isGlobal ? { warehouseId: { in: scope.warehouseIds || [] } } : {}),
+          },
           select: {
             id: true,
             warehouseId: true,
             quantity: true,
             availableQuantity: true,
             reservedQuantity: true,
+            minimumStock: true,
+            reorderLevel: true,
             warehouse: {
               select: {
                 id: true,
                 code: true,
                 name: true,
+                branch: {
+                  select: {
+                    id: true,
+                    name: true,
+                    branchCode: true,
+                  },
+                },
               },
             },
           },
@@ -315,7 +351,9 @@ export async function getProducts(filters, user = null) {
   };
 }
 
-export async function getProductById(id) {
+export async function getProductById(id, user = null) {
+  const scope = user ? await getUserScope(user) : { isGlobal: true };
+
   const product = await prisma.product.findFirst({
     where: { id, isArchived: false },
     include: {
@@ -347,30 +385,52 @@ export async function getProductById(id) {
         },
       },
       warehouseSellingPrices: {
-        where: { isArchived: false },
+        where: {
+          isArchived: false,
+          ...(!scope.isGlobal ? { warehouseId: { in: scope.warehouseIds || [] } } : {}),
+        },
         include: {
           warehouse: {
             select: {
               id: true,
               code: true,
               name: true,
+              branch: {
+                select: {
+                  id: true,
+                  name: true,
+                  branchCode: true,
+                },
+              },
             },
           },
         },
       },
       warehouseStocks: {
-        where: { isArchived: false },
+        where: {
+          isArchived: false,
+          ...(!scope.isGlobal ? { warehouseId: { in: scope.warehouseIds || [] } } : {}),
+        },
         select: {
           id: true,
           warehouseId: true,
           quantity: true,
           availableQuantity: true,
           reservedQuantity: true,
+          minimumStock: true,
+          reorderLevel: true,
           warehouse: {
             select: {
               id: true,
               code: true,
               name: true,
+              branch: {
+                select: {
+                  id: true,
+                  name: true,
+                  branchCode: true,
+                },
+              },
             },
           },
         },
@@ -404,6 +464,16 @@ export async function getProductById(id) {
     throw new AppError('Product not found', 404);
   }
 
+  // If user is non-global, verify that this product has stock or selling price in their assigned warehouses
+  if (!scope.isGlobal) {
+    const isAssigned =
+      (product.warehouseStocks && product.warehouseStocks.length > 0) ||
+      (product.warehouseSellingPrices && product.warehouseSellingPrices.length > 0);
+    if (!isAssigned) {
+      throw new AppError('Product not found or not assigned to your warehouse', 404);
+    }
+  }
+
   return sanitizeProduct(product);
 }
 
@@ -424,6 +494,13 @@ export async function getProductWarehousePrices(productId) {
           id: true,
           code: true,
           name: true,
+          branch: {
+            select: {
+              id: true,
+              name: true,
+              branchCode: true,
+            },
+          },
         },
       },
       createdBy: {
@@ -454,6 +531,8 @@ export async function getProductWarehousePrices(productId) {
 
   return prices.map((price) => ({
     ...price,
+    sellingPrice: Number(price.sellingPrice ?? 0),
+    wholesalePrice: Number(price.wholesalePrice ?? 0),
     updatedAt: price.updatedById ? price.updatedAt : null,
     createdBy: price.createdBy
       ? { id: price.createdBy.id, person: price.createdBy.person }
@@ -665,13 +744,27 @@ export async function deleteProduct(id, createdById, req) {
     invoiceCount,
     prCount,
   ] = await Promise.all([
-    prisma.warehouseStock.count({ where: { productId: id, quantity: { gt: 0 } } }),
-    prisma.warehouseStockTransfer.count({ where: { productId: id, isArchived: false } }),
-    prisma.stockReservation.count({ where: { productId: id, isArchived: false } }),
-    prisma.stockAdjustmentItem.count({ where: { productId: id, isArchived: false } }),
-    prisma.purchaseOrderItem.count({ where: { productId: id, isArchived: false } }),
+    prisma.warehouseStock.count({ where: { productId: id, isArchived: false, quantity: { gt: 0 } } }),
+    prisma.warehouseStockTransfer.count({ where: { productId: id, isArchived: false, status: 'PENDING' } }),
+    prisma.stockReservation.count({ where: { productId: id, isArchived: false, status: 'RESERVED' } }),
+    prisma.stockAdjustmentItem.count({
+      where: { productId: id, isArchived: false, adjustment: { isArchived: false, status: 'PENDING' } },
+    }),
+    prisma.purchaseOrderItem.count({
+      where: {
+        productId: id,
+        isArchived: false,
+        purchaseOrder: { isArchived: false, status: { notIn: ['CANCELLED', 'CLOSED', 'COMPLETED', 'RECEIVED'] } },
+      },
+    }),
     prisma.goodsReceiptItem.count({ where: { productId: id, isArchived: false } }),
-    prisma.salesOrderItem.count({ where: { productId: id, isArchived: false } }),
+    prisma.salesOrderItem.count({
+      where: {
+        productId: id,
+        isArchived: false,
+        salesOrder: { isArchived: false, status: { notIn: ['COMPLETED', 'CANCELLED', 'REJECTED'] } },
+      },
+    }),
     prisma.salesReturnItem.count({ where: { productId: id, isArchived: false } }),
     prisma.deliveryItem.count({ where: { productId: id, isArchived: false } }),
     prisma.invoiceItem.count({ where: { productId: id, isArchived: false } }),
@@ -711,6 +804,17 @@ export async function deleteProduct(id, createdById, req) {
 
     // Soft-delete associated warehouse selling prices
     await tx.warehouseSellingPrice.updateMany({
+      where: { productId: id, isArchived: false },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+        updatedById: createdById,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Soft-delete any remaining non-archived warehouse stocks (e.g. zero-quantity records)
+    await tx.warehouseStock.updateMany({
       where: { productId: id, isArchived: false },
       data: {
         isArchived: true,
@@ -858,34 +962,77 @@ async function buildProductWhere(filters, user = null) {
     where.id = filters.productId;
   }
 
-  let targetWarehouseId = filters.warehouseId;
-
-  // Auto-scope if user is assigned/managing a warehouse and not an admin
-  if (!targetWarehouseId && user) {
-    const isAdmin = user.userRoles?.some((ur) => ur.role?.name === 'ADMIN');
-    if (!isAdmin && user.personId) {
-      const managedWarehouse = await prisma.warehouse.findFirst({
-        where: {
-          manager: { personId: user.personId, isArchived: false },
-          isArchived: false,
-        },
-        select: { id: true },
-      });
-      if (managedWarehouse) {
-        targetWarehouseId = managedWarehouse.id;
-      }
-    }
-  }
-
   const andClauses = [];
 
-  if (targetWarehouseId) {
+  if (user) {
+    const scope = await getUserScope(user);
+    if (!scope.isGlobal) {
+      const scopedWarehouseIds = scope.warehouseIds || [];
+      if (scopedWarehouseIds.length === 0) {
+        where.id = '00000000-0000-0000-0000-000000000000';
+      } else {
+        let effectiveWarehouseIds = scopedWarehouseIds;
+        if (filters.warehouseId) {
+          if (scopedWarehouseIds.includes(filters.warehouseId)) {
+            effectiveWarehouseIds = [filters.warehouseId];
+          } else {
+            where.id = '00000000-0000-0000-0000-000000000000';
+            effectiveWarehouseIds = [];
+          }
+        }
+
+        if (effectiveWarehouseIds.length > 0) {
+          andClauses.push({
+            OR: [
+              {
+                warehouseStocks: {
+                  some: {
+                    warehouseId: { in: effectiveWarehouseIds },
+                    isArchived: false,
+                  },
+                },
+              },
+              {
+                warehouseSellingPrices: {
+                  some: {
+                    warehouseId: { in: effectiveWarehouseIds },
+                    isArchived: false,
+                  },
+                },
+              },
+            ],
+          });
+        }
+      }
+    } else if (filters.warehouseId) {
+      andClauses.push({
+        OR: [
+          {
+            warehouseStocks: {
+              some: {
+                warehouseId: filters.warehouseId,
+                isArchived: false,
+              },
+            },
+          },
+          {
+            warehouseSellingPrices: {
+              some: {
+                warehouseId: filters.warehouseId,
+                isArchived: false,
+              },
+            },
+          },
+        ],
+      });
+    }
+  } else if (filters.warehouseId) {
     andClauses.push({
       OR: [
         {
           warehouseStocks: {
             some: {
-              warehouseId: targetWarehouseId,
+              warehouseId: filters.warehouseId,
               isArchived: false,
             },
           },
@@ -893,7 +1040,7 @@ async function buildProductWhere(filters, user = null) {
         {
           warehouseSellingPrices: {
             some: {
-              warehouseId: targetWarehouseId,
+              warehouseId: filters.warehouseId,
               isArchived: false,
             },
           },
