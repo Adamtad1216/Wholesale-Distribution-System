@@ -93,12 +93,19 @@ api.interceptors.response.use(
       }
     }
 
-    const message =
-      error.response?.data?.message ||
-      error.message ||
-      'An unexpected error occurred';
+    const errorData = error.response?.data;
+    let message = errorData?.message || error.message || 'An unexpected error occurred';
 
-    return Promise.reject({ message, status, originalError: error });
+    if (errorData?.errors && typeof errorData.errors === 'object') {
+      const fieldDetails = Object.entries(errorData.errors)
+        .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
+        .join('; ');
+      if (fieldDetails && (message === 'Validation failed' || !message)) {
+        message = fieldDetails;
+      }
+    }
+
+    return Promise.reject({ message, status, errors: errorData?.errors, originalError: error });
   }
 );
 
