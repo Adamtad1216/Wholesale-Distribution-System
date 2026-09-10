@@ -29,6 +29,7 @@ import RolesJobSpecsMainPage from './features/roles-job-specifications/pages/Rol
 import PermissionsPage from './features/permissions/pages/permissions/PermissionsPage';
 import EmployeesPage from './features/employees/pages/EmployeesPage';
 import BranchesPage from './features/branches/pages/branches/BranchesPage';
+import WarehouseDetailPage from './features/branches/pages/warehouses/WarehouseDetailPage';
 import CompaniesPage from './features/companies/pages/CompaniesPage';
 import Customers from './features/customers/pages/Customers';
 import ProductsPage from './features/products/pages/ProductsPage';
@@ -114,6 +115,8 @@ function AppRoutes() {
         {/* Module 06: Facilities & Corporate Structure */}
         <Route element={<PermissionRoute permission="branches:read" />}>
           <Route path="/branches" element={<BranchesPage />} />
+          <Route path="/branches/warehouses/:id" element={<WarehouseDetailPage />} />
+          <Route path="/warehouses/:id" element={<WarehouseDetailPage />} />
         </Route>
         <Route element={<PermissionRoute permission="companies:read" />}>
           <Route path="/companies" element={<CompaniesPage />} />
@@ -126,21 +129,40 @@ function AppRoutes() {
 
         <Route element={<PermissionRoute permission="products:read" />}>
           <Route path="/products" element={<ProductsPage />} />
-          <Route path="/products/new" element={<ProductFormPage />} />
           <Route path="/products/:id" element={<ProductDetailPage />} />
-          <Route path="/products/:id/edit" element={<ProductFormPage />} />
           <Route path="/product-catalog" element={<ProductsPage />} />
-          <Route path="/product-catalog/new" element={<ProductFormPage />} />
           <Route path="/product-catalog/:id" element={<ProductDetailPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="products:create" />}>
+          <Route path="/products/new" element={<ProductFormPage />} />
+          <Route path="/product-catalog/new" element={<ProductFormPage />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="products:update" />}>
+          <Route path="/products/:id/edit" element={<ProductFormPage />} />
           <Route path="/product-catalog/:id/edit" element={<ProductFormPage />} />
         </Route>
 
         {/* Inventory Management & Detail Pages */}
-        <Route path="/inventory" element={<InventoryPage />} />
-        <Route path="/inventory/stocks/:id" element={<StockDetailPage />} />
-        <Route path="/inventory/transfers/:id" element={<TransferDetailPage />} />
-        <Route path="/inventory/adjustments/:id" element={<AdjustmentDetailPage />} />
-        <Route path="/inventory/reservations/:id" element={<ReservationDetailPage />} />
+        <Route
+          element={
+            <PermissionRoute
+              permission={[
+                'inventory:stock:read',
+                'inventory:transfers:read',
+                'inventory:adjustments:read',
+                'inventory:reservations:read',
+              ]}
+            />
+          }
+        >
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/inventory/stocks/:id" element={<StockDetailPage />} />
+          <Route path="/inventory/transfers/:id" element={<TransferDetailPage />} />
+          <Route path="/inventory/adjustments/:id" element={<AdjustmentDetailPage />} />
+          <Route path="/inventory/reservations/:id" element={<ReservationDetailPage />} />
+        </Route>
 
         <Route element={<PermissionRoute permission="categories:read" />}>
           <Route path="/categories" element={<CategoriesPage />} />
@@ -162,9 +184,14 @@ function AppRoutes() {
           <Route path="/payments" element={<Payments />} />
         </Route>
 
-        <Route path="/sales-orders/new" element={<NewSalesOrder />} />
-        <Route path="/sales-orders" element={<MySalesOrders />} />
-        <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
+        <Route element={<PermissionRoute permission="sales_orders:create" />}>
+          <Route path="/sales-orders/new" element={<NewSalesOrder />} />
+        </Route>
+
+        <Route element={<PermissionRoute permission="sales_orders:read" />}>
+          <Route path="/sales-orders" element={<MySalesOrders />} />
+          <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
+        </Route>
 
         {/* Default redirect inside the shell */}
         <Route index element={<Navigate to="/dashboard" replace />} />
