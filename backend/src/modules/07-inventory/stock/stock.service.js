@@ -2,7 +2,7 @@ import prisma from '../../../config/prisma.js';
 import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
-import { getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
+import { getUserScope, getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
 
 const sanitizeStock = (stock) => {
   if (!stock) return stock;
@@ -29,35 +29,70 @@ export async function createStock(data, createdById, req, user = null) {
   });
   if (!product) throw new AppError('Product not found', 404);
 
-  const existing = await prisma.warehouseStock.findFirst({
+  // Check for any existing record — active OR previously archived
+  const existingAny = await prisma.warehouseStock.findFirst({
     where: { warehouseId: data.warehouseId, productId: data.productId },
   });
-  if (existing) throw new AppError('Stock already exists for this product in warehouse', 409);
+
+  // Case 1: Active record already exists → conflict
+  if (existingAny && !existingAny.isArchived) {
+    throw new AppError(
+      `An active stock record for "${product.name}" already exists in "${warehouse.name}". ` +
+      `Use the Edit action to update the existing record instead.`,
+      409
+    );
+  }
 
   const stock = await prisma.$transaction(async (tx) => {
-    const newStock = await tx.warehouseStock.create({
-      data: {
-        warehouseId: data.warehouseId,
-        productId: data.productId,
-        quantity: data.quantity,
-        reservedQuantity: 0,
-        availableQuantity: data.quantity,
-        minimumStock: data.minimumStock,
-        reorderLevel: data.reorderLevel,
-        createdById,
-      },
-      include: {
-        warehouse: { select: { id: true, name: true, code: true } },
-        product: { select: { id: true, name: true, sku: true } },
-      },
-    });
+    let newStock;
 
-    // Create notification
+    if (existingAny && existingAny.isArchived) {
+      // Case 2: Soft-deleted (archived) record found → restore it with fresh values
+      newStock = await tx.warehouseStock.update({
+        where: { id: existingAny.id },
+        data: {
+          quantity: data.quantity,
+          reservedQuantity: 0,
+          availableQuantity: data.quantity,
+          minimumStock: data.minimumStock ?? existingAny.minimumStock,
+          reorderLevel: data.reorderLevel ?? existingAny.reorderLevel,
+          isArchived: false,
+          archivedAt: null,
+          updatedById: createdById,
+          updatedAt: new Date(),
+        },
+        include: {
+          warehouse: { select: { id: true, name: true, code: true } },
+          product: { select: { id: true, name: true, sku: true } },
+        },
+      });
+    } else {
+      // Case 3: No record at all → create fresh
+      newStock = await tx.warehouseStock.create({
+        data: {
+          warehouseId: data.warehouseId,
+          productId: data.productId,
+          quantity: data.quantity,
+          reservedQuantity: 0,
+          availableQuantity: data.quantity,
+          minimumStock: data.minimumStock,
+          reorderLevel: data.reorderLevel,
+          createdById,
+        },
+        include: {
+          warehouse: { select: { id: true, name: true, code: true } },
+          product: { select: { id: true, name: true, sku: true } },
+        },
+      });
+    }
+
     await tx.notification.create({
       data: {
         userId: createdById,
-        title: 'Stock Created',
-        message: `Added ${data.quantity} units of ${product.name} to ${warehouse.name}`,
+        title: existingAny ? 'Stock Record Restored' : 'Stock Created',
+        message: existingAny
+          ? `Restored and updated stock for ${product.name} in ${warehouse.name} to ${data.quantity} units.`
+          : `Added ${data.quantity} units of ${product.name} to ${warehouse.name}.`,
         type: 'INVENTORY_STOCK_CREATED',
         createdById,
       },
@@ -68,32 +103,48 @@ export async function createStock(data, createdById, req, user = null) {
 
   await logAudit({
     createdById,
-    action: 'STOCK_CREATED',
+    action: existingAny ? 'STOCK_RESTORED' : 'STOCK_CREATED',
     entityType: 'WarehouseStock',
     entityId: stock.id,
-    newValues: { warehouseId: data.warehouseId, productId: data.productId, quantity: data.quantity },
+    newValues: {
+      warehouseId: data.warehouseId,
+      productId: data.productId,
+      quantity: data.quantity,
+      restored: Boolean(existingAny),
+    },
     req,
   });
 
   return sanitizeStock(stock);
 }
 
+
 export async function getStocks(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
   const where = { isArchived: false };
 
-  const assignedWarehouseId = await getAssignedWarehouseId(user);
-  if (assignedWarehouseId) {
-    if (filters.warehouseId && filters.warehouseId !== assignedWarehouseId) {
-      throw new AppError('You are not authorized to view stock for this warehouse', 403);
+  if (user) {
+    const scope = await getUserScope(user);
+    if (!scope.isGlobal) {
+      const allowedWarehouseIds = scope.warehouseIds || [];
+      if (filters.warehouseId) {
+        if (!allowedWarehouseIds.includes(filters.warehouseId)) {
+          throw new AppError('You are not authorized to view stock for this warehouse', 403);
+        }
+        where.warehouseId = filters.warehouseId;
+      } else {
+        where.warehouseId = { in: allowedWarehouseIds };
+      }
+    } else if (filters.warehouseId) {
+      where.warehouseId = filters.warehouseId;
     }
-    where.warehouseId = assignedWarehouseId;
   } else if (filters.warehouseId) {
     where.warehouseId = filters.warehouseId;
   }
 
   if (filters.productId) where.productId = filters.productId;
   if (filters.lowStock) {
+    where.reorderLevel = { gt: 0 };
     where.availableQuantity = { lte: prisma.warehouseStock.fields.reorderLevel };
   }
 
