@@ -30,3 +30,10 @@ export const approveReservationSchema = z.object({
   notes: z.string().max(1000).optional().nullable(),
 });
 
+export const updateReservationSchema = z.object({
+  salesOrderId: z.string().uuid().optional(),
+  warehouseId: z.string().uuid().optional(),
+  productId: z.string().uuid().optional(),
+  quantity: z.coerce.number().positive().optional(),
+});
+

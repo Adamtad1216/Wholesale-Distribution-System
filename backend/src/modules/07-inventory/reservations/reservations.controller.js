@@ -2,6 +2,7 @@ import { sendSuccess, sendPaginatedSuccess, sendCreated, sendError, sendUpdated,
 import { reservationIdSchema } from './reservations.validation.js';
 import {
   createReservation,
+  updateReservation,
   getReservations,
   getReservationById,
   releaseReservation,
@@ -55,6 +56,17 @@ export async function releaseStockReservation(req, res, next) {
     if (!idResult.success) return sendError(res, 'Invalid reservation ID', 400);
     const reservation = await releaseReservation(idResult.data.id, req.body?.quantity, req.user.id, req, req.user);
     sendUpdated(res, reservation, 'Reservation released successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function modifyReservation(req, res, next) {
+  try {
+    const idResult = reservationIdSchema.safeParse({ id: req.params.id });
+    if (!idResult.success) return sendError(res, 'Invalid reservation ID', 400);
+    const reservation = await updateReservation(idResult.data.id, req.body, req.user.id, req, req.user);
+    sendUpdated(res, reservation, 'Stock reservation updated successfully');
   } catch (err) {
     next(err);
   }

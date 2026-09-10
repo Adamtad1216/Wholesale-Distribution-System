@@ -3,6 +3,7 @@ import {
   listReservations,
   getReservation,
   addReservation,
+  modifyReservation,
   releaseStockReservation,
   approveOrRejectReservationHandler,
   removeReservation,
@@ -10,6 +11,7 @@ import {
 import {
   reservationQuerySchema,
   createReservationSchema,
+  updateReservationSchema,
   releaseReservationSchema,
   approveReservationSchema,
 } from './reservations.validation.js';
@@ -309,6 +311,13 @@ router.get(
   '/:id',
   requirePermission('inventory:reservations:read'),
   getReservation,
+);
+
+router.patch(
+  '/:id',
+  validate(updateReservationSchema),
+  requirePermission(['inventory:reservations:update', 'inventory:reservations:create']),
+  modifyReservation,
 );
 
 router.patch(
