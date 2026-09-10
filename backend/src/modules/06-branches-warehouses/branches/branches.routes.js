@@ -5,11 +5,14 @@ import {
   addBranch,
   modifyBranch,
   removeBranch,
+  listEligibleManagers,
+  setBranchManager,
 } from "./branches.controller.js";
 import {
   branchQuerySchema,
   createBranchSchema,
   updateBranchSchema,
+  assignBranchManagerSchema,
 } from "./branches.validation.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 import { authenticate } from "../../../middleware/auth.middleware.js";
@@ -82,6 +85,12 @@ router.get(
   validate(branchQuerySchema),
   requirePermission(["branches:read", "companies:read", "warehouses:read"]),
   listBranches,
+);
+
+router.get(
+  "/eligible-managers",
+  requirePermission(["branches:read", "branches:create", "branches:update", "employees:read"]),
+  listEligibleManagers,
 );
 
 /**
@@ -293,6 +302,13 @@ router.patch(
   validate(updateBranchSchema),
   requirePermission("branches:update"),
   modifyBranch,
+);
+
+router.post(
+  "/:id/assign-manager",
+  validate(assignBranchManagerSchema),
+  requirePermission("branches:update"),
+  setBranchManager,
 );
 
 /**

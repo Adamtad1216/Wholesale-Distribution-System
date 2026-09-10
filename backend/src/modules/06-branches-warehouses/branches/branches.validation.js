@@ -17,7 +17,7 @@ export const createBranchSchema = z.object({
   branchCode: z.string().min(1).max(50),
   name: z.string().min(1).max(255),
   isHeadOffice: z.boolean().default(false),
-  managerId: z.string().uuid().optional(),
+  managerId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().nullable().optional()),
   phone: z.string().max(20).optional(),
   email: z.string().email().optional(),
   regionId: z.string().uuid(),
@@ -35,7 +35,7 @@ export const updateBranchSchema = z.object({
   branchCode: z.string().min(1).max(50).optional(),
   name: z.string().min(1).max(255).optional(),
   isHeadOffice: z.boolean().optional(),
-  managerId: z.string().uuid().optional().nullable(),
+  managerId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().nullable().optional()),
   phone: z.string().max(20).optional().nullable(),
   email: z.string().email().optional().nullable(),
   regionId: z.string().uuid().optional().nullable(),
@@ -46,4 +46,9 @@ export const updateBranchSchema = z.object({
   houseNumber: z.string().max(50).optional().nullable(),
   landmark: z.string().max(255).optional().nullable(),
   status: z.string().optional(),
+});
+
+export const assignBranchManagerSchema = z.object({
+  employeeId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().nullable().optional()),
+  notes: z.string().max(500).optional(),
 });
