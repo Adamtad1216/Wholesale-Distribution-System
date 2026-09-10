@@ -250,7 +250,7 @@ export default function CascadingCategorySelect({
                   ›
                 </span>
               )}
-              <span className="font-semibold text-foreground truncate">
+              <span className="font-normal text-foreground truncate">
                 {selectedCategory.name}
               </span>
               {selectedCategory.isLeaf && (
@@ -395,7 +395,7 @@ export default function CascadingCategorySelect({
                   onClick={handleSelectNone}
                   className={`px-2.5 py-1 rounded-lg border text-xs transition shrink-0 flex items-center gap-1 ${
                     value === ''
-                      ? 'bg-violet-500/20 text-violet-300 border-violet-500/40 font-semibold'
+                      ? 'bg-violet-500/20 text-violet-300 border-violet-500/40 font-normal'
                       : 'bg-muted900/60 text-muted-foreground hover:text-foreground border-border hover:bg-muted800'
                   }`}
                 >
@@ -410,7 +410,7 @@ export default function CascadingCategorySelect({
                   onClick={handleSelectNone}
                   className={`px-2.5 py-1 rounded-lg border text-xs transition shrink-0 flex items-center gap-1 ${
                     value === ''
-                      ? 'bg-violet-500/20 text-violet-300 border-violet-500/40 font-semibold'
+                      ? 'bg-violet-500/20 text-violet-300 border-violet-500/40 font-normal'
                       : 'bg-muted900/60 text-muted-foreground hover:text-foreground border-border hover:bg-muted800'
                   }`}
                 >
@@ -438,7 +438,7 @@ export default function CascadingCategorySelect({
                     type="button"
                     onClick={() => setDrilldownPath([])}
                     className={`hover:text-foreground transition font-medium ${
-                      drilldownPath.length === 0 ? 'text-violet-400 font-semibold' : ''
+                      drilldownPath.length === 0 ? 'text-violet-400 font-normal' : ''
                     }`}
                   >
                     Root Categories
@@ -453,7 +453,7 @@ export default function CascadingCategorySelect({
                           type="button"
                           onClick={() => setDrilldownPath(drilldownPath.slice(0, idx + 1))}
                           className={`hover:text-foreground transition truncate max-w-[140px] ${
-                            isLast ? 'text-violet-400 font-semibold' : 'text-muted-foreground'
+                            isLast ? 'text-violet-400 font-normal' : 'text-muted-foreground'
                           }`}
                         >
                           {step.name}
@@ -508,7 +508,7 @@ export default function CascadingCategorySelect({
                             </span>
                             <div className="truncate flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold text-sm truncate">
+                                <span className="font-normal text-sm truncate">
                                   {cat.name}
                                 </span>
                                 {cat.isLeaf ? (
@@ -547,7 +547,7 @@ export default function CascadingCategorySelect({
                               <button
                                 type="button"
                                 onClick={() => handleSelect(cat)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                                className={`px-2.5 py-1 rounded-lg text-xs font-normal transition ${
                                   isSelected
                                     ? 'bg-violet-600 text-white'
                                     : 'bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 border border-violet-500/30'
@@ -568,7 +568,7 @@ export default function CascadingCategorySelect({
               <div className="p-2 space-y-1">
                 {searchResults.length === 0 ? (
                   <div className="p-6 text-center text-xs text-muted-foreground">
-                    <p className="font-semibold text-foreground">No categories matched "{search}"</p>
+                    <p className="font-normal text-foreground">No categories matched "{search}"</p>
                     <p className="mt-1">Try another keyword or browse the cascading tree.</p>
                   </div>
                 ) : (
@@ -600,7 +600,7 @@ export default function CascadingCategorySelect({
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-sm text-foreground">
+                              <span className="font-normal text-sm text-foreground">
                                 {cat.name}
                               </span>
                               {cat.isLeaf ? (
@@ -624,7 +624,7 @@ export default function CascadingCategorySelect({
                         <div className="shrink-0 ml-2">
                           {isSelectable ? (
                             <span
-                              className={`px-2 py-0.5 rounded-lg text-xs font-semibold ${
+                              className={`px-2 py-0.5 rounded-lg text-xs font-normal ${
                                 isSelected
                                   ? 'bg-violet-600 text-white'
                                   : 'text-violet-400 group-hover:text-violet-300'
@@ -660,7 +660,7 @@ export default function CascadingCategorySelect({
             <div>
               {selectedCategory ? (
                 <span className="truncate max-w-[240px] block text-foreground">
-                  Active: <strong className="text-violet-400">{selectedCategory.name}</strong>{' '}
+                  Active: <span className="text-violet-400">{selectedCategory.name}</span>{' '}
                   <span className="text-[10px] text-muted-foreground">({selectedCategory.breadcrumbPath})</span>
                 </span>
               ) : (

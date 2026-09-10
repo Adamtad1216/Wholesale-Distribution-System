@@ -176,7 +176,7 @@ export default function CascadingCategoryDropdowns({
                 <button
                   type="button"
                   onClick={() => onAddNew(parentIdForThisLevel)}
-                  className="text-[11px] text-blue-500 hover:text-blue-400 font-semibold transition"
+                  className="text-[11px] text-blue-500 hover:text-blue-400 font-normal transition"
                   title={
                     parentIdForThisLevel
                       ? `Add new ${lvl.label.toLowerCase()} under "${parentName}"`
@@ -208,13 +208,13 @@ export default function CascadingCategoryDropdowns({
           <span className="flex items-center gap-1.5 truncate mr-2">
             <span>📁</span>
             <span className="truncate">
-              Want to add a subcategory under <strong className="text-foreground">{deepestSelectedCat.name}</strong>?
+              Want to add a subcategory under <span className="text-foreground">{deepestSelectedCat.name}</span>?
             </span>
           </span>
           <button
             type="button"
             onClick={() => onAddNew(deepestSelectedCat.id)}
-            className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition shrink-0 shadow-sm"
+            className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-normal transition shrink-0 shadow-sm"
           >
             + Add Subcategory
           </button>

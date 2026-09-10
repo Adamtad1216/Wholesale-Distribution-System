@@ -112,12 +112,12 @@ export default function ImagePreviewModal({
           <div className="flex items-center gap-3 min-w-0 pr-2">
             <span className="text-xl shrink-0">🖼️</span>
             <div className="min-w-0">
-              <h4 className="text-sm font-semibold text-foreground truncate">
+              <h4 className="text-sm font-normal text-foreground truncate">
                 {productName}
               </h4>
               <div className="flex items-center gap-2 mt-0.5">
                 {currentImg?.isPrimary && (
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-normal bg-violet-500/20 text-violet-300 border border-violet-500/30">
                     ★ Primary Photo
                   </span>
                 )}
@@ -189,7 +189,7 @@ export default function ImagePreviewModal({
             ) : currentImg && imageError ? (
               <div className="flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
                 <span className="text-4xl mb-2">🖼️</span>
-                <p className="text-sm font-semibold text-rose-400">Failed to load image preview</p>
+                <p className="text-sm font-normal text-rose-400">Failed to load image preview</p>
                 <p className="text-xs text-muted-foreground mt-1 max-w-sm truncate">
                   {currentImg.imageUrl}
                 </p>
@@ -197,7 +197,7 @@ export default function ImagePreviewModal({
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
                 <span className="text-4xl mb-2">📦</span>
-                <p className="text-sm font-semibold text-foreground">No image preview available</p>
+                <p className="text-sm font-normal text-foreground">No image preview available</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Upload an image to preview it in high resolution.
                 </p>

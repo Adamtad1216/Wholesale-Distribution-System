@@ -321,7 +321,42 @@ export default function ProductFormModal({
       }
     }
 
-    onSave(formData);
+    const baseSell =
+      formData.sellingPrice !== '' && formData.sellingPrice !== undefined && formData.sellingPrice !== null
+        ? Math.max(0, Number(formData.sellingPrice))
+        : 0;
+    const baseWhole =
+      formData.wholesalePrice !== '' && formData.wholesalePrice !== undefined && formData.wholesalePrice !== null
+        ? Math.max(0, Number(formData.wholesalePrice))
+        : 0;
+
+    const warehouseSellingPrices = (formData.warehouseSellingPrices || [])
+      .filter((wp) => {
+        const hasCustomSell =
+          wp.sellingPrice !== undefined && wp.sellingPrice !== null && String(wp.sellingPrice).trim() !== '';
+        const hasCustomWhole =
+          wp.wholesalePrice !== undefined && wp.wholesalePrice !== null && String(wp.wholesalePrice).trim() !== '';
+        return Boolean(wp.warehouseId) && (hasCustomSell || hasCustomWhole);
+      })
+      .map((wp) => {
+        const hasCustomSell =
+          wp.sellingPrice !== undefined && wp.sellingPrice !== null && String(wp.sellingPrice).trim() !== '';
+        const hasCustomWhole =
+          wp.wholesalePrice !== undefined && wp.wholesalePrice !== null && String(wp.wholesalePrice).trim() !== '';
+        return {
+          warehouseId: wp.warehouseId,
+          sellingPrice: hasCustomSell ? Math.max(0, Number(wp.sellingPrice)) : 0,
+          wholesalePrice: hasCustomWhole ? Math.max(0, Number(wp.wholesalePrice)) : 0,
+          status: wp.status || 'ACTIVE',
+        };
+      });
+
+    onSave({
+      ...formData,
+      sellingPrice: baseSell,
+      wholesalePrice: baseWhole,
+      warehouseSellingPrices,
+    });
   };
 
   return (
@@ -344,7 +379,7 @@ export default function ProductFormModal({
           <div className="space-y-3.5">
             <div className="flex items-center gap-2 pb-1 border-b border-border">
               <span className="text-base">📋</span>
-              <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+              <h4 className="text-xs font-normal text-foreground uppercase tracking-wider">
                 1. Product Information & Classification
               </h4>
             </div>
@@ -367,15 +402,10 @@ export default function ProductFormModal({
               {/* Connected Category Selection (allows root category if no children) */}
               <div className="sm:col-span-2">
                 <CascadingCategoryDropdowns
-                  value={formData.categoryId}
-                  onChange={(catId) => handleChange('categoryId', catId)}
                   categories={categories}
-                  required={true}
-                  parentLabel="Main Category"
-                  subLabel="Subcategory"
-                  parentPlaceholder="Select Main Category..."
-                  subPlaceholder="Select Subcategory..."
-                  layout="horizontal"
+                  value={formData.categoryId}
+                  onChange={(val) => handleChange('categoryId', val)}
+                  required
                   onAddNew={handleOpenCategoryModal}
                 />
                 <span className="text-[11px] text-muted-foreground mt-1.5 block">
@@ -435,73 +465,69 @@ export default function ProductFormModal({
             </div>
           </div>
 
-          {/* ── SECTION 2: BASE PRICING (Hidden in Edit mode, shown ONLY in Create mode) ── */}
-          {!isEdit && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between pb-1 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">💵</span>
-                  <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                    2. Default Base Pricing
-                  </h4>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">
-                    Standard Selling Price (ETB)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.sellingPrice}
-                    onChange={(e) => handleChange('sellingPrice', e.target.value)}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 bg-muted800/80 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-foreground">
-                      Standard Wholesale Price (ETB)
-                    </label>
-                    {Number(formData.sellingPrice) > 0 && Number(formData.wholesalePrice) > 0 && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                        {(((Number(formData.sellingPrice) - Number(formData.wholesalePrice)) / Number(formData.sellingPrice)) * 100).toFixed(1)}% Discount
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.wholesalePrice}
-                    onChange={(e) => handleChange('wholesalePrice', e.target.value)}
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 bg-muted800/80 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500 font-mono"
-                  />
-                </div>
+          {/* ── SECTION 2: BASE PRICING ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-1 border-b border-border">
+              <div className="flex items-center gap-2">
+                <span className="text-base">💵</span>
+                <h4 className="text-xs font-normal text-foreground uppercase tracking-wider">
+                  2. Default Base Pricing
+                </h4>
               </div>
             </div>
-          )}
 
-          {/* ── SECTION: WAREHOUSE-SPECIFIC PRICES ────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">
+                  Standard Selling Price (ETB)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.sellingPrice}
+                  onChange={(e) => handleChange('sellingPrice', e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 bg-muted800/80 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-foreground">
+                    Standard Wholesale Price (ETB)
+                  </label>
+                  {Number(formData.sellingPrice) > 0 && Number(formData.wholesalePrice) > 0 && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                      {(((Number(formData.sellingPrice) - Number(formData.wholesalePrice)) / Number(formData.sellingPrice)) * 100).toFixed(1)}% Discount
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.wholesalePrice}
+                  onChange={(e) => handleChange('wholesalePrice', e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2 bg-muted800/80 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500 font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── SECTION 3: WAREHOUSE-SPECIFIC PRICES ────────────────── */}
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1 border-b border-border">
               <div className="flex items-center gap-2">
                 <span className="text-base">🏢</span>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                      {isEdit
-                        ? '2. Warehouse-Specific Selling & Wholesale Prices'
-                        : '3. Warehouse-Specific Selling & Wholesale Prices'}
+                    <h4 className="text-xs font-normal text-foreground uppercase tracking-wider">
+                      3. Warehouse-Specific Selling & Wholesale Prices
                     </h4>
                     {formData.warehouseSellingPrices.length > 0 && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                      <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">
                         {formData.warehouseSellingPrices.length} {formData.warehouseSellingPrices.length === 1 ? 'Registered Facility' : 'Registered Facilities'}
                       </span>
                     )}
@@ -534,13 +560,6 @@ export default function ProductFormModal({
                   const whName = wp.warehouseName || matchingWh?.name || `Warehouse ${idx + 1}`;
                   const whCode = wp.warehouseCode || matchingWh?.code;
 
-                  const sellPrice = Number(wp.sellingPrice) || 0;
-                  const wholePrice = Number(wp.wholesalePrice) || 0;
-                  const discountPct =
-                    sellPrice > 0 && wholePrice > 0
-                      ? (((sellPrice - wholePrice) / sellPrice) * 100).toFixed(1)
-                      : null;
-
                   const hasOverride = wp.sellingPrice !== '' || wp.wholesalePrice !== '';
 
                   return (
@@ -559,15 +578,18 @@ export default function ProductFormModal({
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs font-semibold text-foreground truncate" title={whName}>
+                              <span className="text-xs font-normal text-foreground truncate" title={whName}>
                                 {whName}
                               </span>
                               {whCode && (
-                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted900 text-muted-foreground border border-border shrink-0">
+                                <span className="text-[10px] font-mono px-1 py-0.5 rounded bg-muted900 text-muted-foreground border border-border shrink-0">
                                   {whCode}
                                 </span>
                               )}
                             </div>
+                            <span className="text-[10px] text-muted-foreground">
+                              {hasOverride ? 'Custom Override Active' : 'Uses Default Base Rate'}
+                            </span>
                           </div>
                         </div>
 
@@ -584,7 +606,7 @@ export default function ProductFormModal({
                             onChange={(e) =>
                               handleUpdateWarehousePrice(idx, 'sellingPrice', e.target.value)
                             }
-                            placeholder={formData.sellingPrice ? `${formData.sellingPrice} (Base)` : '0.00'}
+                            placeholder="Optional (e.g. 0.00)"
                             className="w-full px-2.5 py-1.5 bg-muted900 border border-border rounded-lg text-foreground text-xs font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-muted-foreground/50"
                           />
                         </div>
@@ -595,11 +617,6 @@ export default function ProductFormModal({
                             <label className="block text-[11px] font-medium text-foreground">
                               Wholesale Price (ETB)
                             </label>
-                            {discountPct && (
-                              <span className="text-[10px] font-mono px-1.5 rounded text-sky-400 bg-sky-500/10 border border-sky-500/20">
-                                -{discountPct}%
-                              </span>
-                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <input
@@ -610,7 +627,7 @@ export default function ProductFormModal({
                               onChange={(e) =>
                                 handleUpdateWarehousePrice(idx, 'wholesalePrice', e.target.value)
                               }
-                              placeholder={formData.wholesalePrice ? `${formData.wholesalePrice} (Base)` : '0.00'}
+                              placeholder="Optional (e.g. 0.00)"
                               className="w-full px-2.5 py-1.5 bg-muted900 border border-border rounded-lg text-foreground text-xs font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-muted-foreground/50"
                             />
                             {hasOverride && (
@@ -635,16 +652,14 @@ export default function ProductFormModal({
             )}
           </div>
 
-          {/* ── SECTION: PRODUCT IMAGES ──────────────────────────── */}
+          {/* ── SECTION 4: PRODUCT IMAGES ──────────────────────────── */}
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-1 border-b border-border">
               <div className="flex items-center gap-2">
                 <span className="text-base">🖼️</span>
                 <div>
-                  <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                    {isEdit
-                      ? `3. Product Photos & Gallery (${formData.images.length})`
-                      : `4. Product Photos & Gallery (${formData.images.length})`}
+                  <h4 className="text-xs font-normal text-foreground uppercase tracking-wider">
+                    4. Product Photos & Gallery ({formData.images.length})
                   </h4>
                   <p className="text-[11px] text-muted-foreground">
                     Upload images from your computer. The primary photo is displayed across the catalog.
@@ -705,7 +720,7 @@ export default function ProductFormModal({
                 )}
               </div>
               <div className="space-y-1 max-w-sm">
-                <p className="text-xs font-semibold text-foreground group-hover:text-violet-300 transition">
+                <p className="text-xs font-normal text-foreground group-hover:text-violet-300 transition">
                   {uploadingImage
                     ? 'Uploading selected image(s)...'
                     : isDragging
@@ -732,7 +747,7 @@ export default function ProductFormModal({
               <div className="space-y-2 pt-1">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-foreground">
+                    <span className="text-xs font-normal text-foreground">
                       Uploaded Photos ({formData.images.length})
                     </span>
                     <span className="text-[10px] text-muted-foreground">
@@ -763,7 +778,7 @@ export default function ProductFormModal({
 
                       {/* Primary Badge */}
                       {img.isPrimary && (
-                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-violet-600 text-white shadow-md z-10">
+                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-normal bg-violet-600 text-white shadow-md z-10">
                           ★ Primary
                         </span>
                       )}
@@ -821,7 +836,7 @@ export default function ProductFormModal({
             <div className="flex items-center gap-2 pb-1 border-b border-border">
               <span className="text-base">🚀</span>
               <div>
-                <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                <h4 className="text-xs font-normal text-foreground uppercase tracking-wider">
                   {isEdit ? '4. Product Status & Visibility' : '5. Product Status & Visibility'}
                 </h4>
                 <p className="text-[11px] text-muted-foreground">
@@ -847,8 +862,8 @@ export default function ProductFormModal({
                 />
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-foreground">ACTIVE</span>
-                    <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400">
+                    <span className="text-xs font-normal text-foreground">ACTIVE</span>
+                    <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-normal bg-emerald-500/20 text-emerald-400">
                       Live in Catalog
                     </span>
                   </div>
@@ -874,8 +889,8 @@ export default function ProductFormModal({
                 />
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-foreground">INACTIVE</span>
-                    <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-400">
+                    <span className="text-xs font-normal text-foreground">INACTIVE</span>
+                    <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-normal bg-amber-500/20 text-amber-400">
                       Draft / Inactive
                     </span>
                   </div>
