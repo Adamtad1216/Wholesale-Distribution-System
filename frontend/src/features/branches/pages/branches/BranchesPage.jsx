@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { Building2, Warehouse, MapPin } from 'lucide-react';
 import { branchesApi } from '../../branchesApi';
 import { usePermission } from '../../../../hooks/usePermission';
 import ConfirmDeleteModal from '../../../../components/ui/ConfirmDeleteModal';
@@ -14,19 +16,21 @@ import BranchFormModal from '../../components/BranchFormModal';
 
 import WarehousesTable from '../../components/WarehousesTable';
 import WarehousesGrid from '../../components/WarehousesGrid';
-import WarehouseDetailModal from '../../components/WarehouseDetailModal';
 import WarehouseFormModal from '../../components/WarehouseFormModal';
 
 import RegionsTab from '../../components/RegionsTab';
 import RegionFormModal from '../../components/RegionFormModal';
 
 export default function BranchesPage() {
-  const [activeTab, setActiveTab] = useState('branches'); // 'branches' | 'warehouses' | 'regions'
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'branches'); // 'branches' | 'warehouses' | 'regions'
   const [branches, setBranches] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [regions, setRegions] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [branchManagers, setBranchManagers] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -44,7 +48,6 @@ export default function BranchesPage() {
 
   const [isWarehouseFormOpen, setIsWarehouseFormOpen] = useState(false);
   const [editingWarehouse, setEditingWarehouse] = useState(null);
-  const [viewingWarehouse, setViewingWarehouse] = useState(null);
 
   const [isRegionFormOpen, setIsRegionFormOpen] = useState(false);
   const [editingRegion, setEditingRegion] = useState(null);
@@ -70,10 +73,11 @@ export default function BranchesPage() {
   // Fetch Lookups (Companies, Regions, Employees)
   const fetchLookups = useCallback(async () => {
     try {
-      const [regRes, compRes, empRes] = await Promise.allSettled([
+      const [regRes, compRes, empRes, brEmpRes] = await Promise.allSettled([
         branchesApi.getRegions({ limit: 100 }),
         branchesApi.getCompanies({ limit: 100 }),
-        branchesApi.getEmployees({ limit: 200 }),
+        branchesApi.getEligibleWarehouseManagers(),
+        branchesApi.getEligibleBranchManagers(),
       ]);
 
       if (regRes.status === 'fulfilled') {
@@ -87,6 +91,10 @@ export default function BranchesPage() {
       if (empRes.status === 'fulfilled') {
         const d = empRes.value?.data || empRes.value || [];
         setEmployees(Array.isArray(d) ? d : d.employees || d.items || []);
+      }
+      if (brEmpRes.status === 'fulfilled') {
+        const d = brEmpRes.value?.data || brEmpRes.value || [];
+        setBranchManagers(Array.isArray(d) ? d : d.employees || d.items || []);
       }
     } catch {
       // Non-blocking lookup failure
@@ -265,20 +273,42 @@ export default function BranchesPage() {
     }
   };
 
+  // Tabs configuration matching InventoryPage
+  const tabs = useMemo(() => [
+    {
+      id: 'branches',
+      label: 'Branches Directory',
+      icon: <Building2 className="w-4 h-4" />,
+      count: branches.length,
+      visible: canReadBranch,
+    },
+    {
+      id: 'warehouses',
+      label: 'Storage Warehouses',
+      icon: <Warehouse className="w-4 h-4" />,
+      count: warehouses.length,
+      visible: canReadWarehouse,
+    },
+    {
+      id: 'regions',
+      label: 'Operational Regions',
+      icon: <MapPin className="w-4 h-4" />,
+      count: regions.length,
+      visible: canReadRegion,
+    },
+  ].filter((t) => t.visible), [branches.length, warehouses.length, regions.length, canReadBranch, canReadWarehouse, canReadRegion]);
+
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.some((t) => t.id === activeTab)) {
+      setActiveTab(tabs[0].id);
+    }
+  }, [tabs, activeTab]);
+
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto w-full">
-      {/* Header */}
+      {/* Header Banner */}
       <BranchesHeader
         activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          handleResetFilters();
-        }}
-        counts={{
-          branches: branches.length,
-          warehouses: warehouses.length,
-          regions: regions.length,
-        }}
         canCreateBranch={canCreateBranch}
         canCreateWarehouse={canCreateWarehouse}
         canCreateRegion={canCreateRegion}
@@ -294,15 +324,59 @@ export default function BranchesPage() {
             setIsRegionFormOpen(true);
           }
         }}
+        onRefresh={fetchData}
+        refreshing={loading}
       />
 
-      {/* KPI Stats */}
+      {/* KPI Stats Strip */}
       <BranchesStats
         branches={branches}
         warehouses={warehouses}
         regions={regions}
         loading={loading}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          handleResetFilters();
+        }}
       />
+
+      {/* Modern High-Contrast Blue & White Tab Navigation Bar */}
+      <div className="border-b-2 border-slate-200 dark:border-slate-800 flex items-center gap-2 flex-wrap pb-0">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab.id);
+                handleResetFilters();
+              }}
+              className={`px-4 py-3 border-b-2 text-xs sm:text-sm flex items-center gap-2.5 transition cursor-pointer -mb-[2px] ${
+                isActive
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 font-bold rounded-t-lg'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-muted800/40 rounded-t-lg font-medium'
+              }`}
+            >
+              <span className={isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}>
+                {tab.icon}
+              </span>
+              <span className={`tracking-tight ${isActive ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>
+                {tab.label}
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full border transition ${
+                  isActive
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 shadow-xs'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Filters Toolbar */}
       <BranchesFilters
@@ -320,8 +394,8 @@ export default function BranchesPage() {
           activeTab === 'branches'
             ? 'Search branches by code, name, city...'
             : activeTab === 'warehouses'
-            ? 'Search warehouses by code, name, location...'
-            : 'Search regions by code or name...'
+              ? 'Search warehouses by code, name, location...'
+              : 'Search regions by code or name...'
         }
       />
 
@@ -367,7 +441,7 @@ export default function BranchesPage() {
               <WarehousesTable
                 warehouses={filteredWarehouses}
                 loading={loading}
-                onView={(w) => setViewingWarehouse(w)}
+                onView={(w) => navigate(`/branches/warehouses/${w.id}`)}
                 onEdit={(w) => {
                   setEditingWarehouse(w);
                   setIsWarehouseFormOpen(true);
@@ -380,7 +454,7 @@ export default function BranchesPage() {
               <WarehousesGrid
                 warehouses={filteredWarehouses}
                 loading={loading}
-                onView={(w) => setViewingWarehouse(w)}
+                onView={(w) => navigate(`/branches/warehouses/${w.id}`)}
                 onEdit={(w) => {
                   setEditingWarehouse(w);
                   setIsWarehouseFormOpen(true);
@@ -437,20 +511,8 @@ export default function BranchesPage() {
         branch={editingBranch}
         companies={companies}
         regions={regions}
-        employees={employees}
+        employees={branchManagers}
         submitting={submitting}
-      />
-
-      <WarehouseDetailModal
-        isOpen={Boolean(viewingWarehouse)}
-        onClose={() => setViewingWarehouse(null)}
-        warehouse={viewingWarehouse}
-        onEdit={(w) => {
-          setViewingWarehouse(null);
-          setEditingWarehouse(w);
-          setIsWarehouseFormOpen(true);
-        }}
-        canUpdate={canUpdateWarehouse}
       />
 
       <WarehouseFormModal
@@ -482,13 +544,12 @@ export default function BranchesPage() {
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
-        title={`Delete ${
-          deleteTarget?.type === 'branch'
+        title={`Delete ${deleteTarget?.type === 'branch'
             ? 'Branch'
             : deleteTarget?.type === 'warehouse'
-            ? 'Warehouse'
-            : 'Region'
-        }`}
+              ? 'Warehouse'
+              : 'Region'
+          }`}
         message={`Are you sure you want to delete "${deleteTarget?.item?.name}"? This action cannot be undone.`}
         submitting={submitting}
       />
