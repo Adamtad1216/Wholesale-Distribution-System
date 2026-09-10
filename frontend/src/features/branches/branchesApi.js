@@ -22,7 +22,11 @@ export const branchesApi = {
   updateRegion: (id, data) => api.patch(`/regions/${id}`, data),
   deleteRegion: (id) => api.delete(`/regions/${id}`),
 
-  // Lookups
+  // Lookups & Management
   getCompanies: (params) => api.get('/companies', { params }),
   getEmployees: (params) => api.get('/employees', { params }),
+  getEligibleWarehouseManagers: () => api.get('/warehouses/eligible-managers'),
+  assignWarehouseManager: (warehouseId, data) => api.post(`/warehouses/${warehouseId}/assign-manager`, data),
+  getEligibleBranchManagers: () => api.get('/branches/eligible-managers'),
+  assignBranchManager: (branchId, data) => api.post(`/branches/${branchId}/assign-manager`, data),
 };
