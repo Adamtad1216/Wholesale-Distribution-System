@@ -6,13 +6,38 @@ import {
   getWarehouseById,
   updateWarehouse,
   deleteWarehouse,
+  getEligibleManagers,
+  assignWarehouseManager,
 } from './warehouses.service.js';
 
 export async function listWarehouses(req, res, next) {
   try {
     const filters = { ...req.query };
-    const { warehouses, meta } = await getWarehouses(filters);
+    const { warehouses, meta } = await getWarehouses(filters, req.user);
     sendPaginatedSuccess(res, warehouses, meta);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listEligibleManagers(req, res, next) {
+  try {
+    const managers = await getEligibleManagers();
+    sendSuccess(res, managers);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function setWarehouseManager(req, res, next) {
+  try {
+    const idResult = warehouseIdSchema.safeParse({ id: req.params.id });
+    if (!idResult.success) {
+      return sendError(res, 'Invalid warehouse ID', 400);
+    }
+    const { employeeId, notes } = req.body;
+    const warehouse = await assignWarehouseManager(idResult.data.id, employeeId, notes, req.user.id, req);
+    sendSuccess(res, warehouse);
   } catch (err) {
     next(err);
   }
@@ -24,7 +49,7 @@ export async function getWarehouse(req, res, next) {
     if (!idResult.success) {
       return sendError(res, 'Invalid warehouse ID', 400);
     }
-    const warehouse = await getWarehouseById(idResult.data.id);
+    const warehouse = await getWarehouseById(idResult.data.id, req.user);
     sendSuccess(res, warehouse);
   } catch (err) {
     next(err);
