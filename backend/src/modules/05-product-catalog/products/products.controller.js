@@ -27,7 +27,7 @@ export async function getProduct(req, res, next) {
     if (!idResult.success) {
       return sendError(res, 'Invalid product ID', 400);
     }
-    const product = await getProductById(idResult.data.id);
+    const product = await getProductById(idResult.data.id, req.user);
     sendSuccess(res, product);
   } catch (err) {
     next(err);
