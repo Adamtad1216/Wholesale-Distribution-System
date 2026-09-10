@@ -52,19 +52,19 @@ export default function ReleaseReservationModal({
         <div className="p-3.5 rounded-xl bg-muted900/50 border border-border space-y-1.5 text-xs">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Product:</span>
-            <span className="font-bold text-foreground">
+            <span className="font-normal text-foreground">
               {reservation.product?.name}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Warehouse:</span>
-            <span className="font-semibold text-foreground">
+            <span className="font-normal text-foreground">
               {reservation.warehouse?.name}
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Currently Reserved:</span>
-            <span className="font-black text-cyan-400">
+            <span className="font-normal text-cyan-400">
               {maxQuantity.toLocaleString()} units
             </span>
           </div>
@@ -72,7 +72,7 @@ export default function ReleaseReservationModal({
 
         {/* Release mode radio */}
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-foreground">
+          <label className="block text-xs font-normal text-foreground">
             Release Type
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -82,7 +82,7 @@ export default function ReleaseReservationModal({
                 setReleaseMode('full');
                 setQuantity(maxQuantity);
               }}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
+              className={`p-2.5 rounded-xl border text-xs font-normal transition flex items-center justify-center gap-2 ${
                 releaseMode === 'full'
                   ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
                   : 'bg-muted800/40 border-border text-muted-foreground hover:text-foreground'
@@ -93,7 +93,7 @@ export default function ReleaseReservationModal({
             <button
               type="button"
               onClick={() => setReleaseMode('partial')}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${
+              className={`p-2.5 rounded-xl border text-xs font-normal transition flex items-center justify-center gap-2 ${
                 releaseMode === 'partial'
                   ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
                   : 'bg-muted800/40 border-border text-muted-foreground hover:text-foreground'
@@ -107,7 +107,7 @@ export default function ReleaseReservationModal({
         {/* Partial Quantity Input */}
         {releaseMode === 'partial' && (
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5">
+            <label className="block text-xs font-normal text-foreground mb-1.5">
               Quantity to Release
             </label>
             <input
