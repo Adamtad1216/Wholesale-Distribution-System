@@ -301,6 +301,128 @@ const ALL_PERMISSIONS = [
     action: "view_deliveries",
     description: "View delivery reports",
   },
+
+  // ─── Inventory: Warehouse Stock ────────────────────────────
+  {
+    name: "inventory:stock:read",
+    module: "inventory",
+    action: "read",
+    description: "View warehouse stock levels",
+  },
+  {
+    name: "inventory:stock:create",
+    module: "inventory",
+    action: "create",
+    description: "Create warehouse stock entries",
+  },
+  {
+    name: "inventory:stock:update",
+    module: "inventory",
+    action: "update",
+    description: "Update warehouse stock entries",
+  },
+  {
+    name: "inventory:stock:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Delete/archive warehouse stock entries",
+  },
+
+  // ─── Inventory: Stock Adjustments ─────────────────────────
+  {
+    name: "inventory:adjustments:read",
+    module: "inventory",
+    action: "read",
+    description: "View stock adjustments",
+  },
+  {
+    name: "inventory:adjustments:create",
+    module: "inventory",
+    action: "create",
+    description: "Create stock adjustment requests",
+  },
+  {
+    name: "inventory:adjustments:update",
+    module: "inventory",
+    action: "update",
+    description: "Edit pending stock adjustments",
+  },
+  {
+    name: "inventory:adjustments:approve",
+    module: "inventory",
+    action: "approve",
+    description: "Approve or reject stock adjustment requests",
+  },
+  {
+    name: "inventory:adjustments:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Delete/archive stock adjustments",
+  },
+
+  // ─── Inventory: Stock Transfers ───────────────────────────
+  {
+    name: "inventory:transfers:read",
+    module: "inventory",
+    action: "read",
+    description: "View inter-warehouse stock transfers",
+  },
+  {
+    name: "inventory:transfers:create",
+    module: "inventory",
+    action: "create",
+    description: "Dispatch inter-warehouse stock transfers",
+  },
+  {
+    name: "inventory:transfers:update",
+    module: "inventory",
+    action: "update",
+    description: "Update pending stock transfers",
+  },
+  {
+    name: "inventory:transfers:approve",
+    module: "inventory",
+    action: "approve",
+    description: "Authorize or reject inter-warehouse stock transfers",
+  },
+  {
+    name: "inventory:transfers:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Cancel or reverse stock transfers",
+  },
+
+  // ─── Inventory: Stock Reservations ────────────────────────
+  {
+    name: "inventory:reservations:read",
+    module: "inventory",
+    action: "read",
+    description: "View stock reservations",
+  },
+  {
+    name: "inventory:reservations:create",
+    module: "inventory",
+    action: "create",
+    description: "Create stock reservations for sales orders",
+  },
+  {
+    name: "inventory:reservations:approve",
+    module: "inventory",
+    action: "approve",
+    description: "Approve (fulfill) or reject stock reservations",
+  },
+  {
+    name: "inventory:reservations:release",
+    module: "inventory",
+    action: "release",
+    description: "Release reserved stock back to available inventory",
+  },
+  {
+    name: "inventory:reservations:delete",
+    module: "inventory",
+    action: "delete",
+    description: "Delete/archive stock reservation records",
+  },
 ];
 
 async function ensureCustomerPermissions() {
