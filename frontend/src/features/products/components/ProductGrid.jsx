@@ -46,7 +46,7 @@ export default function ProductGrid({
         <div className="p-3.5 bg-muted800/80 rounded-2xl border border-border">
           <span className="text-3xl">📦</span>
         </div>
-        <h4 className="text-base font-semibold text-foreground">No Products Found</h4>
+        <h4 className="text-base font-normal text-foreground">No Products Found</h4>
         <p className="text-xs text-muted-foreground max-w-sm">
           No products match your current search criteria or category filter.
         </p>
@@ -109,7 +109,7 @@ export default function ProductGrid({
 
                     {/* Hover Magnifying Overlay */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                      <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs font-semibold flex items-center gap-1.5 shadow-lg">
+                      <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs font-normal flex items-center gap-1.5 shadow-lg">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
@@ -130,7 +130,7 @@ export default function ProductGrid({
                 {/* Status Badge Top Left */}
                 <div className="absolute top-2.5 left-2.5 z-10">
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md shadow-sm ${
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-normal uppercase tracking-wider backdrop-blur-md shadow-sm ${
                       product.status === 'ACTIVE'
                         ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                         : 'bg-slate-800/80 text-slate-300 border border-slate-700/60'
@@ -154,7 +154,7 @@ export default function ProductGrid({
                         e.stopPropagation();
                         onPreviewImage && onPreviewImage(product, 0);
                       }}
-                      className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-violet-600 transition flex items-center gap-1"
+                      className="px-2 py-0.5 rounded-full text-[10px] font-normal bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-violet-600 transition flex items-center gap-1"
                       title="View all images"
                     >
                       <span>🖼️</span>
@@ -169,11 +169,11 @@ export default function ProductGrid({
                 <div className="space-y-1.5">
                   {/* Category & Brand Badges */}
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-muted800 text-muted-foreground border border-border">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md font-normal bg-muted800 text-muted-foreground border border-border">
                       {product.category?.name || 'Category'}
                     </span>
                     {product.brand?.name && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md font-normal bg-violet-500/10 text-violet-300 border border-violet-500/20">
                         {product.brand.name}
                       </span>
                     )}
@@ -182,7 +182,7 @@ export default function ProductGrid({
                   {/* Title & SKU */}
                   <h4
                     onClick={() => onViewProduct(product)}
-                    className="font-semibold text-foreground text-sm line-clamp-1 hover:text-violet-400 cursor-pointer transition"
+                    className="font-normal text-foreground text-sm line-clamp-1 hover:text-violet-400 cursor-pointer transition"
                     title={product.name}
                   >
                     {product.name}
@@ -196,13 +196,13 @@ export default function ProductGrid({
                 <div className="p-2.5 rounded-xl bg-muted950/60 border border-border/80 space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground text-[11px]">Selling Price</span>
-                    <span className="font-bold text-emerald-400 font-mono">
+                    <span className="font-normal text-emerald-400 font-mono">
                       {formatPrice(product.sellingPrice)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground text-[11px]">Wholesale Price</span>
-                    <span className="font-semibold text-sky-400 font-mono">
+                    <span className="font-normal text-sky-400 font-mono">
                       {formatPrice(product.wholesalePrice)}
                     </span>
                   </div>
@@ -210,7 +210,7 @@ export default function ProductGrid({
                   {/* Warehouse Price Pill */}
                   {warehousePrices.length > 0 && (
                     <div className="pt-1 border-t border-border/40 flex items-center justify-between text-[10px]">
-                      <span className="text-violet-400 font-medium flex items-center gap-1">
+                      <span className="text-violet-400 font-normal flex items-center gap-1">
                         <span>🏢</span> {warehousePrices.length} Facility Override{warehousePrices.length > 1 ? 's' : ''}
                       </span>
                       <button
@@ -229,24 +229,24 @@ export default function ProductGrid({
                   <button
                     type="button"
                     onClick={() => onViewProduct(product)}
-                    className="text-xs font-semibold text-muted-foreground hover:text-violet-400 flex items-center gap-1 transition"
+                    className="text-xs font-normal text-black dark:text-white hover:opacity-75 flex items-center gap-1 transition"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <svg className="w-3.5 h-3.5 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                     View
                   </button>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
                     {canUpdate && (
                       <button
                         type="button"
                         onClick={() => onEditProduct(product)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-violet-400 hover:bg-violet-500/10 transition"
+                        className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                         title="Edit product"
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-4 h-4 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
@@ -255,10 +255,10 @@ export default function ProductGrid({
                       <button
                         type="button"
                         onClick={() => onDeleteProduct(product)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition"
+                        className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                         title="Delete product"
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-4 h-4 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
@@ -275,8 +275,8 @@ export default function ProductGrid({
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border">
           <span className="text-xs text-muted-foreground">
-            Showing Page <span className="font-semibold text-foreground">{page}</span> of{' '}
-            <span className="font-semibold text-foreground">{totalPages}</span> ({total} total products)
+            Showing Page <span className="font-normal text-foreground">{page}</span> of{' '}
+            <span className="font-normal text-foreground">{totalPages}</span> ({total} total products)
           </span>
 
           <div className="flex items-center gap-2">
@@ -304,3 +304,4 @@ export default function ProductGrid({
     </div>
   );
 }
+

@@ -154,7 +154,7 @@ export default function ProductDetailModal({
                     />
                     {/* Hover Zoom Overlay */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
-                      <span className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-sm text-xs font-semibold flex items-center gap-1.5 shadow-lg">
+                      <span className="px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-sm text-xs font-normal flex items-center gap-1.5 shadow-lg">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
@@ -203,7 +203,7 @@ export default function ProductDetailModal({
               <div>
                 <span className="text-muted-foreground block text-[11px] uppercase tracking-wider">Status</span>
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full font-semibold mt-1 ${
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full font-normal mt-1 ${
                     product.status === 'ACTIVE'
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                       : 'bg-slate-700/20 text-slate-400 border border-slate-700/40'
@@ -220,21 +220,21 @@ export default function ProductDetailModal({
 
               <div>
                 <span className="text-muted-foreground block text-[11px] uppercase tracking-wider">Category</span>
-                <p className="font-semibold text-foreground mt-0.5">
+                <p className="font-normal text-foreground mt-0.5">
                   {product.category?.name || 'Unassigned'}
                 </p>
               </div>
 
               <div>
                 <span className="text-muted-foreground block text-[11px] uppercase tracking-wider">Brand / Manufacturer</span>
-                <p className="font-semibold text-foreground mt-0.5">
+                <p className="font-normal text-foreground mt-0.5">
                   {product.brand?.name || '—'}
                 </p>
               </div>
 
               <div>
                 <span className="text-muted-foreground block text-[11px] uppercase tracking-wider">Unit of Measure</span>
-                <p className="font-semibold text-foreground mt-0.5">
+                <p className="font-normal text-foreground mt-0.5">
                   {product.unit?.name ? `${product.unit.name} (${product.unit.abbreviation || ''})` : '—'}
                 </p>
               </div>
@@ -243,11 +243,11 @@ export default function ProductDetailModal({
                 <div className="pt-2 border-t border-border/60 flex items-center gap-4 text-[11px]">
                   <div>
                     <span className="text-muted-foreground block">Min Stock:</span>
-                    <span className="font-mono font-semibold text-foreground">{minStock}</span>
+                    <span className="font-mono font-normal text-foreground">{minStock}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block">Reorder Level:</span>
-                    <span className="font-mono font-semibold text-amber-400">{reorder}</span>
+                    <span className="font-mono font-medium text-amber-700 dark:text-amber-400">{reorder}</span>
                   </div>
                 </div>
               )}
@@ -256,7 +256,7 @@ export default function ProductDetailModal({
 
           {/* Warehouse Stock Inventory Section */}
           <div className="bg-muted800/40 border border-border rounded-xl p-4 space-y-3">
-            <h5 className="text-xs font-semibold text-foreground flex items-center justify-between">
+            <h5 className="text-xs font-normal text-foreground flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <span>📊</span> Warehouse Stock Inventory
               </span>
@@ -269,14 +269,14 @@ export default function ProductDetailModal({
             <div className="grid grid-cols-3 gap-2.5 text-center">
               <div className="p-2.5 rounded-lg bg-muted900 border border-border">
                 <span className="text-[10px] text-muted-foreground block uppercase tracking-wider">Total On Hand</span>
-                <span className="text-sm font-bold text-foreground font-mono mt-0.5 block">
+                <span className="text-sm font-normal text-foreground font-mono mt-0.5 block">
                   {stockSummary.totalQuantity.toLocaleString()}
                 </span>
               </div>
               <div className="p-2.5 rounded-lg bg-muted900 border border-border">
                 <span className="text-[10px] text-muted-foreground block uppercase tracking-wider">Available</span>
                 <span
-                  className={`text-sm font-bold font-mono mt-0.5 block ${
+                  className={`text-sm font-normal font-mono mt-0.5 block ${
                     stockSummary.availableQuantity > 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}
                 >
@@ -285,7 +285,7 @@ export default function ProductDetailModal({
               </div>
               <div className="p-2.5 rounded-lg bg-muted900 border border-border">
                 <span className="text-[10px] text-muted-foreground block uppercase tracking-wider">Reserved</span>
-                <span className="text-sm font-bold text-amber-400 font-mono mt-0.5 block">
+                <span className="text-sm font-normal text-amber-400 font-mono mt-0.5 block">
                   {stockSummary.reservedQuantity.toLocaleString()}
                 </span>
               </div>
@@ -293,52 +293,94 @@ export default function ProductDetailModal({
 
             {/* Warehouse Stock Breakdown List */}
             {warehouseStocks.length > 0 ? (
-              <div className="space-y-1.5 mt-2">
+              <div className="space-y-2 mt-2">
                 {warehouseStocks.map((stock, idx) => {
                   const qty = Number(stock.quantity) || 0;
                   const avail = Number(stock.availableQuantity) || 0;
                   const res = Number(stock.reservedQuantity) || 0;
-                  const isLow = reorder > 0 && avail <= reorder && avail > 0;
+                  const minLvl = Number(stock.minimumStock) || 0;
+                  const reorderLvl = Number(stock.reorderLevel) || 0;
+                  const isLow = reorderLvl > 0 && avail <= reorderLvl && avail > 0;
                   const isOut = avail <= 0;
+                  const branchName = stock.warehouse?.branch?.name;
+
+                  // Find warehouse selling price override if present
+                  const matchingWp = warehouseSellingPrices.find(
+                    (wp) => wp.warehouseId === stock.warehouseId
+                  );
+                  const effectiveSellPrice = matchingWp
+                    ? Number(matchingWp.sellingPrice)
+                    : sellPrice;
 
                   return (
                     <div
                       key={stock.id || idx}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-lg bg-muted900 border border-border gap-2 text-xs"
+                      className="p-3 rounded-xl bg-muted900 border border-border space-y-2 text-xs"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">
-                          {stock.warehouse?.name || 'Warehouse'}
-                        </span>
-                        {stock.warehouse?.code && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted800 text-muted-foreground border border-border">
-                            {stock.warehouse.code}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-border/50 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-normal text-foreground text-sm">
+                            {stock.warehouse?.name || 'Warehouse'}
                           </span>
-                        )}
+                          {branchName && (
+                            <span className="text-xs text-muted-foreground">
+                              ({branchName})
+                            </span>
+                          )}
+                          {stock.warehouse?.code && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted800 text-muted-foreground border border-border">
+                              {stock.warehouse.code}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="text-emerald-400 font-normal text-xs">
+                            Selling Price: {formatPrice(effectiveSellPrice)}
+                          </span>
+                          {matchingWp ? (
+                            <span className="text-[9px] font-normal px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                              Override
+                            </span>
+                          ) : (
+                            <span className="text-[9px] text-muted-foreground">
+                              (Base)
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-3 font-mono text-[11px]">
-                        <span className="text-muted-foreground">
-                          On Hand: <strong className="text-foreground">{qty}</strong>
-                        </span>
-                        <span className="text-muted-foreground">
-                          Avail: <strong className={isOut ? 'text-rose-400' : 'text-emerald-400'}>{avail}</strong>
-                        </span>
-                        {res > 0 && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] pt-0.5">
+                        <div className="flex flex-wrap items-center gap-3">
                           <span className="text-muted-foreground">
-                            Res: <strong className="text-amber-400">{res}</strong>
+                            On Hand: <span className="text-foreground">{qty.toLocaleString()}</span>
                           </span>
-                        )}
+                          <span className="text-muted-foreground">
+                            Avail: <span className={isOut ? 'text-rose-400' : 'text-emerald-400'}>{avail.toLocaleString()}</span>
+                          </span>
+                          {res > 0 && (
+                            <span className="text-muted-foreground">
+                              Res: <span className="text-amber-400">{res.toLocaleString()}</span>
+                            </span>
+                          )}
+                          <span className="text-muted-foreground">
+                            Min Stock: <span className="text-rose-700 dark:text-rose-400 font-medium">{minLvl.toLocaleString()}</span>
+                          </span>
+                          <span className="text-muted-foreground">
+                            Reorder Level: <span className="text-amber-700 dark:text-amber-400 font-medium">{reorderLvl.toLocaleString()}</span>
+                          </span>
+                        </div>
+
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-normal self-start sm:self-auto ${
                             isOut
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30'
                               : isLow
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                           }`}
                         >
-                          {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
+                          {isOut ? 'Out of Stock' : isLow ? 'Reorder Needed' : 'Optimal Stock'}
                         </span>
                       </div>
                     </div>
@@ -355,7 +397,7 @@ export default function ProductDetailModal({
           {/* Standard Catalog Pricing Section */}
           {showStandardPrices && (
             <div className="bg-muted800/60 border border-border rounded-xl p-4">
-              <h5 className="text-xs font-semibold text-foreground mb-3 flex items-center justify-between">
+              <h5 className="text-xs font-normal text-foreground mb-3 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <span>💵</span> Standard Catalog Pricing
                 </span>
@@ -376,13 +418,13 @@ export default function ProductDetailModal({
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="p-3 rounded-xl bg-muted900 border border-border/80">
                   <span className="text-[11px] text-muted-foreground block">Selling Price</span>
-                  <span className="text-base font-bold text-emerald-400 font-mono mt-0.5 block">
+                  <span className="text-base font-normal text-emerald-400 font-mono mt-0.5 block">
                     {formatPrice(sellPrice)}
                   </span>
                 </div>
                 <div className="p-3 rounded-xl bg-muted900 border border-border/80">
                   <span className="text-[11px] text-muted-foreground block">Wholesale Price</span>
-                  <span className="text-base font-bold text-sky-400 font-mono mt-0.5 block">
+                  <span className="text-base font-normal text-sky-400 font-mono mt-0.5 block">
                     {formatPrice(wholePrice)}
                   </span>
                 </div>
@@ -393,7 +435,7 @@ export default function ProductDetailModal({
           {/* Warehouse-Specific Pricing Overrides Section */}
           {assignedPricesCount > 0 ? (
             <div className="bg-muted800/60 border border-border rounded-xl p-4 space-y-2.5">
-              <h5 className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <h5 className="text-xs font-normal text-foreground flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <span>🏢</span> Warehouse Pricing Overrides
                 </span>
@@ -415,9 +457,14 @@ export default function ProductDetailModal({
                       className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-lg bg-muted900 border border-border gap-2 text-xs"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">
+                        <span className="font-normal text-foreground">
                           {wp.warehouse?.name || 'Warehouse'}
                         </span>
+                        {wp.warehouse?.branch?.name && (
+                          <span className="text-[11px] text-muted-foreground">
+                            ({wp.warehouse.branch.name})
+                          </span>
+                        )}
                         {wp.warehouse?.code && (
                           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted800 text-muted-foreground border border-border">
                             {wp.warehouse.code}
@@ -426,7 +473,7 @@ export default function ProductDetailModal({
                       </div>
 
                       <div className="flex items-center gap-4 font-mono">
-                        <span className="text-emerald-400 font-semibold">
+                        <span className="text-emerald-400 font-normal">
                           Sell: {formatPrice(wp.sellingPrice)}
                         </span>
                         <span className="text-sky-400">
@@ -454,12 +501,12 @@ export default function ProductDetailModal({
             <div className="flex flex-wrap items-center gap-3">
               {creatorName && (
                 <span>
-                  Created by: <strong className="text-foreground">{creatorName}</strong>
+                  Created by: <span className="text-foreground">{creatorName}</span>
                 </span>
               )}
               {updaterName && (
                 <span>
-                  Updated by: <strong className="text-foreground">{updaterName}</strong>
+                  Updated by: <span className="text-foreground">{updaterName}</span>
                 </span>
               )}
             </div>

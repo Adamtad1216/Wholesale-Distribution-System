@@ -43,7 +43,7 @@ export default function ProductListTable({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
         </div>
-        <h4 className="text-base font-semibold text-foreground">No Products Found</h4>
+        <h4 className="text-base font-normal text-foreground">No Products Found</h4>
         <p className="text-xs text-muted-foreground max-w-sm">
           No products match your current filter parameters or the catalog is empty.
         </p>
@@ -141,7 +141,7 @@ export default function ProductListTable({
 
                       {/* Multi-image count tag */}
                       {images.length > 1 && (
-                        <span className="absolute bottom-0 right-0 bg-blue-600/90 text-white text-[9px] font-bold px-1 rounded-tl">
+                        <span className="absolute bottom-0 right-0 bg-blue-600/90 text-white text-[9px] font-normal px-1 rounded-tl">
                           +{images.length - 1}
                         </span>
                       )}
@@ -149,7 +149,7 @@ export default function ProductListTable({
                     <div>
                       <span
                         onClick={() => onViewProduct(product)}
-                        className="font-semibold text-foreground block line-clamp-1 hover:text-blue-500 cursor-pointer transition"
+                        className="font-normal text-foreground block line-clamp-1 hover:text-blue-500 cursor-pointer transition"
                       >
                         {product.name}
                       </span>
@@ -162,7 +162,7 @@ export default function ProductListTable({
 
                 {/* Category */}
                 <TableCell>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-800/60 text-slate-300 border border-slate-700/50">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-normal bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50">
                     {product.category?.name || 'Unassigned'}
                   </span>
                 </TableCell>
@@ -176,7 +176,7 @@ export default function ProductListTable({
 
                 {/* Unit */}
                 <TableCell>
-                  <span className="text-xs font-medium text-foreground">
+                  <span className="text-xs font-normal text-foreground">
                     {product.unit?.name ? `${product.unit.name} (${product.unit.abbreviation})` : '—'}
                   </span>
                 </TableCell>
@@ -191,11 +191,12 @@ export default function ProductListTable({
                             key={i}
                             className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-[11px] leading-tight"
                           >
-                            <span className="font-semibold text-blue-400 block truncate max-w-[160px]">
+                            <span className="font-normal text-blue-400 block truncate max-w-[170px]">
                               🏢 {wp.warehouse?.name || wp.warehouse?.code || 'Warehouse'}
+                              {wp.warehouse?.branch?.name ? ` (${wp.warehouse.branch.name})` : ''}
                             </span>
                             <div className="flex items-center gap-2 font-mono mt-0.5 text-[11px]">
-                              <span className="text-emerald-400 font-semibold">
+                              <span className="text-emerald-400 font-normal">
                                 Sell: {formatPrice(wp.sellingPrice)}
                               </span>
                               <span className="text-sky-400">
@@ -208,7 +209,7 @@ export default function ProductListTable({
                           <button
                             type="button"
                             onClick={() => onViewProduct(product)}
-                            className="text-[10px] text-blue-400 hover:text-blue-300 font-semibold block"
+                            className="text-[10px] text-blue-400 hover:text-blue-300 font-normal block"
                           >
                             +{product.warehouseSellingPrices.length - 2} more warehouse prices
                           </button>
@@ -216,7 +217,7 @@ export default function ProductListTable({
                       </div>
                     ) : (
                       <div className="space-y-0.5">
-                        <div className="text-emerald-400 font-semibold font-mono">
+                        <div className="text-emerald-400 font-normal font-mono">
                           Sell: {formatPrice(product.sellingPrice)}
                         </div>
                         <div className="text-sky-400 font-mono">
@@ -233,7 +234,7 @@ export default function ProductListTable({
                 {/* Status */}
                 <TableCell>
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal ${
                       product.status === 'ACTIVE'
                         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                         : 'bg-slate-700/20 text-slate-400 border border-slate-700/40'
@@ -246,7 +247,7 @@ export default function ProductListTable({
                 {/* Created Date */}
                 <TableCell className="whitespace-nowrap">
                   <div className="text-xs flex flex-col">
-                    <span className="font-medium text-foreground">
+                    <span className="font-normal text-foreground">
                       {formatDate(product.createdAt)}
                     </span>
                     {product.createdAt && (
@@ -268,9 +269,9 @@ export default function ProductListTable({
                       type="button"
                       onClick={() => onViewProduct(product)}
                       title="View Details"
-                      className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted800 transition"
+                      className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <svg className="w-4 h-4 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
@@ -282,9 +283,9 @@ export default function ProductListTable({
                         type="button"
                         onClick={() => onEditProduct(product)}
                         title="Edit Product"
-                        className="p-1.5 text-muted-foreground hover:text-violet-400 rounded-md hover:bg-muted800 transition"
+                        className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-4 h-4 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
@@ -296,9 +297,9 @@ export default function ProductListTable({
                         type="button"
                         onClick={() => onDeleteProduct(product)}
                         title="Delete Product"
-                        className="p-1.5 text-muted-foreground hover:text-rose-400 rounded-md hover:bg-muted800 transition"
+                        className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                       >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <svg className="w-4 h-4 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
@@ -326,7 +327,7 @@ export default function ProductListTable({
           >
             Previous
           </Button>
-          <span className="font-semibold text-foreground px-2">
+          <span className="font-normal text-foreground px-2">
             Page {page} of {totalPages || 1}
           </span>
           <Button

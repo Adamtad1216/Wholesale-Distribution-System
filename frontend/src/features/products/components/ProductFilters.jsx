@@ -103,7 +103,7 @@ export default function ProductFilters({
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           {hasFilters ? (
             <>
-              <span className="text-[11px] font-medium text-muted-foreground mr-1">Active filters:</span>
+              <span className="text-[11px] font-normal text-muted-foreground mr-1">Active filters:</span>
               {search && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[11px]">
                   "{search}"
@@ -125,7 +125,7 @@ export default function ProductFilters({
               <button
                 type="button"
                 onClick={onReset}
-                className="h-7 px-2 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 text-[11px] font-medium flex items-center gap-1 transition ml-1"
+                className="h-7 px-2 rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 text-[11px] font-normal flex items-center gap-1 transition ml-1"
                 title="Clear all active filters"
               >
                 ✕ Clear All
@@ -139,12 +139,12 @@ export default function ProductFilters({
         {/* Right: Table / Cards View Toggle (always visible on row 2) */}
         {onViewModeChange && (
           <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
-            <span className="text-xs text-muted-foreground font-medium mr-1">View:</span>
+            <span className="text-xs text-muted-foreground font-normal mr-1">View:</span>
             <div className="flex items-center h-8 p-0.5 rounded-xl bg-muted800 border border-border">
               <button
                 type="button"
                 onClick={() => onViewModeChange('TABLE')}
-                className={`h-full px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                className={`h-full px-3 rounded-lg text-xs font-normal flex items-center gap-1.5 transition ${
                   viewMode === 'TABLE'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -159,7 +159,7 @@ export default function ProductFilters({
               <button
                 type="button"
                 onClick={() => onViewModeChange('GRID')}
-                className={`h-full px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                className={`h-full px-3 rounded-lg text-xs font-normal flex items-center gap-1.5 transition ${
                   viewMode === 'GRID'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'

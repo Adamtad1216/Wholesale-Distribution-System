@@ -57,10 +57,10 @@ export default function ProductStats({
         <Card key={idx} hoverEffect className="relative overflow-hidden p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+              <p className="text-xs font-normal text-muted-foreground tracking-wide uppercase">
                 {item.label}
               </p>
-              <h3 className="text-2xl font-bold text-foreground mt-1 tracking-tight">
+              <h3 className="text-2xl font-normal text-foreground mt-1 tracking-tight">
                 {loading ? '...' : item.value.toLocaleString()}
               </h3>
             </div>
