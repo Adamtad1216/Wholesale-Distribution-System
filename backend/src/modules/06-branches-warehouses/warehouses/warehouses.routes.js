@@ -5,11 +5,14 @@ import {
   addWarehouse,
   modifyWarehouse,
   removeWarehouse,
+  listEligibleManagers,
+  setWarehouseManager,
 } from "./warehouses.controller.js";
 import {
   warehouseQuerySchema,
   createWarehouseSchema,
   updateWarehouseSchema,
+  assignWarehouseManagerSchema,
 } from "./warehouses.validation.js";
 import { validate } from "../../../middleware/validation.middleware.js";
 import { authenticate } from "../../../middleware/auth.middleware.js";
@@ -82,6 +85,12 @@ router.get(
   validate(warehouseQuerySchema),
   requirePermission(["warehouses:read", "products:read", "warehouse-selling-prices:read"]),
   listWarehouses,
+);
+
+router.get(
+  "/eligible-managers",
+  requirePermission(["warehouses:read", "warehouses:create", "warehouses:update", "employees:read"]),
+  listEligibleManagers,
 );
 
 /**
@@ -286,6 +295,13 @@ router.patch(
   validate(updateWarehouseSchema),
   requirePermission("warehouses:update"),
   modifyWarehouse,
+);
+
+router.post(
+  "/:id/assign-manager",
+  validate(assignWarehouseManagerSchema),
+  requirePermission("warehouses:update"),
+  setWarehouseManager,
 );
 
 /**

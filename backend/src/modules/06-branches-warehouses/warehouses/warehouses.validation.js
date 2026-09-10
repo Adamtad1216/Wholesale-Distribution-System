@@ -6,6 +6,7 @@ export const warehouseQuerySchema = z.object({
   search: z.string().optional(),
   branchId: z.string().uuid().optional(),
   status: z.string().optional(),
+  scope: z.string().optional(),
 });
 
 export const warehouseIdSchema = z.object({
@@ -23,7 +24,7 @@ export const createWarehouseSchema = z.object({
   woreda: z.string().max(100).optional(),
   kebele: z.string().max(100).optional(),
   houseNumber: z.string().max(50).optional(),
-  managerId: z.string().uuid().optional(),
+  managerId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().nullable().optional()),
   status: z.string().default('ACTIVE'),
 });
 
@@ -38,6 +39,11 @@ export const updateWarehouseSchema = z.object({
   woreda: z.string().max(100).optional().nullable(),
   kebele: z.string().max(100).optional().nullable(),
   houseNumber: z.string().max(50).optional().nullable(),
-  managerId: z.string().uuid().optional().nullable(),
+  managerId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().nullable().optional()),
   status: z.string().optional(),
+});
+
+export const assignWarehouseManagerSchema = z.object({
+  employeeId: z.string().uuid(),
+  notes: z.string().max(500).optional(),
 });
