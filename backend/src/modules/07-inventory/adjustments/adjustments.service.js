@@ -2,7 +2,7 @@ import prisma from '../../../config/prisma.js';
 import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
-import { getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
+import { getUserScope, getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
 
 export async function createAdjustment(data, createdById, req, user = null) {
   await enforceWarehouseScope(user, data.warehouseId);
@@ -88,12 +88,21 @@ export async function getAdjustments(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
   const where = { isArchived: false };
 
-  const assignedWarehouseId = await getAssignedWarehouseId(user);
-  if (assignedWarehouseId) {
-    if (filters.warehouseId && filters.warehouseId !== assignedWarehouseId) {
-      throw new AppError('You are not authorized to view adjustments for this warehouse', 403);
+  if (user) {
+    const scope = await getUserScope(user);
+    if (!scope.isGlobal) {
+      const allowedWarehouseIds = scope.warehouseIds || [];
+      if (filters.warehouseId) {
+        if (!allowedWarehouseIds.includes(filters.warehouseId)) {
+          throw new AppError('You are not authorized to view adjustments for this warehouse', 403);
+        }
+        where.warehouseId = filters.warehouseId;
+      } else {
+        where.warehouseId = { in: allowedWarehouseIds };
+      }
+    } else if (filters.warehouseId) {
+      where.warehouseId = filters.warehouseId;
     }
-    where.warehouseId = assignedWarehouseId;
   } else if (filters.warehouseId) {
     where.warehouseId = filters.warehouseId;
   }
@@ -192,12 +201,12 @@ export async function approveAdjustment(id, data, createdById, req, user = null)
     if (data.status === 'APPROVED') {
       for (const item of adjustment.items) {
         let stock = await tx.warehouseStock.findFirst({
-          where: { warehouseId: existing.warehouseId, productId: item.productId, isArchived: false },
+          where: { warehouseId: existing.warehouseId, productId: item.productId },
         });
 
         const difference = Number(item.difference);
 
-        if (stock) {
+        if (stock && !stock.isArchived) {
           const newQty = Number(stock.quantity) + difference;
           if (newQty < 0) {
             throw new AppError(
@@ -210,6 +219,25 @@ export async function approveAdjustment(id, data, createdById, req, user = null)
             data: {
               quantity: newQty,
               availableQuantity: newQty - Number(stock.reservedQuantity),
+              updatedById: createdById,
+              updatedAt: new Date(),
+            },
+          });
+        } else if (stock && stock.isArchived) {
+          if (difference < 0) {
+            throw new AppError(
+              `Cannot decrease stock for archived product with zero inventory. Difference: ${difference}`,
+              400
+            );
+          }
+          await tx.warehouseStock.update({
+            where: { id: stock.id },
+            data: {
+              quantity: difference,
+              reservedQuantity: 0,
+              availableQuantity: difference,
+              isArchived: false,
+              archivedAt: null,
               updatedById: createdById,
               updatedAt: new Date(),
             },
@@ -312,7 +340,35 @@ export async function updateAdjustment(id, data, updatedById, req, user = null) 
   if (!existing) throw new AppError('Adjustment not found', 404);
   await enforceWarehouseScope(user, existing.warehouseId);
   if (existing.status !== 'PENDING') {
-    throw new AppError('Only PENDING adjustments can be updated', 400);
+    // If adjustment has already been approved or rejected, allow updating reason/notes without altering inventory stock
+    const adjustment = await prisma.stockAdjustment.update({
+      where: { id },
+      data: {
+        reason: data.reason ?? existing.reason,
+        updatedById,
+        updatedAt: new Date(),
+      },
+      include: {
+        items: {
+          include: {
+            product: { select: { id: true, name: true, sku: true } },
+          },
+        },
+        warehouse: { select: { id: true, name: true, code: true } },
+      },
+    });
+
+    await logAudit({
+      createdById: updatedById,
+      action: 'ADJUSTMENT_UPDATED',
+      entityType: 'StockAdjustment',
+      entityId: id,
+      oldValues: { reason: existing.reason },
+      newValues: { reason: adjustment.reason },
+      req,
+    });
+
+    return adjustment;
   }
 
   if (data.items) {
