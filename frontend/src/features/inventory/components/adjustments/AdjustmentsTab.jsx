@@ -3,6 +3,7 @@ import {
   Plus,
   Search,
   Eye,
+  Edit2,
   CheckCircle,
   XCircle,
   Clock,
@@ -24,10 +25,12 @@ export default function AdjustmentsTab({
   search = '',
   onSearchChange,
   onOpenCreateModal,
+  onOpenEditModal,
   onOpenApprovalModal,
   onOpenDetailModal,
   onDeleteAdjustment,
   canCreate = true,
+  canUpdate = true,
   canApprove = true,
   canDelete = true,
 }) {
@@ -36,21 +39,21 @@ export default function AdjustmentsTab({
     switch (status) {
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
             <CheckCircle className="w-3.5 h-3.5" />
             <span>Approved</span>
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30">
             <XCircle className="w-3.5 h-3.5" />
             <span>Rejected</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
             <Clock className="w-3.5 h-3.5 animate-pulse" />
             <span>Pending Review</span>
           </span>
@@ -130,7 +133,7 @@ export default function AdjustmentsTab({
           <div className="w-14 h-14 rounded-2xl bg-muted800 border border-border flex items-center justify-center text-muted-foreground">
             <Sliders className="w-7 h-7 opacity-50" />
           </div>
-          <h3 className="text-base font-bold text-foreground">No Adjustments Recorded</h3>
+          <h3 className="text-base font-normal text-foreground">No Adjustments Recorded</h3>
           <p className="text-xs text-muted-foreground max-w-sm">
             Stock adjustments let you reconcile physical inventory audit findings with system counts.
           </p>
@@ -149,13 +152,13 @@ export default function AdjustmentsTab({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border/80 bg-muted900/40 text-muted-foreground uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 font-bold">Adjustment ID & Date</th>
-                <th className="py-3 px-4 font-bold">Warehouse</th>
-                <th className="py-3 px-4 font-bold">Audit Reason</th>
-                <th className="py-3 px-4 font-bold text-center">Items Count</th>
-                <th className="py-3 px-4 font-bold">Status</th>
-                <th className="py-3 px-4 font-bold">Reviewer</th>
-                <th className="py-3 px-4 font-bold text-center">Actions</th>
+                <th className="py-3 px-4 font-normal">Date Submitted</th>
+                <th className="py-3 px-4 font-normal">Warehouse</th>
+                <th className="py-3 px-4 font-normal">Audit Reason</th>
+                <th className="py-3 px-4 font-normal text-center">Items Count</th>
+                <th className="py-3 px-4 font-normal">Status</th>
+                <th className="py-3 px-4 font-normal">Reviewer</th>
+                <th className="py-3 px-4 font-normal text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
@@ -168,19 +171,19 @@ export default function AdjustmentsTab({
                     key={adj.id}
                     className="hover:bg-muted800/40 transition-colors group"
                   >
-                    {/* ID & Date */}
+                    {/* Date */}
                     <td className="py-3.5 px-4">
-                      <span className="font-mono font-bold text-foreground block">
-                        #{adj.id?.slice(0, 8)}
+                      <span className="font-normal text-foreground block">
+                        {new Date(adj.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
-                        {new Date(adj.createdAt).toLocaleDateString()}
+                        {new Date(adj.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </td>
 
                     {/* Warehouse */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5 font-bold text-foreground">
+                      <div className="flex items-center gap-1.5 font-normal text-foreground">
                         <WarehouseIcon className="w-3.5 h-3.5 text-violet-400" />
                         <span>
                           {adj.warehouse?.name}
@@ -196,13 +199,13 @@ export default function AdjustmentsTab({
 
                     {/* Reason */}
                     <td className="py-3.5 px-4 max-w-xs">
-                      <span className="font-medium text-foreground line-clamp-1">
+                      <span className="font-normal text-foreground line-clamp-1">
                         {adj.reason}
                       </span>
                     </td>
 
                     {/* Items Count */}
-                    <td className="py-3.5 px-4 text-center font-bold text-foreground">
+                    <td className="py-3.5 px-4 text-center font-normal text-foreground">
                       <span className="px-2 py-0.5 rounded-full bg-muted800 border border-border text-xs">
                         {itemsCount} item{itemsCount !== 1 ? 's' : ''}
                       </span>
@@ -227,38 +230,51 @@ export default function AdjustmentsTab({
                         <button
                           type="button"
                           onClick={() => navigate(`/inventory/adjustments/${adj.id}`)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
+                          className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                           title="View adjustment details"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 text-black dark:text-white" />
                         </button>
+
+                        {/* Edit adjustment */}
+                        {canUpdate && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenEditModal?.(adj)}
+                            className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
+                            title={isPending ? "Edit pending adjustment" : "Edit adjustment audit details"}
+                          >
+                            <Edit2 className="w-4 h-4 text-black dark:text-white" />
+                          </button>
+                        )}
 
                         {/* Review / Process (Approve/Reject) */}
                         {isPending && canApprove && (
                           <button
                             type="button"
                             onClick={() => onOpenApprovalModal(adj)}
-                            className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center gap-1 transition"
+                            className="px-2.5 py-1 rounded-lg border border-border bg-card text-black dark:text-white font-normal text-xs flex items-center gap-1 hover:bg-muted transition"
                             title="Process Approval"
                           >
-                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-black dark:text-white" />
                             <span>Review</span>
                           </button>
                         )}
 
-                        {/* Delete pending */}
-                        {isPending && canDelete && (
+                        {/* Delete / Archive adjustment */}
+                        {canDelete && (
                           <button
                             type="button"
                             onClick={() => onDeleteAdjustment(adj)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition"
-                            title="Delete pending adjustment"
+                            className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
+                            title={isPending ? "Delete pending adjustment" : "Archive adjustment audit"}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4 text-black dark:text-white" />
                           </button>
                         )}
                       </div>
                     </td>
+
                   </tr>
                 );
               })}

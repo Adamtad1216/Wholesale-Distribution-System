@@ -33,7 +33,7 @@ export default function AdjustmentApprovalModal({
               type="button"
               onClick={() => onReject(adjustment.id)}
               disabled={isProcessing}
-              className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-semibold text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-normal text-xs transition flex items-center gap-1.5 disabled:opacity-50"
             >
               <XCircle className="w-4 h-4" />
               <span>Reject Adjustment</span>
@@ -43,7 +43,7 @@ export default function AdjustmentApprovalModal({
               type="button"
               onClick={() => onApprove(adjustment.id)}
               disabled={isProcessing}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
             >
               <CheckCircle className="w-4 h-4" />
               <span>Approve & Apply Stock</span>
@@ -57,7 +57,7 @@ export default function AdjustmentApprovalModal({
         <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-amber-300 text-xs leading-relaxed">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
           <div>
-            <strong className="font-bold">Important:</strong> Approving this adjustment will immediately modify real-time stock levels in warehouse <strong>"{adjustment.warehouse?.name}"</strong> by the computed discrepancies.
+            <span className="font-normal">Important:</span> Approving this adjustment will immediately modify real-time stock levels in warehouse <span>"{adjustment.warehouse?.name}"</span> by the computed discrepancies.
           </div>
         </div>
 
@@ -65,7 +65,7 @@ export default function AdjustmentApprovalModal({
         <div className="p-3 rounded-xl bg-muted900/50 border border-border space-y-1.5 text-xs">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Warehouse:</span>
-            <span className="font-bold text-foreground flex items-center gap-1">
+            <span className="font-normal text-foreground flex items-center gap-1">
               <WarehouseIcon className="w-3.5 h-3.5 text-violet-400" />
               {adjustment.warehouse?.name} ({adjustment.warehouse?.code || 'N/A'})
             </span>
@@ -78,7 +78,7 @@ export default function AdjustmentApprovalModal({
 
         {/* Line Items Discrepancy Table */}
         <div className="space-y-2">
-          <span className="text-xs font-bold text-foreground uppercase tracking-wider block">
+          <span className="text-xs font-normal text-foreground uppercase tracking-wider block">
             Discrepancies to Apply ({items.length})
           </span>
 
@@ -91,7 +91,7 @@ export default function AdjustmentApprovalModal({
                   className="p-2.5 flex items-center justify-between gap-3 text-xs bg-card/60"
                 >
                   <div className="min-w-0">
-                    <p className="font-bold text-foreground truncate">
+                    <p className="font-normal text-foreground truncate">
                       {item.product?.name || 'Product'}
                     </p>
                     <p className="text-[10px] text-muted-foreground">
@@ -106,7 +106,7 @@ export default function AdjustmentApprovalModal({
 
                   <div className="shrink-0 text-right">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold border ${
+                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-normal border ${
                         diff > 0
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                           : diff < 0
