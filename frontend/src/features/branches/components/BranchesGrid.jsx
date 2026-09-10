@@ -1,4 +1,14 @@
 import React from 'react';
+import {
+  Building2,
+  Warehouse,
+  MapPin,
+  Eye,
+  Edit2,
+  Trash2,
+  UserCheck,
+  Phone,
+} from 'lucide-react';
 
 export default function BranchesGrid({
   branches = [],
@@ -13,7 +23,7 @@ export default function BranchesGrid({
     return (
       <div className="p-12 text-center text-xs text-muted-foreground bg-card border border-border rounded-xl">
         <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent mb-2" />
-        <p>Loading branches...</p>
+        <p>Loading branches directory...</p>
       </div>
     );
   }
@@ -21,9 +31,11 @@ export default function BranchesGrid({
   if (branches.length === 0) {
     return (
       <div className="p-12 text-center text-xs text-muted-foreground bg-card border border-border rounded-xl">
-        <span className="text-3xl block mb-1">🏢</span>
-        <p className="font-semibold text-foreground">No branches found</p>
-        <p className="mt-1">Try adjusting your filters or add a new branch office.</p>
+        <div className="w-12 h-12 mx-auto mb-2 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
+          <Building2 className="w-6 h-6" />
+        </div>
+        <p className="font-semibold text-foreground text-sm">No branches found</p>
+        <p className="mt-1 text-muted-foreground">Try adjusting your filters or register a new branch office.</p>
       </div>
     );
   }
@@ -35,23 +47,27 @@ export default function BranchesGrid({
           ? `${b.manager.person.firstName || ''} ${b.manager.person.lastName || ''}`.trim()
           : b.manager?.name || null;
 
-        const warehouseCount = Array.isArray(b.warehouses) ? b.warehouses.length : 0;
+        const warehousesList = Array.isArray(b.warehouses) ? b.warehouses : [];
+        const warehouseCount = warehousesList.length;
 
         return (
           <div
             key={b.id}
             onClick={() => onView && onView(b)}
-            className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition shadow-sm hover:shadow-md flex flex-col justify-between cursor-pointer group"
+            className="p-4 rounded-2xl border border-border bg-card hover:border-blue-500/50 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col justify-between cursor-pointer group relative overflow-hidden"
           >
-            <div className="space-y-3">
+            {/* Top gradient glow */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500/50 via-sky-500/30 to-transparent" />
+
+            <div className="space-y-3.5">
               {/* Card Header */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center text-lg shrink-0">
-                    🏢
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                    <Building2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm group-hover:text-primary transition flex items-center gap-1.5">
+                    <h3 className="font-semibold text-foreground text-sm group-hover:text-blue-400 transition flex items-center gap-1.5">
                       <span className="truncate max-w-[180px]">{b.name}</span>
                       {b.isHeadOffice && (
                         <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase shrink-0">
@@ -81,11 +97,12 @@ export default function BranchesGrid({
                 </span>
               </div>
 
-              {/* Specs / Badges */}
-              <div className="grid grid-cols-2 gap-2 text-xs bg-muted800/40 p-2.5 rounded-lg border border-border/70">
+              {/* Specs / Region & City */}
+              <div className="grid grid-cols-2 gap-2 text-xs bg-muted800/40 p-2.5 rounded-xl border border-border/70">
                 <div>
                   <span className="text-[10px] text-muted-foreground block uppercase tracking-wider">Region</span>
-                  <span className="font-medium text-foreground truncate block">
+                  <span className="font-medium text-foreground truncate block flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-amber-400 shrink-0" />
                     {b.region?.name || '—'}
                   </span>
                 </div>
@@ -97,10 +114,13 @@ export default function BranchesGrid({
                 </div>
               </div>
 
-              {/* Contact & Manager */}
+              {/* Branch Manager & Phone */}
               <div className="space-y-1.5 text-[11px] text-muted-foreground">
                 <div className="flex items-center justify-between">
-                  <span>Manager:</span>
+                  <span className="flex items-center gap-1">
+                    <UserCheck className="w-3 h-3 text-purple-400" />
+                    Manager:
+                  </span>
                   <strong className="text-foreground font-medium">
                     {managerName || 'Unassigned'}
                   </strong>
@@ -108,51 +128,77 @@ export default function BranchesGrid({
 
                 {b.phone && (
                   <div className="flex items-center justify-between">
-                    <span>Phone:</span>
+                    <span className="flex items-center gap-1">
+                      <Phone className="w-3 h-3 opacity-60" />
+                      Phone:
+                    </span>
                     <span className="font-mono text-foreground">{b.phone}</span>
                   </div>
                 )}
               </div>
+
+              {/* Warehouses Under This Branch Section */}
+              <div className="space-y-1.5 pt-2.5 border-t border-border/70">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Warehouse className="w-3.5 h-3.5 text-sky-400" />
+                    Operating Warehouses:
+                  </span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">
+                    {warehouseCount}
+                  </span>
+                </div>
+
+                {warehouseCount > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {warehousesList.slice(0, 3).map((wh) => (
+                      <span
+                        key={wh.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted800/80 hover:bg-muted700 text-foreground border border-border text-[10px] transition"
+                        title={`${wh.name} (${wh.code})`}
+                      >
+                        <Warehouse className="w-2.5 h-2.5 text-sky-400" />
+                        <span className="truncate max-w-[90px]">{wh.name}</span>
+                        <span className="font-mono text-[9px] text-muted-foreground">({wh.code})</span>
+                      </span>
+                    ))}
+                    {warehouseCount > 3 && (
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-mono bg-muted800 text-muted-foreground border border-border">
+                        +{warehouseCount - 3} more
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground italic">
+                    No storage facilities currently attached
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* Card Footer: Warehouse Count & Actions */}
+            {/* Card Footer: Actions */}
             <div
               className="pt-3 mt-3 border-t border-border flex items-center justify-between"
               onClick={(e) => e.stopPropagation()}
             >
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono text-[10px] ${
-                  warehouseCount > 0
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'bg-muted800 text-muted-foreground'
-                }`}
+              <button
+                type="button"
+                onClick={() => onView && onView(b)}
+                className="text-[11px] text-black dark:text-white hover:underline font-medium flex items-center gap-1"
               >
-                🏬 {warehouseCount} {warehouseCount === 1 ? 'warehouse' : 'warehouses'}
-              </span>
+                <Eye className="w-3.5 h-3.5 text-black dark:text-white" />
+                View Facility Details
+              </button>
 
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => onView && onView(b)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
-                  title="View Details"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
-
                 {canUpdate && (
                   <button
                     type="button"
                     onClick={() => onEdit && onEdit(b)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted800 transition"
+                    className="p-1.5 text-black dark:text-white hover:bg-muted rounded-lg transition"
                     title="Edit Branch"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                    <Edit2 className="w-3.5 h-3.5 text-black dark:text-white" />
                   </button>
                 )}
 
@@ -160,12 +206,10 @@ export default function BranchesGrid({
                   <button
                     type="button"
                     onClick={() => onDelete && onDelete(b)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-muted800 transition"
+                    className="p-1.5 text-black dark:text-white hover:bg-muted rounded-lg transition"
                     title="Delete Branch"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <Trash2 className="w-3.5 h-3.5 text-black dark:text-white" />
                   </button>
                 )}
               </div>
