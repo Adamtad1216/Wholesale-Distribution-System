@@ -45,7 +45,7 @@ export default function CompaniesStats({
       value: totalBranches,
       subtext: 'Operating Branch Offices',
       icon: '🏢',
-      color: 'from-purple-500/20 to-purple-600/5 text-purple-400 border-purple-500/30',
+      color: 'from-sky-500/20 to-sky-600/5 text-sky-400 border-sky-500/30',
     },
   ];
 
@@ -57,17 +57,17 @@ export default function CompaniesStats({
           className={`p-3.5 rounded-xl border bg-gradient-to-br ${stat.color} bg-card/60 backdrop-blur-sm transition hover:border-border`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-[11px] font-normal uppercase tracking-wider text-muted-foreground">
               {stat.label}
             </span>
             <span className="text-xl">{stat.icon}</span>
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-2xl font-bold font-mono text-foreground">
+            <span className="text-2xl font-normal text-foreground tracking-tight">
               {loading ? '—' : stat.value}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground truncate">
+          <p className="mt-1 text-[11px] text-muted-foreground truncate font-normal">
             {stat.subtext}
           </p>
         </div>

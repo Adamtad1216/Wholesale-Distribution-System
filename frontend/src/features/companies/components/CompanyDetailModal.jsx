@@ -33,15 +33,15 @@ export default function CompanyDetailModal({
       footer={
         <div className="flex items-center justify-between w-full">
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-normal ${
               company.status === 'ACTIVE'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                 : 'bg-slate-700/20 text-slate-400 border border-slate-700/40'
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                company.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-slate-400'
+                company.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
               }`}
             />
             {company.status || 'ACTIVE'}
@@ -70,14 +70,14 @@ export default function CompanyDetailModal({
       <div className="space-y-4 text-xs">
         {/* Tax & Regulatory Compliance Card */}
         <div className="p-3.5 rounded-xl bg-muted800/40 border border-border space-y-2.5">
-          <h4 className="text-xs font-semibold text-foreground flex items-center justify-between">
+          <h4 className="text-xs font-normal text-foreground flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <span>📑</span> Legal & Tax Identification
             </span>
             <span
-              className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-semibold ${
+              className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-normal ${
                 company.isVatRegistered
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                   : 'bg-muted800 text-muted-foreground border border-border'
               }`}
             >
@@ -88,17 +88,17 @@ export default function CompanyDetailModal({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-[11px]">
             <div className="p-2 rounded-lg bg-muted900 border border-border/80">
               <span className="text-[10px] text-muted-foreground font-sans block">TIN Number</span>
-              <strong className="text-foreground text-xs">{company.tinNumber || 'Not recorded'}</strong>
+              <span className="text-foreground text-xs font-medium">{company.tinNumber || 'Not recorded'}</span>
             </div>
 
             <div className="p-2 rounded-lg bg-muted900 border border-border/80">
               <span className="text-[10px] text-muted-foreground font-sans block">Trade License</span>
-              <strong className="text-foreground text-xs">{company.tradeLicenseNumber || 'Not recorded'}</strong>
+              <span className="text-foreground text-xs font-medium">{company.tradeLicenseNumber || 'Not recorded'}</span>
             </div>
 
             <div className="p-2 rounded-lg bg-muted900 border border-border/80">
               <span className="text-[10px] text-muted-foreground font-sans block">VAT Registration</span>
-              <strong className="text-foreground text-xs">{company.vatRegistrationNumber || (company.isVatRegistered ? 'Yes' : 'None')}</strong>
+              <span className="text-foreground text-xs font-medium">{company.vatRegistrationNumber || (company.isVatRegistered ? 'Yes' : 'None')}</span>
             </div>
           </div>
         </div>
@@ -107,13 +107,13 @@ export default function CompanyDetailModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Address */}
           <div className="p-3.5 rounded-xl bg-muted800/30 border border-border space-y-2">
-            <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <h4 className="text-xs font-normal text-foreground flex items-center gap-1.5">
               <span>📍</span> Corporate Headquarters
             </h4>
             <div className="space-y-1 text-muted-foreground">
               <div className="flex justify-between">
                 <span>Region:</span>
-                <strong className="text-foreground">{company.region?.name || '—'}</strong>
+                <span className="text-foreground font-normal">{company.region?.name || '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span>City:</span>
@@ -176,7 +176,7 @@ export default function CompanyDetailModal({
         {/* Operating Branches List */}
         <div className="p-3.5 rounded-xl bg-muted800/40 border border-border space-y-2.5">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <h4 className="text-xs font-normal text-foreground flex items-center gap-1.5">
               <span>🏢</span> Operating Branches Under This Enterprise
             </h4>
             <span className="text-[11px] text-muted-foreground font-mono">
@@ -192,21 +192,21 @@ export default function CompanyDetailModal({
                   className="p-2.5 rounded-lg bg-muted900 border border-border flex items-center justify-between text-xs"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">{b.name}</span>
+                    <span className="font-normal text-foreground">{b.name}</span>
                     <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted800 text-muted-foreground border border-border">
                       {b.branchCode || b.code}
                     </span>
                     {b.isHeadOffice && (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase">
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-normal bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 uppercase">
                         HQ
                       </span>
                     )}
                   </div>
 
                   <span
-                    className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${
+                    className={`text-[9px] px-1.5 py-0.5 rounded font-normal ${
                       b.status === 'ACTIVE'
-                        ? 'bg-emerald-500/10 text-emerald-400'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                         : 'bg-slate-700/20 text-slate-400'
                     }`}
                   >

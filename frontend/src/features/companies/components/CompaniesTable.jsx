@@ -33,13 +33,13 @@ export default function CompaniesTable({
       <table className="w-full text-left text-xs">
         <thead className="bg-muted800/60 border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="px-4 py-3 font-semibold">Enterprise / Legal Name</th>
-            <th className="px-4 py-3 font-semibold">Tax & Licenses (TIN / VAT)</th>
-            <th className="px-4 py-3 font-semibold">Region & City</th>
-            <th className="px-4 py-3 font-semibold">Contact Details</th>
-            <th className="px-4 py-3 font-semibold">Branches</th>
-            <th className="px-4 py-3 font-semibold">Status</th>
-            <th className="px-4 py-3 font-semibold text-right">Actions</th>
+            <th className="px-4 py-3 font-normal">Enterprise / Legal Name</th>
+            <th className="px-4 py-3 font-normal">Tax & Licenses (TIN / VAT)</th>
+            <th className="px-4 py-3 font-normal">Region & City</th>
+            <th className="px-4 py-3 font-normal">Contact Details</th>
+            <th className="px-4 py-3 font-normal">Branches</th>
+            <th className="px-4 py-3 font-normal">Status</th>
+            <th className="px-4 py-3 font-normal text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
@@ -63,7 +63,7 @@ export default function CompaniesTable({
                       🏛️
                     </span>
                     <div>
-                      <div className="font-semibold text-foreground">{c.name}</div>
+                      <div className="font-normal text-foreground">{c.name}</div>
                       <span className="text-[11px] text-muted-foreground block truncate max-w-[200px]">
                         {c.legalName || 'No legal name specified'}
                       </span>
@@ -75,11 +75,11 @@ export default function CompaniesTable({
                   <div className="space-y-0.5 font-mono text-[11px]">
                     <div>
                       <span className="text-muted-foreground">TIN: </span>
-                      <strong className="text-foreground">{c.tinNumber || '—'}</strong>
+                      <span className="text-foreground font-medium">{c.tinNumber || '—'}</span>
                     </div>
                     <div>
                       {c.isVatRegistered ? (
-                        <span className="inline-flex items-center text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
                           VAT Reg ({c.vatRegistrationNumber || 'Yes'})
                         </span>
                       ) : (
@@ -90,7 +90,7 @@ export default function CompaniesTable({
                 </td>
 
                 <td className="px-4 py-3">
-                  <span className="font-medium text-foreground block">
+                  <span className="font-normal text-foreground block">
                     {c.region?.name || '—'}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
@@ -99,16 +99,16 @@ export default function CompaniesTable({
                 </td>
 
                 <td className="px-4 py-3 text-muted-foreground">
-                  {c.phone && <div className="font-mono text-foreground">{c.phone}</div>}
+                  {c.phone && <div className="font-mono text-foreground font-normal">{c.phone}</div>}
                   {c.email && <div className="text-[11px] truncate max-w-[160px]">{c.email}</div>}
                   {!c.phone && !c.email && <span>—</span>}
                 </td>
 
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold ${
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[10px] font-normal ${
                       branchCount > 0
-                        ? 'bg-primary/10 text-primary border border-primary/30'
+                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30'
                         : 'bg-muted800 text-muted-foreground border border-border'
                     }`}
                   >
@@ -118,15 +118,15 @@ export default function CompaniesTable({
 
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-normal ${
                       c.status === 'ACTIVE'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                         : 'bg-slate-700/20 text-slate-400 border border-slate-700/40'
                     }`}
                   >
                     <span
                       className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                        c.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-slate-400'
+                        c.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
                       }`}
                     />
                     {c.status || 'ACTIVE'}
@@ -154,7 +154,7 @@ export default function CompaniesTable({
                       <button
                         type="button"
                         onClick={() => onEdit && onEdit(c)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted800 transition"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
                         title="Edit Company"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -167,7 +167,7 @@ export default function CompaniesTable({
                       <button
                         type="button"
                         onClick={() => onDelete && onDelete(c)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-muted800 transition"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
                         title="Delete Company"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -185,3 +185,4 @@ export default function CompaniesTable({
     </div>
   );
 }
+

@@ -52,7 +52,7 @@ export default function CompaniesGrid({
                     🏛️
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm group-hover:text-blue-400 transition truncate max-w-[190px]">
+                    <h3 className="font-normal text-foreground text-sm group-hover:text-blue-500 dark:group-hover:text-blue-400 transition truncate max-w-[190px]">
                       {c.name}
                     </h3>
                     <span className="text-[11px] text-muted-foreground truncate block max-w-[190px]">
@@ -62,15 +62,15 @@ export default function CompaniesGrid({
                 </div>
 
                 <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-normal shrink-0 ${
                     c.status === 'ACTIVE'
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
                       : 'bg-slate-700/20 text-slate-400 border border-slate-700/40'
                   }`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                      c.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-slate-400'
+                      c.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
                     }`}
                   />
                   {c.status || 'ACTIVE'}
@@ -81,15 +81,15 @@ export default function CompaniesGrid({
               <div className="grid grid-cols-2 gap-2 text-xs bg-muted800/40 p-2.5 rounded-lg border border-border/70 font-mono">
                 <div>
                   <span className="text-[10px] text-muted-foreground block uppercase font-sans">TIN Number</span>
-                  <span className="font-semibold text-foreground truncate block">
+                  <span className="font-normal text-foreground truncate block">
                     {c.tinNumber || '—'}
                   </span>
                 </div>
                 <div>
                   <span className="text-[10px] text-muted-foreground block uppercase font-sans">VAT Status</span>
                   <span
-                    className={`text-[10px] font-semibold ${
-                      c.isVatRegistered ? 'text-emerald-400' : 'text-muted-foreground'
+                    className={`text-[10px] font-normal ${
+                      c.isVatRegistered ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'
                     }`}
                   >
                     {c.isVatRegistered ? 'Registered' : 'Non-VAT'}
@@ -101,20 +101,20 @@ export default function CompaniesGrid({
               <div className="space-y-1.5 text-[11px] text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Region:</span>
-                  <strong className="text-foreground">{c.region?.name || '—'}</strong>
+                  <span className="text-foreground font-normal">{c.region?.name || '—'}</span>
                 </div>
 
                 {c.city && (
                   <div className="flex items-center justify-between">
                     <span>City:</span>
-                    <span className="text-foreground">{c.city}</span>
+                    <span className="text-foreground font-normal">{c.city}</span>
                   </div>
                 )}
 
                 {c.phone && (
                   <div className="flex items-center justify-between">
                     <span>Phone:</span>
-                    <span className="font-mono text-foreground">{c.phone}</span>
+                    <span className="font-mono text-foreground font-normal">{c.phone}</span>
                   </div>
                 )}
               </div>
@@ -126,9 +126,9 @@ export default function CompaniesGrid({
               onClick={(e) => e.stopPropagation()}
             >
               <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono text-[10px] ${
+                className={`inline-flex items-center px-2 py-0.5 rounded-md font-mono text-[10px] font-normal ${
                   branchCount > 0
-                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                     : 'bg-muted800 text-muted-foreground'
                 }`}
               >
@@ -152,7 +152,7 @@ export default function CompaniesGrid({
                   <button
                     type="button"
                     onClick={() => onEdit && onEdit(c)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted800 transition"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
                     title="Edit Company"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -165,7 +165,7 @@ export default function CompaniesGrid({
                   <button
                     type="button"
                     onClick={() => onDelete && onDelete(c)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-muted800 transition"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
                     title="Delete Company"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -181,3 +181,4 @@ export default function CompaniesGrid({
     </div>
   );
 }
+

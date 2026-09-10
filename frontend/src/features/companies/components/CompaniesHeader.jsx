@@ -9,10 +9,10 @@ export default function CompaniesHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          <span>🏛️</span> Enterprises & Companies
+        <h1 className="text-2xl sm:text-3xl font-normal text-foreground tracking-tight flex items-center gap-3">
+          <span>Enterprises & Companies</span>
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">
           Manage corporate entities, legal trade licenses, TIN numbers, and subsidiary networks
         </p>
       </div>
