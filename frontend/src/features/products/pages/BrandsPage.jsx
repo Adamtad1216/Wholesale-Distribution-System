@@ -8,9 +8,9 @@ export default function BrandsPage() {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const { can: canCreateBrand } = usePermission(['brands:create', 'products:create']);
-  const { can: canUpdateBrand } = usePermission(['brands:update', 'products:update']);
-  const { can: canDeleteBrand } = usePermission(['brands:delete', 'products:delete']);
+  const { can: canCreateBrand } = usePermission('brands:create');
+  const { can: canUpdateBrand } = usePermission('brands:update');
+  const { can: canDeleteBrand } = usePermission('brands:delete');
 
   const fetchBrands = useCallback(async () => {
     try {
@@ -40,7 +40,7 @@ export default function BrandsPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🏷️</span>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">
               Brands & Manufacturers
             </h1>
           </div>
@@ -54,10 +54,10 @@ export default function BrandsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-normal text-muted-foreground uppercase tracking-wider block">
               Total Brands
             </span>
-            <span className="text-2xl font-bold text-foreground mt-1 block">
+            <span className="text-2xl font-normal text-foreground mt-1 block">
               {loading ? '—' : brands.length}
             </span>
           </div>
@@ -68,10 +68,10 @@ export default function BrandsPage() {
 
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-normal text-muted-foreground uppercase tracking-wider block">
               Active Brands
             </span>
-            <span className="text-2xl font-bold text-emerald-500 mt-1 block">
+            <span className="text-2xl font-normal text-emerald-500 mt-1 block">
               {loading ? '—' : activeBrandsCount}
             </span>
           </div>

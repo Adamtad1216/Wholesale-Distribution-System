@@ -8,9 +8,9 @@ export default function UnitsPage() {
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const { can: canCreateUnit } = usePermission(['units:create', 'products:create']);
-  const { can: canUpdateUnit } = usePermission(['units:update', 'products:update']);
-  const { can: canDeleteUnit } = usePermission(['units:delete', 'products:delete']);
+  const { can: canCreateUnit } = usePermission('units:create');
+  const { can: canUpdateUnit } = usePermission('units:update');
+  const { can: canDeleteUnit } = usePermission('units:delete');
 
   const fetchUnits = useCallback(async () => {
     try {
@@ -38,7 +38,7 @@ export default function UnitsPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">⚖️</span>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">
               Units of Measure
             </h1>
           </div>
@@ -52,10 +52,10 @@ export default function UnitsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-normal text-muted-foreground uppercase tracking-wider block">
               Configured Measurement Units
             </span>
-            <span className="text-2xl font-bold text-foreground mt-1 block">
+            <span className="text-2xl font-normal text-foreground mt-1 block">
               {loading ? '—' : units.length}
             </span>
           </div>
@@ -66,7 +66,7 @@ export default function UnitsPage() {
 
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-normal text-muted-foreground uppercase tracking-wider block">
               Common Standards
             </span>
             <span className="text-xs text-muted-foreground mt-1 block">

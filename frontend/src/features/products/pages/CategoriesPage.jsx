@@ -8,9 +8,9 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const { can: canCreateCategory } = usePermission(['categories:create', 'products:create']);
-  const { can: canUpdateCategory } = usePermission(['categories:update', 'products:update']);
-  const { can: canDeleteCategory } = usePermission(['categories:delete', 'products:delete']);
+  const { can: canCreateCategory } = usePermission('categories:create');
+  const { can: canUpdateCategory } = usePermission('categories:update');
+  const { can: canDeleteCategory } = usePermission('categories:delete');
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -41,7 +41,7 @@ export default function CategoriesPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">📁</span>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-normal tracking-tight text-foreground">
               Product Categories
             </h1>
           </div>
@@ -55,10 +55,10 @@ export default function CategoriesPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-normal text-muted-foreground uppercase tracking-wider block">
               Total Categories
             </span>
-            <span className="text-2xl font-bold text-foreground mt-1 block">
+            <span className="text-2xl font-normal text-foreground mt-1 block">
               {loading ? '—' : categories.length}
             </span>
           </div>
@@ -69,10 +69,10 @@ export default function CategoriesPage() {
 
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-normal text-muted-foreground uppercase tracking-wider block">
               Root / Main Categories
             </span>
-            <span className="text-2xl font-bold text-emerald-500 mt-1 block">
+            <span className="text-2xl font-normal text-emerald-500 mt-1 block">
               {loading ? '—' : rootCategoriesCount}
             </span>
           </div>
@@ -83,10 +83,10 @@ export default function CategoriesPage() {
 
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+            <span className="text-xs font-normal text-muted-foreground uppercase tracking-wider block">
               Nested Subcategories
             </span>
-            <span className="text-2xl font-bold text-sky-500 mt-1 block">
+            <span className="text-2xl font-normal text-sky-500 mt-1 block">
               {loading ? '—' : subcategoriesCount}
             </span>
           </div>
