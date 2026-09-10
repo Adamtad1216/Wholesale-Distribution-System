@@ -41,6 +41,7 @@ import {
   getTransferById,
   updateTransfer,
   deleteTransfer,
+  approveOrRejectTransfer,
 } from '../../../src/modules/07-inventory/transfers/transfers.service.js';
 
 describe('Stock Transfers Service (Unit)', () => {
@@ -193,23 +194,20 @@ describe('Stock Transfers Service (Unit)', () => {
     expect(result.id).toBe('transfer-123');
     expect(result.quantity).toBe(30);
 
-    // Verify stock updates:
-    // Source: 100 - 30 = 70
+    // New behaviour: create only holds (reserves) source availableQuantity
+    // Total quantity on source is NOT changed until approval.
+    // No destination stock change at create time.
     expect(mockTx.warehouseStock.update).toHaveBeenCalledWith({
       where: { id: 'src-stock-id' },
       data: expect.objectContaining({
-        quantity: 70,
+        // Source availableQuantity reduced by 30: 100 - 30 = 70
         availableQuantity: 70,
       }),
     });
-    // Destination: 10 + 30 = 40
-    expect(mockTx.warehouseStock.update).toHaveBeenCalledWith({
-      where: { id: 'dest-stock-id' },
-      data: expect.objectContaining({
-        quantity: 40,
-        availableQuantity: 40,
-      }),
-    });
+    // Destination is NOT touched at create time
+    expect(mockTx.warehouseStock.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'dest-stock-id' } })
+    );
 
     // Verify notifications (creator, destination manager, source manager):
     expect(mockTx.notification.create).toHaveBeenCalled();
@@ -341,40 +339,45 @@ describe('Stock Transfers Service (Unit)', () => {
 
       const res = await updateTransfer('t-123', { quantity: 40 }, userId);
       expect(res.quantity).toBe(40);
-      // delta = +10: source decreases by 10 (50-10=40), destination increases by 10 (30+10=40)
+      // New behaviour: only source availableQuantity hold is extended by delta (+10)
+      // Source hold: 50 available - 10 delta = 40
       expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'src-stock' }, data: expect.objectContaining({ quantity: 40 }) })
+        expect.objectContaining({ where: { id: 'src-stock' }, data: expect.objectContaining({ availableQuantity: 40 }) })
       );
-      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'dest-stock' }, data: expect.objectContaining({ quantity: 40 }) })
+      // Destination is NOT touched until approval
+      expect(mockTx.warehouseStock.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'dest-stock' } })
       );
     });
 
-    it('should throw 400 when reducing transfer quantity but destination lacks stock to return', async () => {
+    it('should release partial hold back to source when reducing transfer quantity (PENDING)', async () => {
       prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(existingTransfer);
       const mockTx = {
         warehouseStock: {
-          findFirst: vi.fn().mockResolvedValueOnce({
-            id: 'dest-stock',
-            quantity: 2,
-            availableQuantity: 2,
-          }),
+          findFirst: vi.fn()
+            .mockResolvedValueOnce({ id: 'src-stock', quantity: 50, availableQuantity: 30 }),
+          update: vi.fn().mockResolvedValue({}),
         },
+        warehouseStockTransfer: {
+          update: vi.fn().mockResolvedValue({ ...existingTransfer, quantity: 20 }),
+        },
+        notification: { create: vi.fn() },
       };
       prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
 
-      // Decrease quantity from 30 to 20 (returnQty = 10, but destination only has 2 available)
+      // Decrease quantity from 30 to 20 (releaseQty = 10 back to source)
       await expect(
         updateTransfer('t-123', { quantity: 20 }, userId)
-      ).rejects.toThrow('destination warehouse "Branch Warehouse" has insufficient available stock to return');
+      ).resolves.toBeDefined();
     });
+
 
     it('should successfully decrease transfer quantity and return stock to source', async () => {
       prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(existingTransfer);
       const mockTx = {
         warehouseStock: {
+          // New behaviour: only source stock is looked up when reducing a PENDING transfer
           findFirst: vi.fn()
-            .mockResolvedValueOnce({ id: 'dest-stock', quantity: 30, availableQuantity: 30 })
             .mockResolvedValueOnce({ id: 'src-stock', quantity: 40, availableQuantity: 40 }),
           update: vi.fn().mockResolvedValue({}),
         },
@@ -387,14 +390,17 @@ describe('Stock Transfers Service (Unit)', () => {
 
       const res = await updateTransfer('t-123', { quantity: 20 }, userId);
       expect(res.quantity).toBe(20);
-      // returnQty = 10: destination decreases by 10 (30-10=20), source increases by 10 (40+10=50)
+      // New behaviour: releaseQty = 10 is returned to source availableQuantity (hold released)
+      // Source: 40 available + 10 released = 50
       expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'dest-stock' }, data: expect.objectContaining({ quantity: 20 }) })
+        expect.objectContaining({ where: { id: 'src-stock' }, data: expect.objectContaining({ availableQuantity: 50 }) })
       );
-      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'src-stock' }, data: expect.objectContaining({ quantity: 50 }) })
+      // Destination is not touched (no stock moved yet)
+      expect(mockTx.warehouseStock.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'dest-stock' } })
       );
     });
+
   });
 
   describe('deleteTransfer', () => {
@@ -414,26 +420,79 @@ describe('Stock Transfers Service (Unit)', () => {
       await expect(deleteTransfer('t-nonexistent', userId)).rejects.toThrow('Stock transfer not found');
     });
 
-    it('should throw 400 when destination warehouse lacks stock to reverse', async () => {
-      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(existingTransfer);
+    it('should release the source hold when deleting a PENDING transfer (no stock moved)', async () => {
+      const pendingTransfer = { ...existingTransfer, status: 'PENDING' };
+      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(pendingTransfer);
       const mockTx = {
         warehouseStock: {
           findFirst: vi.fn().mockResolvedValueOnce({
-            id: 'dest-stock',
-            quantity: 10,
-            availableQuantity: 10,
+            id: 'src-stock',
+            quantity: 50,
+            availableQuantity: 25,
+            isArchived: false,
           }),
+          update: vi.fn().mockResolvedValue({}),
         },
+        warehouseStockTransfer: {
+          update: vi.fn().mockResolvedValue({ id: 't-123', isArchived: true }),
+        },
+        notification: { create: vi.fn() },
       };
       prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
 
-      await expect(deleteTransfer('t-123', userId)).rejects.toThrow(
-        'destination warehouse "Branch Warehouse" does not have enough available stock'
+      const res = await deleteTransfer('t-123', userId);
+      expect(res.deleted).toBe(true);
+
+      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'src-stock' }, data: expect.objectContaining({ availableQuantity: 50 }) })
+      );
+      expect(mockTx.warehouseStockTransfer.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 't-123' }, data: expect.objectContaining({ isArchived: true }) })
       );
     });
 
-    it('should successfully reverse stock balances, soft-delete record, and notify managers', async () => {
-      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(existingTransfer);
+    it('should force-reverse an APPROVED transfer even when destination stock was fully consumed (clamp to 0)', async () => {
+      // Destination has 0 available (stock was consumed) but quantity still shows 30
+      const approvedTransfer = { ...existingTransfer, status: 'APPROVED' };
+      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(approvedTransfer);
+      const mockTx = {
+        warehouseStock: {
+          findFirst: vi.fn()
+            // dest stock: 30 quantity but 0 available (all consumed/reserved)
+            .mockResolvedValueOnce({ id: 'dest-stock', quantity: 30, availableQuantity: 0, isArchived: false })
+            // source stock: active, restore here
+            .mockResolvedValueOnce({ id: 'src-stock', quantity: 20, availableQuantity: 20, isArchived: false }),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        warehouseStockTransfer: {
+          update: vi.fn().mockResolvedValue({ id: 't-123', isArchived: true }),
+        },
+        notification: { create: vi.fn() },
+      };
+      prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
+
+      const res = await deleteTransfer('t-123', userId);
+      expect(res.deleted).toBe(true);
+
+      // Destination: quantity 30-25=5 clamped... actually 30-25=5, availQty clamped 0-0=0
+      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'dest-stock' },
+          data: expect.objectContaining({ quantity: 5, availableQuantity: 0 }),
+        })
+      );
+      // Source: quantity 20+25=45, availableQuantity 20+25=45
+      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'src-stock' },
+          data: expect.objectContaining({ quantity: 45 }),
+        })
+      );
+    });
+
+    it('should fully reverse stock when deleting an APPROVED transfer (normal case)', async () => {
+      const approvedTransfer = { ...existingTransfer, status: 'APPROVED' };
+      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(approvedTransfer);
       const mockTx = {
         warehouseStock: {
           findFirst: vi.fn()
@@ -451,12 +510,10 @@ describe('Stock Transfers Service (Unit)', () => {
       const res = await deleteTransfer('t-123', userId);
       expect(res.deleted).toBe(true);
 
-      // Reversal verification:
-      // Destination deducted by 25: 25 - 25 = 0
+      // Full reversal: destination deducted by 25 (25-25=0), source restored by 25 (50+25=75)
       expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'dest-stock' }, data: expect.objectContaining({ quantity: 0 }) })
       );
-      // Source incremented by 25: 50 + 25 = 75
       expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'src-stock' }, data: expect.objectContaining({ quantity: 75 }) })
       );
@@ -464,8 +521,137 @@ describe('Stock Transfers Service (Unit)', () => {
       expect(mockTx.warehouseStockTransfer.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 't-123' }, data: expect.objectContaining({ isArchived: true }) })
       );
-      // Notification created:
+      // Notifications dispatched:
       expect(mockTx.notification.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('approveOrRejectTransfer', () => {
+    const existingTransfer = {
+      id: 't-123',
+      fromWarehouseId,
+      toWarehouseId,
+      productId,
+      quantity: 15,
+      status: 'PENDING',
+      createdById: userId,
+      fromWarehouse: { id: fromWarehouseId, name: 'Main Warehouse' },
+      toWarehouse: { id: toWarehouseId, name: 'Branch Warehouse' },
+      product: { id: productId, name: 'Sugar 50kg' },
+    };
+
+    it('should throw 400 when transfer is already approved', async () => {
+      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce({
+        ...existingTransfer,
+        status: 'APPROVED',
+      });
+      await expect(
+        approveOrRejectTransfer('t-123', { action: 'APPROVE' }, userId)
+      ).rejects.toThrow('Stock transfer has already been approved');
+    });
+
+    it('should successfully approve transfer and credit active destination stock', async () => {
+      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(existingTransfer);
+      const mockTx = {
+        warehouseStock: {
+          findFirst: vi.fn()
+            // source stock: deduct total quantity
+            .mockResolvedValueOnce({ id: 'src-stock', quantity: 50, availableQuantity: 35, reorderLevel: 5 })
+            // dest stock: active, credit quantity & availableQuantity
+            .mockResolvedValueOnce({ id: 'dest-stock', quantity: 10, availableQuantity: 10, isArchived: false }),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        warehouseStockTransfer: {
+          update: vi.fn().mockResolvedValue({ ...existingTransfer, status: 'APPROVED' }),
+        },
+        notification: { create: vi.fn() },
+      };
+      prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
+
+      const res = await approveOrRejectTransfer('t-123', { action: 'APPROVE' }, userId);
+      expect(res.status).toBe('APPROVED');
+
+      // Source stock: 50 - 15 = 35 total quantity
+      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'src-stock' },
+          data: expect.objectContaining({ quantity: 35 }),
+        })
+      );
+
+      // Destination stock: 10 + 15 = 25
+      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'dest-stock' },
+          data: expect.objectContaining({ quantity: 25, availableQuantity: 25 }),
+        })
+      );
+    });
+
+    it('should restore archived destination stock when approving transfer', async () => {
+      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(existingTransfer);
+      const mockTx = {
+        warehouseStock: {
+          findFirst: vi.fn()
+            // source stock
+            .mockResolvedValueOnce({ id: 'src-stock', quantity: 50, availableQuantity: 35, reorderLevel: 5 })
+            // dest stock: soft-deleted/archived previously
+            .mockResolvedValueOnce({ id: 'dest-stock-archived', quantity: 0, availableQuantity: 0, isArchived: true }),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        warehouseStockTransfer: {
+          update: vi.fn().mockResolvedValue({ ...existingTransfer, status: 'APPROVED' }),
+        },
+        notification: { create: vi.fn() },
+      };
+      prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
+
+      const res = await approveOrRejectTransfer('t-123', { action: 'APPROVE' }, userId);
+      expect(res.status).toBe('APPROVED');
+
+      // Destination stock should be restored with un-archive flags and transfer quantity
+      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'dest-stock-archived' },
+          data: expect.objectContaining({
+            quantity: 15,
+            availableQuantity: 15,
+            isArchived: false,
+            archivedAt: null,
+          }),
+        })
+      );
+    });
+
+    it('should release source hold when rejecting a transfer', async () => {
+      prisma.warehouseStockTransfer.findFirst.mockResolvedValueOnce(existingTransfer);
+      const mockTx = {
+        warehouseStock: {
+          findFirst: vi.fn().mockResolvedValueOnce({
+            id: 'src-stock',
+            quantity: 50,
+            availableQuantity: 35,
+            isArchived: false,
+          }),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        warehouseStockTransfer: {
+          update: vi.fn().mockResolvedValue({ ...existingTransfer, status: 'REJECTED' }),
+        },
+        notification: { create: vi.fn() },
+      };
+      prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
+
+      const res = await approveOrRejectTransfer('t-123', { action: 'REJECT', notes: 'Damaged packaging' }, userId);
+      expect(res.status).toBe('REJECTED');
+
+      // Source available quantity restored: 35 + 15 = 50
+      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'src-stock' },
+          data: expect.objectContaining({ availableQuantity: 50 }),
+        })
+      );
     });
   });
 });
