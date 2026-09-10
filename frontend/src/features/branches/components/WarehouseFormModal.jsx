@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
+import { branchesApi } from '../branchesApi';
 
 export default function WarehouseFormModal({
   isOpen = false,
@@ -30,6 +31,24 @@ export default function WarehouseFormModal({
   });
 
   const [errors, setErrors] = useState({});
+  const [managers, setManagers] = useState(employees);
+  const [loadingManagers, setLoadingManagers] = useState(false);
+
+  // Fetch eligible managers dynamically if not provided
+  useEffect(() => {
+    if (employees && employees.length > 0) {
+      setManagers(employees);
+    } else if (isOpen) {
+      setLoadingManagers(true);
+      branchesApi.getEligibleWarehouseManagers()
+        .then((res) => {
+          const list = res?.data || res || [];
+          setManagers(Array.isArray(list) ? list : []);
+        })
+        .catch(() => {})
+        .finally(() => setLoadingManagers(false));
+    }
+  }, [isOpen, employees]);
 
   useEffect(() => {
     if (warehouse) {
@@ -86,7 +105,11 @@ export default function WarehouseFormModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    onSave(formData);
+    const payload = {
+      ...formData,
+      managerId: formData.managerId?.trim() ? formData.managerId : null,
+    };
+    onSave(payload);
   };
 
   return (
@@ -217,26 +240,67 @@ export default function WarehouseFormModal({
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-medium text-foreground mb-1">
-                Warehouse Custodian / Manager
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-medium text-foreground">
+                  Warehouse Custodian / Manager
+                </label>
+                {loadingManagers && (
+                  <span className="text-[10px] text-muted-foreground animate-pulse">
+                    Loading managers...
+                  </span>
+                )}
+              </div>
               <select
                 value={formData.managerId}
                 onChange={(e) => handleChange('managerId', e.target.value)}
                 className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                <option value="">Unassigned (Select Employee)</option>
-                {employees.map((emp) => {
-                  const empName = emp.person
+                <option value="">Unassigned (No Manager)</option>
+                {managers.map((emp) => {
+                  const empName = emp.name || (emp.person
                     ? `${emp.person.firstName || ''} ${emp.person.lastName || ''}`.trim()
-                    : emp.name || emp.id;
+                    : emp.employeeCode || emp.id);
+                  const role = emp.primaryRole || emp.department || 'Employee';
+                  const whNote = emp.currentWarehouse
+                    ? ` • Currently at ${emp.currentWarehouse}`
+                    : '';
                   return (
                     <option key={emp.id} value={emp.id}>
-                      {empName}
+                      {empName} ({emp.employeeCode || 'EMP'}) — {role}{whNote}
                     </option>
                   );
                 })}
               </select>
+
+              {/* Selected manager preview badge */}
+              {formData.managerId && (() => {
+                const selected = managers.find((m) => m.id === formData.managerId);
+                if (!selected) return null;
+                const selName = selected.name || (selected.person
+                  ? `${selected.person.firstName || ''} ${selected.person.lastName || ''}`.trim()
+                  : selected.employeeCode);
+                return (
+                  <div className="mt-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-400 font-bold text-xs">👤</span>
+                      <div>
+                        <span className="font-semibold text-foreground">{selName}</span>
+                        <span className="text-muted-foreground block text-[10px]">
+                          Code: {selected.employeeCode} • {selected.primaryRole || selected.department || 'Manager'}
+                          {selected.phone ? ` • Tel: ${selected.phone}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleChange('managerId', '')}
+                      className="text-[10px] text-rose-400 hover:underline px-1.5 py-0.5"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
 
             <div>
