@@ -58,7 +58,7 @@ export default function QuickUnitModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5">
+          <label className="block text-xs font-normal text-foreground mb-1.5">
             Unit Name <span className="text-rose-500">*</span>
           </label>
           <input
@@ -73,7 +73,7 @@ export default function QuickUnitModal({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5">
+          <label className="block text-xs font-normal text-foreground mb-1.5">
             Abbreviation / Symbol <span className="text-rose-500">*</span>
           </label>
           <input

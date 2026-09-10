@@ -55,7 +55,7 @@ export default function QuickBrandModal({
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5">
+          <label className="block text-xs font-normal text-foreground mb-1.5">
             Brand Name <span className="text-rose-500">*</span>
           </label>
           <input
@@ -70,7 +70,7 @@ export default function QuickBrandModal({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5">
+          <label className="block text-xs font-normal text-foreground mb-1.5">
             Description <span className="text-muted-foreground font-normal">(Optional)</span>
           </label>
           <textarea
