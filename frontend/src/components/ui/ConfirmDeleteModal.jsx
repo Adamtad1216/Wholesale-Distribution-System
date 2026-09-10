@@ -9,7 +9,11 @@ export default function ConfirmDeleteModal({
   title = 'Confirm Deletion',
   message = 'Are you sure you want to delete this item? This action cannot be undone.',
   submitting = false,
+  isDeleting,
+  confirmText = 'Yes, Delete Item',
+  busyText = 'Processing...',
 }) {
+  const isBusy = Boolean(submitting || isDeleting);
   return (
     <Modal
       isOpen={isOpen}
@@ -30,7 +34,7 @@ export default function ConfirmDeleteModal({
             variant="secondary"
             size="md"
             onClick={onClose}
-            disabled={submitting}
+            disabled={isBusy}
           >
             Cancel
           </Button>
@@ -39,10 +43,10 @@ export default function ConfirmDeleteModal({
             variant="danger"
             size="md"
             onClick={onConfirm}
-            disabled={submitting}
+            disabled={isBusy}
             className="shadow-lg shadow-rose-500/20"
           >
-            {submitting ? 'Deleting...' : 'Yes, Delete Item'}
+            {isBusy ? busyText : confirmText}
           </Button>
         </div>
       </div>
