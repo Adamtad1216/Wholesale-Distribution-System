@@ -3,7 +3,21 @@ import { toast } from 'react-hot-toast';
 import { companiesApi } from '../companiesApi';
 import { usePermission } from '../../../hooks/usePermission';
 import CompanyFormModal from '../components/CompanyFormModal';
+import Button from '../../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
+import {
+  Building2,
+  Shield,
+  Phone,
+  MapPin,
+  GitBranch,
+  Edit3,
+  Plus,
+  ExternalLink,
+  RefreshCw,
+  CheckCircle2,
+  Globe,
+} from 'lucide-react';
 
 export default function CompaniesPage() {
   const navigate = useNavigate();
@@ -65,395 +79,336 @@ export default function CompaniesPage() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-7xl mx-auto flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-3 text-slate-400">
-          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-semibold tracking-wide">Loading Enterprise Profile...</span>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-12 h-12">
+            <div className="w-12 h-12 border-4 border-slate-200 dark:border-slate-800 rounded-full absolute" />
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-normal text-foreground">Loading Enterprise Profile</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Fetching organization data...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+    <div className="space-y-6 w-full min-w-0">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Company Profile
-            </h1>
-            <span className="px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-              Master Enterprise
-            </span>
-          </div>
-          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl sm:text-3xl font-normal text-foreground tracking-tight flex items-center gap-3">
+            <span>Company Profile</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">
             Core organization identity, legal compliance, tax registrations, and operational branches.
           </p>
         </div>
 
-        {company ? (
-          canUpdate && (
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-600 hover:from-indigo-500 hover:to-blue-500 transition-all duration-200 active:scale-[0.98]"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit Company Profile
-            </button>
-          )
-        ) : (
+        <div className="flex items-center gap-2.5 self-start md:self-auto">
           <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all duration-200 active:scale-[0.98]"
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            className="p-2.5 rounded-xl border border-border bg-card hover:bg-slate-50 dark:hover:bg-muted800 text-muted-foreground hover:text-foreground transition flex items-center gap-2 text-xs font-normal"
+            title="Refresh enterprise profile data"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Initialize Enterprise Profile
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
+            <span className="hidden sm:inline">Sync Data</span>
           </button>
-        )}
+
+          {company ? (
+            canUpdate && (
+              <Button
+                variant="primary"
+                size="md"
+                icon={<Edit3 className="w-4 h-4" />}
+                onClick={() => setIsEditModalOpen(true)}
+              >
+                Edit Profile
+              </Button>
+            )
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-4 h-4" />}
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              Initialize Profile
+            </Button>
+          )}
+        </div>
       </div>
 
       {!company ? (
         /* Empty State */
-        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4-4H9m4 0H7" />
-            </svg>
+        <div className="bg-card border-2 border-dashed border-border rounded-2xl p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4 border border-blue-100 dark:border-blue-500/20">
+            <Building2 className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">No Enterprise Profile Found</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-2 mb-6">
-            Get started by initializing your primary enterprise company profile with your organization's legal name, TIN, trade license, and headquarters.
+          <h2 className="text-lg font-normal text-foreground mb-1">No Enterprise Profile Found</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto mb-5 leading-relaxed">
+            Get started by initializing your primary enterprise company profile with your organization&apos;s legal name, TIN, trade license, and headquarters.
           </p>
-          <button
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Plus className="w-4 h-4" />}
             onClick={() => setIsEditModalOpen(true)}
-            className="px-6 py-3 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-500 shadow-md transition"
           >
             Create Company Profile
-          </button>
+          </Button>
         </div>
       ) : (
-        /* Rich Enterprise Profile View */
+        /* Enterprise Profile View */
         <div className="space-y-6">
-          {/* Hero Banner Card */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-950 text-white p-6 sm:p-8 shadow-xl border border-indigo-500/20">
-            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-start sm:items-center gap-5">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center text-3xl font-black text-white shadow-inner flex-shrink-0 border-2 border-white/20">
-                  {company.name?.charAt(0)?.toUpperCase() || 'E'}
+          {/* Main Organization Identity Banner */}
+          <div className="rounded-2xl bg-card border border-border p-5 sm:p-6 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="relative w-16 h-16 shrink-0">
+                  <div className="w-full h-full rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center text-2xl font-normal shadow-xs">
+                    {company.name?.charAt(0)?.toUpperCase() || 'E'}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-card flex items-center justify-center text-white">
+                    <CheckCircle2 className="w-3 h-3" />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
+
+                <div className="space-y-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                    <h2 className="text-xl sm:text-2xl font-normal tracking-tight text-foreground">
                       {company.name}
                     </h2>
-                    <span className="px-3 py-0.5 text-xs font-extrabold uppercase rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span
+                      className={`px-2.5 py-0.5 text-xs font-normal uppercase rounded-full border ${
+                        company.status === 'ACTIVE'
+                          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                          : 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
+                      }`}
+                    >
                       {company.status || 'ACTIVE'}
                     </span>
                     {company.isVatRegistered && (
-                      <span className="px-2.5 py-0.5 text-xs font-extrabold uppercase rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      <span className="px-2.5 py-0.5 text-xs font-normal uppercase rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20">
                         VAT Registered
                       </span>
                     )}
                   </div>
-                  <p className="text-base font-semibold text-indigo-200">
-                    {company.legalName || company.name}
-                  </p>
-                  <p className="text-xs text-slate-400 flex items-center gap-2">
-                    <span>Region: <strong className="text-white">{company.region?.name || 'Central'}</strong></span>
+
+                  {company.legalName && company.legalName !== company.name && (
+                    <p className="text-xs sm:text-sm text-muted-foreground font-normal">
+                      Legal Entity: {company.legalName}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground font-normal pt-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      {company.region?.name || 'Central Region'}
+                    </span>
                     <span>•</span>
-                    <span>TIN: <strong className="text-white">{company.tinNumber || 'N/A'}</strong></span>
-                    <span>•</span>
-                    <span>License: <strong className="text-white">{company.tradeLicenseNumber || 'N/A'}</strong></span>
-                  </p>
+                    <span className="flex items-center gap-1.5">
+                      <GitBranch className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      {(company.branches?.length || 0)} Operational Facilities
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {canUpdate && (
-                <button
+                <Button
+                  variant="outline"
+                  size="md"
+                  icon={<Edit3 className="w-4 h-4" />}
                   onClick={() => setIsEditModalOpen(true)}
-                  className="self-start md:self-auto px-4 py-2 rounded-xl text-xs font-bold text-white bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 transition flex items-center gap-2"
+                  className="self-start sm:self-auto shrink-0"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
                   Edit Profile
-                </button>
+                </Button>
               )}
             </div>
           </div>
 
-          {/* Key Metric Highlights */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Branches</span>
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                {company.branchCount || company.branches?.length || 0}
-              </p>
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-1 block">Operational Facilities</span>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">VAT Compliance</span>
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                {company.isVatRegistered ? 'Registered' : 'Exempt'}
-              </p>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 block">
-                {company.vatRegistrationNumber || 'No VAT Number'}
-              </span>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">TIN Identifier</span>
-              <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1 truncate">
-                {company.tinNumber || 'Pending'}
-              </p>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 block">Tax Identity No.</span>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">License Status</span>
-              <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1 truncate">
-                {company.tradeLicenseNumber || 'Standard'}
-              </p>
-              <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mt-1 block">Verified Entity</span>
-            </div>
-          </div>
-
-          {/* Profile Details Breakdown Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Card 1: Legal & Corporate Identity */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4-4H9m4 0H7" />
-                  </svg>
+          {/* Two Non-Overlapping Panels (NO DUPLICATED DATA) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Panel 1: Legal & Tax Registration */}
+            <div className="bg-card rounded-2xl border border-border shadow-xs overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-slate-50/60 dark:bg-muted800/30">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 flex items-center justify-center">
+                  <Shield className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Corporate Identification
-                </h3>
+                <h3 className="text-sm font-normal text-foreground">Legal & Tax Registration</h3>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">Trade Name</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.name}</p>
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">Registered Legal Name</span>
+                  <p className="font-normal text-foreground">{company.legalName || company.name || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">Registered Legal Name</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.legalName || '-'}</p>
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">Trade License Number</span>
+                  <p className="font-normal text-foreground font-mono font-medium">{company.tradeLicenseNumber || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">Trade License Number</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.tradeLicenseNumber || '-'}</p>
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">Taxpayer Identification (TIN)</span>
+                  <p className="font-normal text-foreground font-mono font-medium">{company.tinNumber || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">Enterprise Status</span>
-                  <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{company.status || 'ACTIVE'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Tax & Legal Compliance */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Tax & Compliance
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">TIN Number</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.tinNumber || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">VAT Registration Status</span>
-                  <p className="font-bold mt-0.5">
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">VAT Registration</span>
+                  <p className="font-normal text-foreground">
                     {company.isVatRegistered ? (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">Registered (Subject to VAT)</span>
+                      <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-normal">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="font-mono">{company.vatRegistrationNumber || 'Registered'}</span>
+                      </span>
                     ) : (
-                      <span className="text-slate-500 font-semibold">Not Registered</span>
+                      <span className="text-muted-foreground">Exempt / Not Registered</span>
                     )}
                   </p>
                 </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">VAT Registration No.</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.vatRegistrationNumber || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">Operating Region</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                    {company.region?.name ? `${company.region.name} (${company.region.code || ''})` : '-'}
-                  </p>
-                </div>
               </div>
             </div>
 
-            {/* Card 3: Contact & Communications */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
+            {/* Panel 2: Contact & Headquarters */}
+            <div className="bg-card rounded-2xl border border-border shadow-xs overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-slate-50/60 dark:bg-muted800/30">
+                <div className="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-100 dark:border-sky-500/20 flex items-center justify-center">
+                  <Phone className="w-4 h-4" />
                 </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Contact & Communications
-                </h3>
+                <h3 className="text-sm font-normal text-foreground">Contact & Headquarters</h3>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">Primary Phone</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.phone || '-'}</p>
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">Telephone Contacts</span>
+                  <p className="font-normal text-foreground">
+                    {company.phone || '—'}
+                    {company.alternatePhone && ` • ${company.alternatePhone}`}
+                  </p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">Alternate Phone</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.alternatePhone || '-'}</p>
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">Corporate Email</span>
+                  <p className="font-normal text-foreground truncate">{company.email || '—'}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">Corporate Email</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.email || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">Official Website</span>
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">Official Website</span>
                   {company.website ? (
                     <a
                       href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline mt-0.5 block truncate"
+                      className="font-normal text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate"
                     >
-                      {company.website}
+                      <Globe className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{company.website}</span>
                     </a>
                   ) : (
-                    <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">-</p>
+                    <p className="font-normal text-foreground">—</p>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Card 4: Physical Headquarters Location */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Headquarters & Physical Address
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-xs text-slate-400 font-medium">City / Municipality</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.city || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">Sub-City</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{company.subCity || '-'}</p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">Woreda / Kebele</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                    {company.woreda ? `Woreda ${company.woreda}` : ''}
-                    {company.kebele ? ` / Kebele ${company.kebele}` : ''}
-                    {!company.woreda && !company.kebele ? '-' : ''}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-medium">House Number & Landmark</span>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                    {company.houseNumber ? `#${company.houseNumber}` : ''}
-                    {company.landmark ? ` (${company.landmark})` : ''}
-                    {!company.houseNumber && !company.landmark ? '-' : ''}
+                  <span className="text-xs text-muted-foreground font-normal block mb-1">Physical Headquarters</span>
+                  <p className="font-normal text-foreground leading-relaxed">
+                    {[
+                      company.city,
+                      company.subCity,
+                      company.woreda ? `Woreda ${company.woreda}` : null,
+                      company.kebele ? `Kebele ${company.kebele}` : null,
+                      company.houseNumber ? `#${company.houseNumber}` : null,
+                      company.landmark ? `(${company.landmark})` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || '—'}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Card 5: Operational Branches */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          {/* Operational Branches Section */}
+          <div className="bg-card rounded-2xl border border-border shadow-xs overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-slate-50/60 dark:bg-muted800/30">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0h4m-4 0H9m4-4H9m4 0H7" />
-                  </svg>
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center justify-center">
+                  <GitBranch className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Operational Branches & Depots
-                  </h3>
-                  <p className="text-xs text-slate-400">All registered distribution centers linked to this enterprise.</p>
+                  <h3 className="text-sm font-normal text-foreground">Operational Facilities & Hubs</h3>
+                  <p className="text-xs text-muted-foreground font-normal">Registered branch facilities associated with this enterprise.</p>
                 </div>
               </div>
-
               <button
+                type="button"
                 onClick={() => navigate('/branches')}
-                className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 flex items-center gap-1"
+                className="text-xs font-normal text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-slate-50 dark:hover:bg-muted800 transition"
               >
                 Manage Branches
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
+                <ExternalLink className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {company.branches && company.branches.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
-                {company.branches.map((b) => (
-                  <div
-                    key={b.id}
-                    onClick={() => navigate('/branches')}
-                    className="group cursor-pointer p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all hover:shadow-md"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                          {b.name}
-                        </h4>
-                        <span className="text-xs font-semibold text-slate-400 font-mono">
-                          {b.branchCode || b.code || 'BR-FACILITY'}
+            <div className="p-5">
+              {company.branches && company.branches.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {company.branches.map((b) => (
+                    <div
+                      key={b.id}
+                      onClick={() => navigate('/branches')}
+                      className="group cursor-pointer p-4 rounded-xl bg-card hover:bg-slate-50/70 dark:hover:bg-muted800/30 border border-border hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-xs"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="min-w-0">
+                          <h4 className="font-normal text-sm text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                            {b.name}
+                          </h4>
+                          <span className="text-xs font-normal text-muted-foreground font-mono">
+                            {b.branchCode || b.code || 'BR-FACILITY'}
+                          </span>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 text-[11px] font-normal rounded-full border shrink-0 ml-2 ${
+                            b.status === 'ACTIVE'
+                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20'
+                              : 'bg-slate-100 dark:bg-muted text-muted-foreground border-border'
+                          }`}
+                        >
+                          {b.status || 'ACTIVE'}
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 text-[11px] font-bold rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300">
-                        {b.status || 'ACTIVE'}
-                      </span>
+                      <div className="pt-3 border-t border-border/60 text-xs text-muted-foreground flex items-center justify-between font-normal">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {b.city || 'Regional Center'}
+                        </span>
+                        <span className="font-normal text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                          Details <ExternalLink className="w-3 h-3" />
+                        </span>
+                      </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                      <span>{b.city || 'Regional Center'}</span>
-                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">View Details ➔</span>
-                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-3 border border-blue-100 dark:border-blue-500/20">
+                    <GitBranch className="w-6 h-6" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400 italic py-4 text-center">
-                No active branches linked to this enterprise yet.
-              </p>
-            )}
+                  <p className="text-xs sm:text-sm text-muted-foreground font-normal">No operational branches linked yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/branches')}
+                    className="mt-2 text-xs font-normal text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Go to Branch Management →
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Audit Timestamp Footer */}
-          <div className="text-xs text-slate-400 dark:text-slate-500 flex flex-wrap items-center justify-between gap-3 px-2 pt-2">
-            <span>Enterprise ID: <code className="font-mono text-slate-600 dark:text-slate-300">{company.id}</code></span>
+          {/* Audit Footprint */}
+          <div className="text-xs text-muted-foreground flex flex-wrap items-center justify-end gap-3 px-1 font-normal">
             <span>
               Last Updated: {company.updatedAt ? new Date(company.updatedAt).toLocaleString() : 'N/A'}
             </span>
