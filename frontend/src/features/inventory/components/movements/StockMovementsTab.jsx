@@ -47,7 +47,7 @@ export default function StockMovementsTab({
       case 'TRANSFER_IN':
       case 'ADJUSTMENT_IN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
             <ArrowDownLeft className="w-3 h-3" />
             <span>{type.replace('_', ' ')}</span>
           </span>
@@ -57,21 +57,21 @@ export default function StockMovementsTab({
       case 'ADJUSTMENT_OUT':
       case 'PURCHASE_RETURN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
             <ArrowUpRight className="w-3 h-3" />
             <span>{type.replace('_', ' ')}</span>
           </span>
         );
       case 'SALES_RESERVATION':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
             <Layers className="w-3 h-3" />
             <span>RESERVED</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-normal bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/30">
             <span>{type?.replace('_', ' ') || 'MOVEMENT'}</span>
           </span>
         );
@@ -137,7 +137,7 @@ export default function StockMovementsTab({
             size="sm"
             onClick={onRefresh}
             disabled={loading}
-            className="flex items-center gap-1.5 font-bold"
+            className="flex items-center gap-1.5 font-normal"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -149,7 +149,7 @@ export default function StockMovementsTab({
       <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-muted/60 border-b border-border text-foreground font-bold uppercase tracking-wider text-[11px]">
+            <thead className="bg-muted/60 border-b border-border text-foreground font-normal uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="px-4 py-3.5">Timestamp</th>
                 <th className="px-4 py-3.5">Product</th>
@@ -175,7 +175,7 @@ export default function StockMovementsTab({
                   <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <History className="w-8 h-8 text-muted-foreground/50" />
-                      <span className="font-semibold text-foreground">No stock movement history found</span>
+                      <span className="font-normal text-foreground">No stock movement history found</span>
                       <span className="text-[11px]">Stock movements will be logged automatically on inventory additions, adjustments, and transfers.</span>
                     </div>
                   </td>
@@ -200,7 +200,7 @@ export default function StockMovementsTab({
                         <div className="flex items-center gap-2">
                           <Package className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                           <div>
-                            <span className="font-bold text-foreground block">
+                            <span className="font-normal text-foreground block">
                               {m.product?.name || 'Product'}
                             </span>
                             {m.product?.sku && (
@@ -223,7 +223,7 @@ export default function StockMovementsTab({
                       <td className="px-4 py-3 whitespace-nowrap">
                         {getMovementBadge(m.movementType)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap text-foreground text-sm">
+                      <td className="px-4 py-3 text-right font-mono font-normal whitespace-nowrap text-foreground text-sm">
                         {Number(m.quantity) > 0 ? `+${Number(m.quantity)}` : Number(m.quantity)}
                         {m.product?.unit?.abbreviation ? ` ${m.product.unit.abbreviation}` : ''}
                       </td>

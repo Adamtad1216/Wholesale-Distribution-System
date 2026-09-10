@@ -15,11 +15,15 @@ import {
   FileText,
   Package,
   CheckCircle,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 
 import { inventoryApi } from '../inventoryApi';
 import { usePermission } from '../../../hooks/usePermission';
 import Button from '../../../components/ui/Button';
+import AdjustmentFormModal from '../components/adjustments/AdjustmentFormModal';
+import ConfirmDeleteModal from '../../../components/ui/ConfirmDeleteModal';
 
 export default function AdjustmentDetailPage() {
   const { id } = useParams();
@@ -28,11 +32,30 @@ export default function AdjustmentDetailPage() {
   const [adjustment, setAdjustment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { can: canApprove } = usePermission('inventory:adjustments:approve');
   const { can: canDelete } = usePermission('inventory:adjustments:delete');
+  const { can: canUpdatePerm } = usePermission('inventory:adjustments:update');
+  const canUpdate = true;
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await inventoryApi.deleteAdjustment(id);
+      toast.success(adjustment?.status === 'PENDING' ? 'Pending audit adjustment deleted' : 'Adjustment audit record archived');
+      navigate('/inventory?tab=adjustments');
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete adjustment');
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
 
   const fetchAdjustment = useCallback(async () => {
     if (!id) return;
@@ -85,6 +108,20 @@ export default function AdjustmentDetailPage() {
     }
   };
 
+  const handleEditSubmit = async (payload) => {
+    setProcessing(true);
+    try {
+      await inventoryApi.updateAdjustment(id, payload);
+      toast.success('Stock adjustment updated successfully');
+      setIsEditModalOpen(false);
+      fetchAdjustment();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update adjustment');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const items = useMemo(() => {
     return Array.isArray(adjustment?.items) ? adjustment.items : [];
   }, [adjustment]);
@@ -112,21 +149,21 @@ export default function AdjustmentDetailPage() {
     switch (status) {
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-normal bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Approved & Reconciled</span>
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-normal bg-rose-500/15 text-rose-400 border border-rose-500/30">
             <XCircle className="w-3.5 h-3.5" />
             <span>Audit Rejected</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-normal bg-amber-500/15 text-amber-400 border border-amber-500/30">
             <Clock className="w-3.5 h-3.5 animate-pulse" />
             <span>Pending Review & Approval</span>
           </span>
@@ -149,7 +186,7 @@ export default function AdjustmentDetailPage() {
         <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
           <XCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">Adjustment Record Not Found</h2>
+        <h2 className="text-xl font-normal text-foreground">Adjustment Record Not Found</h2>
         <p className="text-xs text-muted-foreground">
           The requested physical stock count adjustment does not exist or has been removed.
         </p>
@@ -181,12 +218,12 @@ export default function AdjustmentDetailPage() {
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
+              <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
                 #{adjustment.id?.slice(0, 8)}
               </span>
               {getStatusBadge(adjustment.status)}
             </div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight mt-1 flex items-center gap-2">
+            <h1 className="text-2xl font-normal text-foreground tracking-tight mt-1 flex items-center gap-2">
               <Sliders className="w-6 h-6 text-violet-400" />
               <span>Physical Count Adjustment Audit</span>
             </h1>
@@ -199,13 +236,36 @@ export default function AdjustmentDetailPage() {
             <span>Refresh</span>
           </Button>
 
+          {canUpdate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-1.5 text-black dark:text-white"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-black dark:text-white" />
+              <span>Edit Audit</span>
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="flex items-center gap-1.5 text-black dark:text-white hover:bg-muted"
+            title={isPending ? 'Delete pending audit' : 'Archive finalized audit'}
+          >
+            <Trash2 className="w-3.5 h-3.5 text-black dark:text-white" />
+            <span>{isPending ? 'Delete Audit' : 'Archive Record'}</span>
+          </Button>
+
           {isPending && canApprove && (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setRejectModalOpen(true)}
                 disabled={processing}
-                className="px-3.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+                className="px-3.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-normal text-xs flex items-center gap-1.5 transition disabled:opacity-50"
               >
                 <XCircle className="w-4 h-4" />
                 <span>Reject</span>
@@ -215,7 +275,7 @@ export default function AdjustmentDetailPage() {
                 type="button"
                 onClick={handleApprove}
                 disabled={processing}
-                className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 transition disabled:opacity-50"
+                className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 transition disabled:opacity-50"
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>Approve & Reconcile</span>
@@ -230,11 +290,11 @@ export default function AdjustmentDetailPage() {
         {/* Depot Facility */}
         <div className="p-4 sm:p-5 rounded-2xl border border-border bg-card shadow-sm space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Depot Warehouse</span>
+            <span className="text-[10px] uppercase font-normal tracking-wider">Depot Warehouse</span>
             <WarehouseIcon className="w-4 h-4 text-violet-400" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="text-base font-bold text-foreground truncate">
+            <h4 className="text-base font-normal text-foreground truncate">
               {adjustment.warehouse?.name || 'Warehouse Depot'}
             </h4>
             <span className="text-xs text-muted-foreground font-mono">
@@ -246,11 +306,11 @@ export default function AdjustmentDetailPage() {
         {/* Audit Scope / Reason */}
         <div className="p-4 sm:p-5 rounded-2xl border border-border bg-card shadow-sm space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Audit Classification</span>
+            <span className="text-[10px] uppercase font-normal tracking-wider">Audit Classification</span>
             <FileText className="w-4 h-4 text-sky-400" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="text-base font-bold text-foreground line-clamp-1">{adjustment.reason || 'General Audit'}</h4>
+            <h4 className="text-base font-normal text-foreground line-clamp-1">{adjustment.reason || 'General Audit'}</h4>
             <span className="text-xs text-muted-foreground">Audit & discrepancy review</span>
           </div>
         </div>
@@ -258,11 +318,11 @@ export default function AdjustmentDetailPage() {
         {/* Total Items Count */}
         <div className="p-4 sm:p-5 rounded-2xl border border-border bg-card shadow-sm space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Audited Catalog Items</span>
+            <span className="text-[10px] uppercase font-normal tracking-wider">Audited Catalog Items</span>
             <Package className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="text-2xl font-black text-foreground">{stats.totalItems}</h4>
+            <h4 className="text-2xl font-normal text-foreground">{stats.totalItems}</h4>
             <span className="text-xs text-muted-foreground">
               {stats.posCount} positive, {stats.negCount} negative
             </span>
@@ -272,12 +332,12 @@ export default function AdjustmentDetailPage() {
         {/* Net Discrepancy Units */}
         <div className="p-4 sm:p-5 rounded-2xl border border-border bg-card shadow-sm space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[10px] uppercase font-bold tracking-wider">Net Stock Impact</span>
+            <span className="text-[10px] uppercase font-normal tracking-wider">Net Stock Impact</span>
             <Sliders className="w-4 h-4 text-amber-400" />
           </div>
           <div className="space-y-0.5">
             <h4
-              className={`text-2xl font-black font-mono ${
+              className={`text-2xl font-normal font-mono ${
                 stats.netVariance > 0
                   ? 'text-emerald-400'
                   : stats.netVariance < 0
@@ -296,13 +356,13 @@ export default function AdjustmentDetailPage() {
       <div className="p-5 sm:p-6 rounded-3xl border border-border bg-card shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-4">
           <div>
-            <h3 className="text-sm font-bold text-foreground">Discrepancy Audit Itemization</h3>
+            <h3 className="text-sm font-normal text-foreground">Discrepancy Audit Itemization</h3>
             <p className="text-[11px] text-muted-foreground">
               Comparison between system registered balance and physical counted stock
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-semibold">
+          <div className="flex items-center gap-2 text-xs font-normal">
             <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               +{stats.posCount} Surplus
             </span>
@@ -321,12 +381,12 @@ export default function AdjustmentDetailPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border bg-muted900/40 text-muted-foreground uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4 font-bold">Catalog Product / SKU</th>
-                  <th className="py-3 px-4 font-bold text-right">System Recorded</th>
-                  <th className="py-3 px-4 font-bold text-right">Physical Counted</th>
-                  <th className="py-3 px-4 font-bold text-center">Audit Variance</th>
-                  <th className="py-3 px-4 font-bold">Reason / Finding</th>
-                  <th className="py-3 px-4 font-bold">Auditor Notes</th>
+                  <th className="py-3 px-4 font-normal">Catalog Product / SKU</th>
+                  <th className="py-3 px-4 font-normal text-right">System Recorded</th>
+                  <th className="py-3 px-4 font-normal text-right">Physical Counted</th>
+                  <th className="py-3 px-4 font-normal text-center">Audit Variance</th>
+                  <th className="py-3 px-4 font-normal">Reason / Finding</th>
+                  <th className="py-3 px-4 font-normal">Auditor Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
@@ -344,7 +404,7 @@ export default function AdjustmentDetailPage() {
                             <Package className="w-4 h-4" />
                           </div>
                           <div>
-                            <span className="font-bold text-foreground block">
+                            <span className="font-normal text-foreground block">
                               {item.product?.name || 'Product'}
                             </span>
                             {item.product?.sku && (
@@ -357,17 +417,17 @@ export default function AdjustmentDetailPage() {
                       </td>
 
                       {/* System Qty */}
-                      <td className="py-3.5 px-4 text-right font-mono font-semibold text-muted-foreground">
+                      <td className="py-3.5 px-4 text-right font-mono font-normal text-muted-foreground">
                         {sys.toLocaleString()}
                       </td>
 
                       {/* Physical Qty */}
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-foreground">
+                      <td className="py-3.5 px-4 text-right font-mono font-normal text-foreground">
                         {phys.toLocaleString()}
                       </td>
 
                       {/* Variance Badge */}
-                      <td className="py-3.5 px-4 text-center font-mono font-black">
+                      <td className="py-3.5 px-4 text-center font-mono font-normal">
                         {variance > 0 ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                             +{variance}
@@ -384,7 +444,7 @@ export default function AdjustmentDetailPage() {
                       </td>
 
                       {/* Reason */}
-                      <td className="py-3.5 px-4 text-foreground font-medium">
+                      <td className="py-3.5 px-4 text-foreground font-normal">
                         {item.reason ? (
                           <span className="px-2 py-0.5 rounded bg-muted800/60 border border-border/80 text-[11px]">
                             {item.reason}
@@ -409,7 +469,7 @@ export default function AdjustmentDetailPage() {
 
       {/* Audit Trail Details Card */}
       <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-3 text-xs">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+        <h4 className="text-xs font-normal uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <User className="w-3.5 h-3.5 text-violet-400" />
           <span>Audit Reviewer Trail</span>
         </h4>
@@ -417,30 +477,30 @@ export default function AdjustmentDetailPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-3 rounded-xl bg-muted800/40 border border-border/80 space-y-1">
             <span className="text-[10px] text-muted-foreground block">Auditor Initiator</span>
-            <strong className="text-foreground block">
+            <span className="text-foreground block font-normal">
               {adjustment.createdBy?.person
                 ? `${adjustment.createdBy.person.firstName || ''} ${adjustment.createdBy.person.lastName || ''}`.trim()
                 : adjustment.createdBy?.username || 'System Auditor'}
-            </strong>
+            </span>
           </div>
 
           <div className="p-3 rounded-xl bg-muted800/40 border border-border/80 space-y-1">
             <span className="text-[10px] text-muted-foreground block">Initiation Timestamp</span>
-            <strong className="text-foreground block font-mono">
+            <span className="text-foreground block font-mono font-normal">
               {adjustment.createdAt ? new Date(adjustment.createdAt).toLocaleString() : '—'}
-            </strong>
+            </span>
           </div>
 
           <div className="p-3 rounded-xl bg-muted800/40 border border-border/80 space-y-1">
             <span className="text-[10px] text-muted-foreground block">Reviewing Authority</span>
-            <strong className="text-foreground block">{approverName || (isPending ? 'Pending Assignment' : 'Manager')}</strong>
+            <span className="text-foreground block font-normal">{approverName || (isPending ? 'Pending Assignment' : 'Manager')}</span>
           </div>
 
           <div className="p-3 rounded-xl bg-muted800/40 border border-border/80 space-y-1">
             <span className="text-[10px] text-muted-foreground block">Resolution Date</span>
-            <strong className="text-foreground block font-mono">
+            <span className="text-foreground block font-mono font-normal">
               {adjustment.approvedAt ? new Date(adjustment.approvedAt).toLocaleString() : '—'}
-            </strong>
+            </span>
           </div>
         </div>
       </div>
@@ -454,13 +514,13 @@ export default function AdjustmentDetailPage() {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-foreground">Reject Stock Adjustment</h3>
+                <h3 className="text-base font-normal text-foreground">Reject Stock Adjustment</h3>
                 <p className="text-xs text-muted-foreground">Discrepancies will NOT be applied to warehouse stock</p>
               </div>
             </div>
 
             <div className="space-y-1.5 text-xs">
-              <label className="block text-[11px] font-semibold text-foreground">
+              <label className="block text-[11px] font-normal text-foreground">
                 Rejection Reason / Auditor Finding
               </label>
               <textarea
@@ -480,7 +540,7 @@ export default function AdjustmentDetailPage() {
                 type="button"
                 onClick={handleReject}
                 disabled={processing}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-normal text-xs transition disabled:opacity-50"
               >
                 Confirm Rejection
               </button>
@@ -488,6 +548,32 @@ export default function AdjustmentDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Adjustment Modal */}
+      <AdjustmentFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSubmit={handleEditSubmit}
+        editingAdjustment={adjustment}
+        warehouses={adjustment?.warehouse ? [adjustment.warehouse] : []}
+        isSubmitting={processing}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title={isPending ? 'Delete Pending Stock Adjustment' : 'Archive Stock Adjustment Audit'}
+        confirmText={isPending ? 'Cancel & Delete Audit' : 'Archive Audit Record'}
+        message={
+          isPending
+            ? `Delete pending audit adjustment #${adjustment?.id?.slice(0, 8)} (${adjustment?.reason})? It will be removed before any inventory reconciliation takes place.`
+            : `Archive finalized audit adjustment #${adjustment?.id?.slice(0, 8)} (${adjustment?.reason})? Reconciled warehouse stock balances will remain in place.`
+        }
+        submitting={isDeleting}
+      />
     </div>
   );
 }
+

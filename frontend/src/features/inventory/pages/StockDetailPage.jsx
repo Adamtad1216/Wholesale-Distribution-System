@@ -84,7 +84,7 @@ export default function StockDetailPage() {
         <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
           <Package className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">Stock Record Not Found</h2>
+        <h2 className="text-xl font-normal text-foreground">Stock Record Not Found</h2>
         <p className="text-xs text-muted-foreground">
           The requested warehouse stock balance record does not exist or has been removed.
         </p>
@@ -113,23 +113,23 @@ export default function StockDetailPage() {
   if (avail <= 0) {
     health = {
       label: 'Out of Stock',
-      badgeClass: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30',
       dotClass: 'bg-rose-500',
       icon: <XCircle className="w-4 h-4" />,
       description: 'Zero available stock in this facility depot. Sales orders cannot be fulfilled from this depot.',
     };
-  } else if (avail <= min) {
+  } else if (min > 0 && avail <= min) {
     health = {
       label: 'Critical Safety Deficit',
-      badgeClass: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+      badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30',
       dotClass: 'bg-rose-500 animate-ping',
       icon: <AlertCircle className="w-4 h-4" />,
       description: 'Inventory has dropped below the minimum safety buffer. Urgent replenishment recommended.',
     };
-  } else if (avail <= reorder) {
+  } else if (reorder > 0 && avail <= reorder) {
     health = {
       label: 'Reorder Point Reached',
-      badgeClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+      badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30',
       dotClass: 'bg-amber-500 animate-pulse',
       icon: <AlertTriangle className="w-4 h-4" />,
       description: 'Stock is at or below the reorder trigger. Dispatch an inter-warehouse transfer or purchase order.',
@@ -152,16 +152,16 @@ export default function StockDetailPage() {
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
+              <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
                 {stock.warehouse?.name || 'Warehouse Depot'}
                 {stock.warehouse?.branch?.name ? ` (${stock.warehouse.branch.name})` : ''}
               </span>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${health.badgeClass}`}>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-normal border ${health.badgeClass}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${health.dotClass}`} />
                 <span>{health.label}</span>
               </span>
             </div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight mt-1 flex items-center gap-2">
+            <h1 className="text-2xl font-normal text-foreground tracking-tight mt-1 flex items-center gap-2">
               <Package className="w-6 h-6 text-violet-400" />
               <span>{stock.product?.name || 'Inventory Product'}</span>
             </h1>
@@ -207,7 +207,7 @@ export default function StockDetailPage() {
             {health.icon}
           </div>
           <div>
-            <h4 className="text-sm font-bold text-foreground">Stock Assessment: {health.label}</h4>
+            <h4 className="text-sm font-normal text-foreground">Stock Assessment: {health.label}</h4>
             <p className="text-xs opacity-90">{health.description}</p>
           </div>
         </div>
@@ -239,10 +239,10 @@ export default function StockDetailPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Available Qty */}
         <div className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 shadow-sm space-y-1">
-          <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
+          <span className="text-[10px] uppercase font-normal text-emerald-400 tracking-wider block">
             Available For Sale
           </span>
-          <span className="text-3xl font-black text-emerald-400 block font-mono">
+          <span className="text-3xl font-normal text-emerald-400 block font-mono">
             {avail.toLocaleString()}
           </span>
           <span className="text-[11px] text-muted-foreground">Uncommitted physical units</span>
@@ -250,10 +250,10 @@ export default function StockDetailPage() {
 
         {/* Reserved Qty */}
         <div className="p-5 rounded-2xl border border-sky-500/20 bg-sky-500/5 shadow-sm space-y-1">
-          <span className="text-[10px] uppercase font-bold text-sky-400 tracking-wider block">
+          <span className="text-[10px] uppercase font-normal text-sky-400 tracking-wider block">
             Reserved / Allocated
           </span>
-          <span className="text-3xl font-black text-sky-400 block font-mono">
+          <span className="text-3xl font-normal text-sky-400 block font-mono">
             {reserved.toLocaleString()}
           </span>
           <span className="text-[11px] text-muted-foreground">Held for pending sales orders</span>
@@ -261,10 +261,10 @@ export default function StockDetailPage() {
 
         {/* Total Qty On Hand */}
         <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-1">
-          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">
+          <span className="text-[10px] uppercase font-normal text-muted-foreground tracking-wider block">
             Total Facility On Hand
           </span>
-          <span className="text-3xl font-black text-foreground block font-mono">
+          <span className="text-3xl font-normal text-foreground block font-mono">
             {total.toLocaleString()}
           </span>
           <span className="text-[11px] text-muted-foreground">Available + Reserved units</span>
@@ -272,22 +272,22 @@ export default function StockDetailPage() {
 
         {/* Reorder Level */}
         <div className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 shadow-sm space-y-1">
-          <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider block">
+          <span className="text-[10px] uppercase font-medium text-amber-700 dark:text-amber-400 tracking-wider block">
             Reorder Threshold
           </span>
-          <span className="text-3xl font-black text-amber-400 block font-mono">
-            {reorder.toLocaleString()}
+          <span className="text-3xl font-medium text-amber-700 dark:text-amber-400 block font-mono">
+            {reorder > 0 ? reorder.toLocaleString() : 'Not set'}
           </span>
           <span className="text-[11px] text-muted-foreground">Restock trigger point</span>
         </div>
 
         {/* Minimum Stock */}
         <div className="p-5 rounded-2xl border border-rose-500/20 bg-rose-500/5 shadow-sm space-y-1">
-          <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider block">
+          <span className="text-[10px] uppercase font-medium text-rose-700 dark:text-rose-400 tracking-wider block">
             Minimum Safety Stock
           </span>
-          <span className="text-3xl font-black text-rose-400 block font-mono">
-            {min.toLocaleString()}
+          <span className="text-3xl font-medium text-rose-700 dark:text-rose-400 block font-mono">
+            {min > 0 ? min.toLocaleString() : 'Not set'}
           </span>
           <span className="text-[11px] text-muted-foreground">Absolute critical threshold</span>
         </div>
@@ -302,7 +302,7 @@ export default function StockDetailPage() {
               <WarehouseIcon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">Depot Facility Profile</h3>
+              <h3 className="text-sm font-normal text-foreground">Depot Facility Profile</h3>
               <p className="text-[11px] text-muted-foreground">Operating warehouse storing this inventory item</p>
             </div>
           </div>
@@ -310,15 +310,15 @@ export default function StockDetailPage() {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
               <span className="text-[10px] text-muted-foreground block mb-0.5">Facility Name</span>
-              <strong className="text-foreground">
+              <span className="text-foreground font-normal">
                 {stock.warehouse?.name || '—'}
                 {stock.warehouse?.branch?.name ? ` (${stock.warehouse.branch.name})` : ''}
-              </strong>
+              </span>
             </div>
 
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
               <span className="text-[10px] text-muted-foreground block mb-0.5">Facility Code</span>
-              <strong className="font-mono text-foreground">{stock.warehouse?.code || '—'}</strong>
+              <span className="font-mono text-foreground font-normal">{stock.warehouse?.code || '—'}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
@@ -330,7 +330,7 @@ export default function StockDetailPage() {
 
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
               <span className="text-[10px] text-muted-foreground block mb-0.5">Depot Operational Status</span>
-              <span className="font-bold text-emerald-400">Active Distribution Depot</span>
+              <span className="font-normal text-emerald-400">Active Distribution Depot</span>
             </div>
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function StockDetailPage() {
               <Package className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">Catalog Product Attributes</h3>
+              <h3 className="text-sm font-normal text-foreground">Catalog Product Attributes</h3>
               <p className="text-[11px] text-muted-foreground">Base product unit specifications and identifier</p>
             </div>
           </div>
@@ -350,27 +350,27 @@ export default function StockDetailPage() {
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
               <span className="text-[10px] text-muted-foreground block mb-0.5">Catalog Title</span>
-              <strong className="text-foreground truncate block">{stock.product?.name || '—'}</strong>
+              <span className="text-foreground truncate block font-normal">{stock.product?.name || '—'}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
               <span className="text-[10px] text-muted-foreground block mb-0.5">SKU Identifier</span>
-              <strong className="font-mono text-foreground">{stock.product?.sku || '—'}</strong>
+              <span className="font-mono text-foreground font-normal">{stock.product?.sku || '—'}</span>
             </div>
 
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
               <span className="text-[10px] text-muted-foreground block mb-0.5">Measurement Unit</span>
-              <strong className="text-foreground">
+              <span className="text-foreground font-normal">
                 {stock.product?.unit?.name || 'Standard Unit'}
                 {stock.product?.unit?.abbreviation ? ` (${stock.product.unit.abbreviation})` : ''}
-              </strong>
+              </span>
             </div>
 
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
               <span className="text-[10px] text-muted-foreground block mb-0.5">Product Detail Link</span>
               <Link
                 to={`/products/${stock.productId}`}
-                className="text-violet-400 hover:underline font-semibold flex items-center gap-1"
+                className="text-violet-400 hover:underline font-normal flex items-center gap-1"
               >
                 <span>Open Full Page</span>
                 <ExternalLink className="w-3 h-3" />

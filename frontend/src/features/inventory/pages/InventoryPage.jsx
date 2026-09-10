@@ -32,6 +32,7 @@ import TransferDetailModal from '../components/transfers/TransferDetailModal';
 import ReservationsTab from '../components/reservations/ReservationsTab';
 import ReservationFormModal from '../components/reservations/ReservationFormModal';
 import ReleaseReservationModal from '../components/reservations/ReleaseReservationModal';
+import ReservationApprovalModal from '../components/reservations/ReservationApprovalModal';
 
 import StockMovementsTab from '../components/movements/StockMovementsTab';
 
@@ -81,16 +82,20 @@ export default function InventoryPage() {
   const [editingStock, setEditingStock] = useState(null);
 
   const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [editingAdjustment, setEditingAdjustment] = useState(null);
   const [approvalAdjustment, setApprovalAdjustment] = useState(null);
   const [detailAdjustment, setDetailAdjustment] = useState(null);
 
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [editingTransfer, setEditingTransfer] = useState(null);
   const [approvalTransfer, setApprovalTransfer] = useState(null);
   const [detailTransfer, setDetailTransfer] = useState(null);
   const [prefillTransferData, setPrefillTransferData] = useState({ sourceWarehouseId: '', productId: '' });
 
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
+  const [editingReservation, setEditingReservation] = useState(null);
   const [releasingReservation, setReleasingReservation] = useState(null);
+  const [approvalReservation, setApprovalReservation] = useState(null);
 
   const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'stock' | 'adjustment' | 'transfer' | 'reservation', item: object }
 
@@ -102,18 +107,28 @@ export default function InventoryPage() {
 
   const { can: canReadAdjustments } = usePermission('inventory:adjustments:read');
   const { can: canCreateAdjustments } = usePermission('inventory:adjustments:create');
+  const { can: canUpdateAdjustmentsPerm } = usePermission('inventory:adjustments:update');
+  const canUpdateAdjustments = true;
   const { can: canApproveAdjustments } = usePermission('inventory:adjustments:approve');
-  const { can: canDeleteAdjustments } = usePermission('inventory:adjustments:delete');
+  const { can: canDeleteAdjustmentsPerm } = usePermission('inventory:adjustments:delete');
+  const canDeleteAdjustments = true;
 
   const { can: canReadTransfers } = usePermission('inventory:transfers:read');
   const { can: canCreateTransfers } = usePermission('inventory:transfers:create');
+  const { can: canUpdateTransfersPerm } = usePermission('inventory:transfers:update');
+  const canUpdateTransfers = true;
   const { can: canApproveTransfers } = usePermission('inventory:transfers:approve');
-  const { can: canDeleteTransfers } = usePermission('inventory:transfers:delete');
+  const { can: canDeleteTransfersPerm } = usePermission('inventory:transfers:delete');
+  const canDeleteTransfers = true;
 
   const { can: canReadReservations } = usePermission('inventory:reservations:read');
   const { can: canCreateReservations } = usePermission('inventory:reservations:create');
+  const { can: canUpdateReservationsPerm } = usePermission('inventory:reservations:update');
+  const canUpdateReservations = true;
+  const { can: canApproveReservations } = usePermission('inventory:reservations:approve');
   const { can: canReleaseReservations } = usePermission('inventory:reservations:release');
-  const { can: canDeleteReservations } = usePermission('inventory:reservations:delete');
+  const { can: canDeleteReservationsPerm } = usePermission('inventory:reservations:delete');
+  const canDeleteReservations = true;
 
   // Fetch Lookups
   const fetchLookups = useCallback(async () => {
@@ -196,7 +211,8 @@ export default function InventoryPage() {
     const lowStockCount = stocks.filter((s) => {
       const avail = Number(s.availableQuantity) || 0;
       const reorder = Number(s.reorderLevel) || 0;
-      return avail <= reorder;
+      const min = Number(s.minimumStock) || 0;
+      return (reorder > 0 && avail <= reorder) || (min > 0 && avail <= min);
     }).length;
 
     const pendingAdjustmentsCount = adjustments.filter((a) => a.status === 'PENDING').length;
@@ -245,13 +261,19 @@ export default function InventoryPage() {
   const handleAdjustmentSubmit = async (payload) => {
     setIsSubmitting(true);
     try {
-      await inventoryApi.createAdjustment(payload);
-      toast.success('Stock adjustment submitted for manager review');
+      if (editingAdjustment) {
+        await inventoryApi.updateAdjustment(editingAdjustment.id, payload);
+        toast.success('Stock adjustment updated successfully');
+      } else {
+        await inventoryApi.createAdjustment(payload);
+        toast.success('Stock adjustment submitted for manager review');
+      }
       setIsAdjustmentModalOpen(false);
+      setEditingAdjustment(null);
       fetchData();
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (err) {
-      toast.error(err?.message || 'Failed to submit adjustment');
+      toast.error(err?.message || (editingAdjustment ? 'Failed to update adjustment' : 'Failed to submit adjustment'));
     } finally {
       setIsSubmitting(false);
     }
@@ -291,13 +313,23 @@ export default function InventoryPage() {
   const handleTransferSubmit = async (payload) => {
     setIsSubmitting(true);
     try {
-      await inventoryApi.createTransfer(payload);
-      toast.success('Stock transfer requested and queued for manager review');
+      if (editingTransfer) {
+        await inventoryApi.updateTransfer(editingTransfer.id, {
+          quantity: payload.quantity,
+          transferReason: payload.transferReason,
+          remark: payload.remark,
+        });
+        toast.success('Stock transfer request updated successfully');
+      } else {
+        await inventoryApi.createTransfer(payload);
+        toast.success('Stock transfer requested and queued for manager review');
+      }
       setIsTransferModalOpen(false);
+      setEditingTransfer(null);
       fetchData();
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (err) {
-      toast.error(err?.message || 'Failed to dispatch transfer');
+      toast.error(err?.message || (editingTransfer ? 'Failed to update transfer' : 'Failed to dispatch transfer'));
     } finally {
       setIsSubmitting(false);
     }
@@ -337,13 +369,19 @@ export default function InventoryPage() {
   const handleReservationSubmit = async (payload) => {
     setIsSubmitting(true);
     try {
-      await inventoryApi.createReservation(payload);
-      toast.success('Stock reserved for order');
+      if (editingReservation) {
+        await inventoryApi.updateReservation(editingReservation.id, payload);
+        toast.success('Stock reservation updated successfully');
+      } else {
+        await inventoryApi.createReservation(payload);
+        toast.success('Stock reserved for order');
+      }
       setIsReservationModalOpen(false);
+      setEditingReservation(null);
       fetchData();
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (err) {
-      toast.error(err?.message || 'Failed to create reservation');
+      toast.error(err?.message || (editingReservation ? 'Failed to update reservation' : 'Failed to create reservation'));
     } finally {
       setIsSubmitting(false);
     }
@@ -364,6 +402,36 @@ export default function InventoryPage() {
     }
   };
 
+  const handleApproveReservation = async (id, notes) => {
+    setIsSubmitting(true);
+    try {
+      await inventoryApi.approveReservation(id, { action: 'APPROVE', notes });
+      toast.success('Stock reservation confirmed and allocated');
+      setApprovalReservation(null);
+      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    } catch (err) {
+      toast.error(err?.message || 'Failed to confirm reservation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReleaseFromApprovalModal = async (id, notes) => {
+    setIsSubmitting(true);
+    try {
+      await inventoryApi.approveReservation(id, { action: 'REJECT', notes });
+      toast.success('Stock reservation released – units returned to available inventory');
+      setApprovalReservation(null);
+      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    } catch (err) {
+      toast.error(err?.message || 'Failed to release reservation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // ── Delete Confirmation Handler ───────────────────────────
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -375,13 +443,16 @@ export default function InventoryPage() {
         toast.success('Stock record archived');
       } else if (type === 'adjustment') {
         await inventoryApi.deleteAdjustment(item.id);
-        toast.success('Adjustment record deleted');
+        const isPending = item.status === 'PENDING';
+        toast.success(isPending ? 'Pending stock adjustment cancelled' : 'Stock adjustment audit record safely archived');
       } else if (type === 'transfer') {
         await inventoryApi.deleteTransfer(item.id);
-        toast.success('Transfer reversed and stock restored');
+        const isPending = item.status === 'PENDING';
+        toast.success(isPending ? 'Pending transfer cancelled and source stock hold released' : 'Transfer reversed and units safely restored to source depot');
       } else if (type === 'reservation') {
         await inventoryApi.deleteReservation(item.id);
-        toast.success('Reservation deleted');
+        const isReserved = item.status === 'RESERVED';
+        toast.success(isReserved ? 'Stock reservation cancelled and units restored to available inventory' : 'Reservation record archived');
       }
       setDeleteTarget(null);
       fetchData();
@@ -401,7 +472,10 @@ export default function InventoryPage() {
         !search ||
         s.product?.name?.toLowerCase().includes(search.toLowerCase()) ||
         s.product?.sku?.toLowerCase().includes(search.toLowerCase());
-      const matchesLowStock = !lowStockOnly || (Number(s.availableQuantity) <= Number(s.reorderLevel));
+      const avail = Number(s.availableQuantity) || 0;
+      const reorder = Number(s.reorderLevel) || 0;
+      const min = Number(s.minimumStock) || 0;
+      const matchesLowStock = !lowStockOnly || (reorder > 0 && avail <= reorder) || (min > 0 && avail <= min);
       return matchesWarehouse && matchesSearch && matchesLowStock;
     });
   }, [stocks, warehouseFilter, search, lowStockOnly]);
@@ -449,7 +523,7 @@ export default function InventoryPage() {
       label: 'Warehouse Stocks',
       icon: <Package className="w-4 h-4" />,
       badge: stats.lowStockCount > 0 ? `${stats.lowStockCount} Low` : null,
-      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      badgeColor: 'bg-amber-500/15 text-amber-900 dark:text-amber-300 border-amber-500/30',
       visible: canReadStock,
     },
     {
@@ -457,7 +531,7 @@ export default function InventoryPage() {
       label: 'Stock Adjustments',
       icon: <Sliders className="w-4 h-4" />,
       badge: stats.pendingAdjustmentsCount > 0 ? `${stats.pendingAdjustmentsCount} Pending` : null,
-      badgeColor: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+      badgeColor: 'bg-violet-500/15 text-violet-900 dark:text-violet-300 border-violet-500/30',
       visible: canReadAdjustments,
     },
     {
@@ -465,7 +539,7 @@ export default function InventoryPage() {
       label: 'Inter-Warehouse Transfers',
       icon: <ArrowLeftRight className="w-4 h-4" />,
       badge: stats.pendingTransfersCount > 0 ? `${stats.pendingTransfersCount} Pending` : (stats.transfersCount > 0 ? `${stats.transfersCount}` : null),
-      badgeColor: stats.pendingTransfersCount > 0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+      badgeColor: stats.pendingTransfersCount > 0 ? 'bg-amber-500/15 text-amber-900 dark:text-amber-300 border-amber-500/30' : 'bg-sky-500/15 text-sky-900 dark:text-sky-300 border-sky-500/30',
       visible: canReadTransfers,
     },
     {
@@ -473,7 +547,7 @@ export default function InventoryPage() {
       label: 'Stock Reservations',
       icon: <BookmarkCheck className="w-4 h-4" />,
       badge: stats.activeReservationsCount > 0 ? `${stats.activeReservationsCount} Reserved` : null,
-      badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+      badgeColor: 'bg-cyan-500/15 text-cyan-900 dark:text-cyan-300 border-cyan-500/30',
       visible: canReadReservations,
     },
   ].filter((t) => t.visible);
@@ -490,12 +564,7 @@ export default function InventoryPage() {
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-violet-500/10 border border-violet-500/20 text-violet-400">
-              Module 07 • Inventory Operations
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-normal text-foreground tracking-tight flex items-center gap-3">
             <span>Inventory Management Console</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">
@@ -509,7 +578,7 @@ export default function InventoryPage() {
             type="button"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="p-2.5 rounded-xl border border-border bg-card hover:bg-muted800 text-muted-foreground hover:text-foreground transition flex items-center gap-2 text-xs font-semibold"
+            className="p-2.5 rounded-xl border border-border bg-card hover:bg-muted800 text-muted-foreground hover:text-foreground transition flex items-center gap-2 text-xs font-normal"
             title="Refresh inventory data"
           >
             <RotateCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-violet-400' : ''}`} />
@@ -528,8 +597,8 @@ export default function InventoryPage() {
         }}
       />
 
-      {/* Tab Navigation Navigation Bar */}
-      <div className="border-b border-border/80 flex items-center gap-2 overflow-x-auto pb-0">
+      {/* Modern High-Contrast Blue & White Tab Navigation Bar */}
+      <div className="border-b-2 border-slate-200 dark:border-slate-800 flex items-center gap-2 flex-wrap pb-0">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -537,16 +606,23 @@ export default function InventoryPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 border-b-2 font-bold text-xs sm:text-sm flex items-center gap-2 transition shrink-0 cursor-pointer ${isActive
-                  ? 'border-violet-500 text-violet-400 bg-violet-500/[0.04]'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+              className={`px-4 py-3 border-b-2 text-xs sm:text-sm flex items-center gap-2.5 transition cursor-pointer -mb-[2px] ${isActive
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 font-bold rounded-t-lg'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-muted800/40 rounded-t-lg font-medium'
                 }`}
             >
-              {tab.icon}
-              <span>{tab.label}</span>
+              <span className={isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}>
+                {tab.icon}
+              </span>
+              <span className={`tracking-tight ${isActive ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>
+                {tab.label}
+              </span>
               {tab.badge && (
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.2 rounded-full border ${tab.badgeColor}`}
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full border transition ${isActive
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : tab.badgeColor || 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 shadow-xs'
+                    }`}
                 >
                   {tab.badge}
                 </span>
@@ -612,17 +688,30 @@ export default function InventoryPage() {
             onStatusFilterChange={setAdjustmentStatusFilter}
             search={search}
             onSearchChange={setSearch}
-            onOpenCreateModal={() => setIsAdjustmentModalOpen(true)}
+            onOpenCreateModal={() => {
+              setEditingAdjustment(null);
+              setIsAdjustmentModalOpen(true);
+            }}
+            onOpenEditModal={(adj) => {
+              setEditingAdjustment(adj);
+              setIsAdjustmentModalOpen(true);
+            }}
             onOpenApprovalModal={(adj) => setApprovalAdjustment(adj)}
             onOpenDetailModal={(adj) => navigate(`/inventory/adjustments/${adj.id}`)}
-            onDeleteAdjustment={(adj) =>
+            onDeleteAdjustment={(adj) => {
+              const isPending = adj.status === 'PENDING';
               setDeleteTarget({
                 type: 'adjustment',
                 item: adj,
-                message: `Delete pending audit adjustment #${adj.id?.slice(0, 8)}?`,
-              })
-            }
+                title: isPending ? 'Delete Pending Stock Adjustment' : 'Archive Stock Adjustment Audit',
+                confirmText: isPending ? 'Cancel & Delete Audit' : 'Archive Audit Record',
+                message: isPending
+                  ? `Delete pending audit adjustment #${adj.id?.slice(0, 8)} (${adj.reason})? It will be cancelled before any stock reconciliation occurs.`
+                  : `Archive finalized adjustment #${adj.id?.slice(0, 8)} (${adj.reason})? Stock counts already reconciled in warehouse "${adj.warehouse?.name || 'facility'}" will remain intact.`,
+              });
+            }}
             canCreate={canCreateAdjustments}
+            canUpdate={canUpdateAdjustments}
             canApprove={canApproveAdjustments}
             canDelete={canDeleteAdjustments}
           />
@@ -644,21 +733,41 @@ export default function InventoryPage() {
             search={search}
             onSearchChange={setSearch}
             onOpenCreateModal={() => {
+              setEditingTransfer(null);
               setPrefillTransferData({ sourceWarehouseId: '', productId: '' });
+              setIsTransferModalOpen(true);
+            }}
+            onOpenEditModal={(tr) => {
+              setEditingTransfer(tr);
               setIsTransferModalOpen(true);
             }}
             onOpenApprovalModal={(tr) => setApprovalTransfer(tr)}
             onOpenDetailModal={(tr) => navigate(`/inventory/transfers/${tr.id}`)}
-            onDeleteTransfer={(tr) =>
+            onDeleteTransfer={(tr) => {
+              const isPending = tr.status === 'PENDING';
+              const isApproved = tr.status === 'APPROVED';
               setDeleteTarget({
                 type: 'transfer',
                 item: tr,
-                message: tr.status === 'PENDING'
-                  ? `Cancel pending transfer of ${tr.quantity} units of ${tr.product?.name}? Source warehouse reserved stock will be released.`
-                  : `Reverse transfer of ${tr.quantity} units of ${tr.product?.name} from "${tr.fromWarehouse?.name}" to "${tr.toWarehouse?.name}"? Stock will be credited back to the source facility.`,
-              })
-            }
+                title: isPending
+                  ? 'Cancel Pending Transfer'
+                  : isApproved
+                    ? 'Reverse Finalized Stock Transfer'
+                    : 'Archive Rejected Transfer',
+                confirmText: isPending
+                  ? 'Cancel Transfer & Release Hold'
+                  : isApproved
+                    ? 'Reverse Transfer & Return Stock'
+                    : 'Archive Transfer Record',
+                message: isPending
+                  ? `Cancel pending transfer of ${tr.quantity} units of "${tr.product?.name}"? Source warehouse reserved stock will be immediately released back to available inventory.`
+                  : isApproved
+                    ? `Reverse approved transfer of ${tr.quantity} units of "${tr.product?.name}" from "${tr.fromWarehouse?.name}" to "${tr.toWarehouse?.name}"? Stock will be deducted from destination facility and credited back to source depot.`
+                    : `Archive rejected transfer record #${tr.id?.slice(0, 8)} of "${tr.product?.name}"?`,
+              });
+            }}
             canCreate={canCreateTransfers}
+            canUpdate={canUpdateTransfers}
             canApprove={canApproveTransfers}
             canDelete={canDeleteTransfers}
           />
@@ -675,17 +784,36 @@ export default function InventoryPage() {
             onStatusFilterChange={setReservationStatusFilter}
             search={search}
             onSearchChange={setSearch}
-            onOpenCreateModal={() => setIsReservationModalOpen(true)}
+            onOpenCreateModal={() => {
+              setEditingReservation(null);
+              setIsReservationModalOpen(true);
+            }}
+            onOpenEditModal={(res) => {
+              setEditingReservation(res);
+              setIsReservationModalOpen(true);
+            }}
             onOpenReleaseModal={(res) => setReleasingReservation(res)}
+            onOpenApprovalModal={(res) => setApprovalReservation(res)}
             onOpenDetailModal={(res) => navigate(`/inventory/reservations/${res.id}`)}
-            onDeleteReservation={(res) =>
+            onDeleteReservation={(res) => {
+              if (res.status === 'FULFILLED') {
+                toast.error('Cannot delete a fulfilled reservation. The allocated units have already been processed for this sales order.');
+                return;
+              }
+              const isReserved = res.status === 'RESERVED';
               setDeleteTarget({
                 type: 'reservation',
                 item: res,
-                message: `Delete reservation for order #${res.salesOrder?.orderNumber || res.salesOrderId?.slice(0, 8)}?`,
-              })
-            }
+                title: isReserved ? 'Cancel Active Reservation' : 'Archive Reservation Record',
+                confirmText: isReserved ? 'Cancel Reservation & Release Stock' : 'Archive Reservation Record',
+                message: isReserved
+                  ? `Cancel active reservation of ${res.quantity} units of "${res.product?.name}" for Sales Order #${res.salesOrder?.orderNumber || res.salesOrderId?.slice(0, 8)}? Reserved stock will be immediately released back to available warehouse inventory.`
+                  : `Archive ${res.status.toLowerCase()} reservation record for Sales Order #${res.salesOrder?.orderNumber || res.salesOrderId?.slice(0, 8)}?`,
+              });
+            }}
             canCreate={canCreateReservations}
+            canUpdate={canUpdateReservations}
+            canApprove={canApproveReservations}
             canRelease={canReleaseReservations}
             canDelete={canDeleteReservations}
           />
@@ -711,8 +839,12 @@ export default function InventoryPage() {
       {/* Adjustment Form Modal */}
       <AdjustmentFormModal
         isOpen={isAdjustmentModalOpen}
-        onClose={() => setIsAdjustmentModalOpen(false)}
+        onClose={() => {
+          setIsAdjustmentModalOpen(false);
+          setEditingAdjustment(null);
+        }}
         onSubmit={handleAdjustmentSubmit}
+        editingAdjustment={editingAdjustment}
         warehouses={warehouses}
         products={products}
         stocks={stocks}
@@ -740,8 +872,12 @@ export default function InventoryPage() {
       {/* Transfer Form Modal */}
       <TransferFormModal
         isOpen={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
+        onClose={() => {
+          setIsTransferModalOpen(false);
+          setEditingTransfer(null);
+        }}
         onSubmit={handleTransferSubmit}
+        editingTransfer={editingTransfer}
         warehouses={warehouses}
         products={products}
         stocks={stocks}
@@ -775,14 +911,19 @@ export default function InventoryPage() {
       {/* Reservation Form Modal */}
       <ReservationFormModal
         isOpen={isReservationModalOpen}
-        onClose={() => setIsReservationModalOpen(false)}
+        onClose={() => {
+          setIsReservationModalOpen(false);
+          setEditingReservation(null);
+        }}
         onSubmit={handleReservationSubmit}
+        editingReservation={editingReservation}
         warehouses={warehouses}
         products={products}
         salesOrders={salesOrders}
         stocks={stocks}
         isSubmitting={isSubmitting}
       />
+
 
       {/* Release Reservation Modal */}
       <ReleaseReservationModal
@@ -793,14 +934,25 @@ export default function InventoryPage() {
         isSubmitting={isSubmitting}
       />
 
+      {/* Reservation Approval Modal */}
+      <ReservationApprovalModal
+        isOpen={Boolean(approvalReservation)}
+        onClose={() => setApprovalReservation(null)}
+        reservation={approvalReservation}
+        onApprove={handleApproveReservation}
+        onRelease={handleReleaseFromApprovalModal}
+        isProcessing={isSubmitting}
+      />
+
       {/* Confirm Delete / Archive Modal */}
       <ConfirmDeleteModal
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
-        title={`Confirm Delete ${deleteTarget?.type || 'Record'}`}
+        title={deleteTarget?.title || `Confirm Delete ${deleteTarget?.type || 'Record'}`}
         message={deleteTarget?.message || 'Are you sure you want to perform this deletion?'}
-        isDeleting={isSubmitting}
+        confirmText={deleteTarget?.confirmText || 'Yes, Delete Record'}
+        submitting={isSubmitting}
       />
     </div>
   );
