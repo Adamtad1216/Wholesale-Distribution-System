@@ -6,6 +6,8 @@ import {
   getBranchById,
   updateBranch,
   deleteBranch,
+  getEligibleManagers,
+  assignBranchManager,
 } from './branches.service.js';
 
 export async function listBranches(req, res, next) {
@@ -13,6 +15,29 @@ export async function listBranches(req, res, next) {
     const filters = { ...req.query };
     const { branches, meta } = await getBranches(filters);
     sendPaginatedSuccess(res, branches, meta);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listEligibleManagers(req, res, next) {
+  try {
+    const managers = await getEligibleManagers();
+    sendSuccess(res, managers);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function setBranchManager(req, res, next) {
+  try {
+    const idResult = branchIdSchema.safeParse({ id: req.params.id });
+    if (!idResult.success) {
+      return sendError(res, 'Invalid branch ID', 400);
+    }
+    const { employeeId, notes } = req.body;
+    const branch = await assignBranchManager(idResult.data.id, employeeId, notes, req.user.id, req);
+    sendSuccess(res, branch);
   } catch (err) {
     next(err);
   }
@@ -65,4 +90,5 @@ export async function removeBranch(req, res, next) {
     next(err);
   }
 }
+
 
