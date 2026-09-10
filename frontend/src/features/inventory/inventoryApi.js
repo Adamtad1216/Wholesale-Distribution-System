@@ -32,6 +32,7 @@ export const inventoryApi = {
   getReservations: (params) => api.get('/inventory/reservations', { params }),
   getReservationById: (id) => api.get(`/inventory/reservations/${id}`),
   createReservation: (data) => api.post('/inventory/reservations', data),
+  updateReservation: (id, data) => api.patch(`/inventory/reservations/${id}`, data),
   approveReservation: (id, data) => api.patch(`/inventory/reservations/${id}/approve`, data),
   releaseReservation: (id, data) => api.post(`/inventory/reservations/${id}/release`, data),
   deleteReservation: (id) => api.delete(`/inventory/reservations/${id}`),

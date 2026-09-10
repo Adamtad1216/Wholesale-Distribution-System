@@ -93,10 +93,10 @@ export default function InventoryStats({
 
           <div className="relative z-10 flex items-start justify-between gap-3">
             <div className="space-y-1 min-w-0">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate block">
+              <span className="text-[11px] font-normal uppercase tracking-wider text-muted-foreground truncate block">
                 {card.label}
               </span>
-              <div className="text-2xl font-black text-foreground tracking-tight flex items-center gap-2">
+              <div className="text-2xl font-normal text-foreground tracking-tight flex items-center gap-2">
                 {card.value}
                 {card.pulse && (
                   <span className="relative flex h-2 w-2">
@@ -119,7 +119,7 @@ export default function InventoryStats({
 
           {card.badge && (
             <div className="mt-2.5 relative z-10">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
+              <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
                 {card.badge}
               </span>
             </div>
