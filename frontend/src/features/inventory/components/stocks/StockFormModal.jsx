@@ -18,9 +18,9 @@ export default function StockFormModal({
   const [formData, setFormData] = useState({
     warehouseId: '',
     productId: '',
-    quantity: 0,
-    minimumStock: 0,
-    reorderLevel: 0,
+    quantity: '',
+    minimumStock: '',
+    reorderLevel: '',
     notes: '',
   });
 
@@ -39,17 +39,27 @@ export default function StockFormModal({
         warehouseId: initialData.warehouseId || initialData.warehouse?.id || '',
         productId: initialData.productId || initialData.product?.id || '',
         quantity: Number(initialData.quantity) || 0,
-        minimumStock: Number(initialData.minimumStock) || 0,
-        reorderLevel: Number(initialData.reorderLevel) || 0,
+        minimumStock:
+          initialData.minimumStock !== undefined &&
+          initialData.minimumStock !== null &&
+          Number(initialData.minimumStock) > 0
+            ? Number(initialData.minimumStock)
+            : '',
+        reorderLevel:
+          initialData.reorderLevel !== undefined &&
+          initialData.reorderLevel !== null &&
+          Number(initialData.reorderLevel) > 0
+            ? Number(initialData.reorderLevel)
+            : '',
         notes: '',
       });
     } else {
       setFormData({
         warehouseId: warehouses[0]?.id || '',
         productId: products[0]?.id || '',
-        quantity: 0,
-        minimumStock: 10,
-        reorderLevel: 25,
+        quantity: '',
+        minimumStock: '',
+        reorderLevel: '',
         notes: '',
       });
     }
@@ -75,14 +85,14 @@ export default function StockFormModal({
     if (!isEditing && !formData.productId) {
       errs.productId = 'Product is required';
     }
-    if (formData.quantity === '' || formData.quantity < 0) {
+    if (formData.quantity === '' || Number(formData.quantity) < 0) {
       errs.quantity = 'Quantity must be 0 or higher';
     }
-    if (formData.minimumStock === '' || formData.minimumStock < 0) {
-      errs.minimumStock = 'Minimum stock must be 0 or higher';
+    if (formData.minimumStock !== '' && Number(formData.minimumStock) < 0) {
+      errs.minimumStock = 'Minimum stock cannot be negative';
     }
-    if (formData.reorderLevel === '' || formData.reorderLevel < 0) {
-      errs.reorderLevel = 'Reorder level must be 0 or higher';
+    if (formData.reorderLevel !== '' && Number(formData.reorderLevel) < 0) {
+      errs.reorderLevel = 'Reorder level cannot be negative';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -91,7 +101,18 @@ export default function StockFormModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validate()) return;
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      quantity: Number(formData.quantity) || 0,
+      minimumStock:
+        formData.minimumStock !== '' && formData.minimumStock !== null && formData.minimumStock !== undefined
+          ? Math.max(0, Number(formData.minimumStock))
+          : 0,
+      reorderLevel:
+        formData.reorderLevel !== '' && formData.reorderLevel !== null && formData.reorderLevel !== undefined
+          ? Math.max(0, Number(formData.reorderLevel))
+          : 0,
+    });
   };
 
   return (
@@ -142,13 +163,13 @@ export default function StockFormModal({
           <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-xs text-blue-300 leading-relaxed flex items-start gap-2.5">
             <span className="text-base leading-none mt-0.5">📦</span>
             <div>
-              <strong className="text-blue-200">Existing Inventory Found:</strong> Submitting will add this quantity to the current stock level ({Number(existingStock.quantity) || 0} units) and log the intake event in stock history.
+              <span className="text-blue-200">Existing Inventory Found:</span> Submitting will add this quantity to the current stock level ({Number(existingStock.quantity) || 0} units) and log the intake event in stock history.
             </div>
           </div>
         )}
         {/* Warehouse Selection */}
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+          <label className="block text-xs font-normal text-foreground mb-1.5 flex items-center gap-1.5">
             <WarehouseIcon className="w-3.5 h-3.5 text-violet-400" />
             <span>Warehouse</span>
           </label>
@@ -178,7 +199,7 @@ export default function StockFormModal({
 
         {/* Product Selection */}
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+          <label className="block text-xs font-normal text-foreground mb-1.5 flex items-center gap-1.5">
             <Package className="w-3.5 h-3.5 text-violet-400" />
             <span>Product Catalog Item</span>
           </label>
@@ -210,7 +231,7 @@ export default function StockFormModal({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           {/* Total Quantity */}
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1">
+            <label className="block text-xs font-normal text-foreground mb-1.5 flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-indigo-400" />
               <span>Total Qty</span>
             </label>
@@ -230,9 +251,9 @@ export default function StockFormModal({
 
           {/* Minimum Stock */}
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1">
+            <label className="block text-xs font-normal text-foreground mb-1.5 flex items-center gap-1">
               <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-              <span>Min Stock</span>
+              <span>Min Stock (Optional)</span>
             </label>
             <input
               type="number"
@@ -240,7 +261,7 @@ export default function StockFormModal({
               min="0"
               value={formData.minimumStock}
               onChange={handleChange}
-              placeholder="0"
+              placeholder="0 (Unset)"
               className="w-full px-3 py-2 rounded-xl border border-border bg-card text-sm text-foreground focus:outline-none focus:border-violet-500 transition"
             />
             {errors.minimumStock && (
@@ -250,9 +271,9 @@ export default function StockFormModal({
 
           {/* Reorder Level */}
           <div>
-            <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1">
+            <label className="block text-xs font-normal text-foreground mb-1.5 flex items-center gap-1">
               <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-              <span>Reorder Level</span>
+              <span>Reorder Level (Optional)</span>
             </label>
             <input
               type="number"
@@ -260,7 +281,7 @@ export default function StockFormModal({
               min="0"
               value={formData.reorderLevel}
               onChange={handleChange}
-              placeholder="0"
+              placeholder="0 (Unset)"
               className="w-full px-3 py-2 rounded-xl border border-border bg-card text-sm text-foreground focus:outline-none focus:border-violet-500 transition"
             />
             {errors.reorderLevel && (
@@ -271,7 +292,7 @@ export default function StockFormModal({
 
         {/* Notes / Intake Reference */}
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+          <label className="block text-xs font-normal text-foreground mb-1.5 flex items-center gap-1.5">
             <FileText className="w-3.5 h-3.5 text-violet-400" />
             <span>Intake Notes / Batch Reference (Optional)</span>
           </label>
@@ -287,7 +308,7 @@ export default function StockFormModal({
 
         {/* Informational helper */}
         <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-300 leading-relaxed">
-          <strong>Tip:</strong> Reorder Level triggers low stock alerts when available stock drops to or below this threshold. Minimum Stock represents the critical safety buffer.
+          <span>Tip:</span> Reorder Level triggers low stock alerts when available stock drops to or below this threshold. Minimum Stock represents the critical safety buffer.
         </div>
       </form>
     </Modal>
