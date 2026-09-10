@@ -59,7 +59,7 @@ export default function TransferApprovalModal({
               type="button"
               onClick={handleReject}
               disabled={isProcessing}
-              className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-semibold text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-normal text-xs transition flex items-center gap-1.5 disabled:opacity-50"
             >
               <XCircle className="w-4 h-4" />
               <span>Reject Transfer</span>
@@ -69,7 +69,7 @@ export default function TransferApprovalModal({
               type="button"
               onClick={handleApprove}
               disabled={isProcessing}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Approve & Move Stock</span>
@@ -83,7 +83,7 @@ export default function TransferApprovalModal({
         <div className="p-3 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-start gap-2.5 text-sky-300 text-xs leading-relaxed">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
           <div>
-            <strong className="font-bold">Workflow Notice:</strong> Approving this transfer will finalize stock deduction from source <strong>"{transfer.fromWarehouse?.name}"</strong> and immediately credit available inventory in destination <strong>"{transfer.toWarehouse?.name}"</strong>. Rejecting releases the reserved stock back to available source inventory.
+            <span className="font-normal">Workflow Notice:</span> Approving this transfer will finalize stock deduction from source <span>"{transfer.fromWarehouse?.name}"</span> and immediately credit available inventory in destination <span>"{transfer.toWarehouse?.name}"</span>. Rejecting releases the reserved stock back to available source inventory.
           </div>
         </div>
 
@@ -91,11 +91,11 @@ export default function TransferApprovalModal({
         <div className="p-4 rounded-2xl bg-muted900/50 border border-border grid grid-cols-1 sm:grid-cols-7 gap-3 items-center">
           {/* Source */}
           <div className="sm:col-span-3 p-3 rounded-xl bg-muted800/40 border border-border/80 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider flex items-center gap-1">
+            <span className="text-[10px] uppercase font-normal text-rose-400 tracking-wider flex items-center gap-1">
               <WarehouseIcon className="w-3 h-3" />
               <span>Source Warehouse</span>
             </span>
-            <p className="font-bold text-foreground text-xs truncate">
+            <p className="font-normal text-foreground text-xs truncate">
               {transfer.fromWarehouse?.name || 'Origin Depot'}
             </p>
             {transfer.fromWarehouse?.code && (
@@ -114,11 +114,11 @@ export default function TransferApprovalModal({
 
           {/* Destination */}
           <div className="sm:col-span-3 p-3 rounded-xl bg-muted800/40 border border-border/80 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider flex items-center gap-1">
+            <span className="text-[10px] uppercase font-normal text-emerald-400 tracking-wider flex items-center gap-1">
               <WarehouseIcon className="w-3 h-3" />
               <span>Destination</span>
             </span>
-            <p className="font-bold text-foreground text-xs truncate">
+            <p className="font-normal text-foreground text-xs truncate">
               {transfer.toWarehouse?.name || 'Destination Hub'}
             </p>
             {transfer.toWarehouse?.code && (
@@ -136,7 +136,7 @@ export default function TransferApprovalModal({
               <Package className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h4 className="text-xs font-bold text-foreground truncate">
+              <h4 className="text-xs font-normal text-foreground truncate">
                 {transfer.product?.name || 'Transferred Product'}
               </h4>
               <p className="text-[10px] text-muted-foreground font-mono">
@@ -146,10 +146,10 @@ export default function TransferApprovalModal({
           </div>
 
           <div className="text-right shrink-0">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold block">
+            <span className="text-[10px] text-muted-foreground uppercase font-normal block">
               Quantity
             </span>
-            <span className="text-lg font-black text-sky-400">
+            <span className="text-lg font-normal text-sky-400">
               {Number(transfer.quantity).toLocaleString()}
             </span>
           </div>
@@ -158,7 +158,7 @@ export default function TransferApprovalModal({
         {/* Initiator Remark */}
         {transfer.remark && (
           <div className="p-3 rounded-xl bg-muted800/20 border border-border/60 text-xs">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">
+            <span className="text-[10px] text-muted-foreground uppercase font-normal block mb-1">
               Initiator Remark
             </span>
             <p className="text-foreground italic">{transfer.remark}</p>
@@ -167,7 +167,7 @@ export default function TransferApprovalModal({
 
         {/* Reviewer Notes / Justification */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-foreground block">
+          <label className="text-xs font-normal text-foreground block">
             Approval / Rejection Notes <span className="text-muted-foreground font-normal">(Optional for approval, recommended for rejection)</span>
           </label>
           <textarea

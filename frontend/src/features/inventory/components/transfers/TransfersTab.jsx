@@ -4,6 +4,7 @@ import {
   Plus,
   Search,
   Eye,
+  Edit2,
   Trash2,
   Warehouse as WarehouseIcon,
   Package,
@@ -30,10 +31,12 @@ export default function TransfersTab({
   search = '',
   onSearchChange,
   onOpenCreateModal,
+  onOpenEditModal,
   onOpenApprovalModal,
   onOpenDetailModal,
   onDeleteTransfer,
   canCreate = true,
+  canUpdate = true,
   canApprove = false,
   canDelete = true,
 }) {
@@ -42,15 +45,15 @@ export default function TransfersTab({
   const getReasonBadge = (reason) => {
     switch (reason) {
       case 'REBALANCING':
-        return 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+        return 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30';
       case 'RESTOCKING':
-        return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+        return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
       case 'DAMAGED_GOODS':
-        return 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+        return 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30';
       case 'STORE_REQUEST':
-        return 'bg-violet-500/15 text-violet-300 border-violet-500/30';
+        return 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30';
       case 'SEASONAL_ALLOCATION':
-        return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30';
       default:
         return 'bg-muted800 text-foreground border-border';
     }
@@ -60,28 +63,28 @@ export default function TransfersTab({
     switch (status) {
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-normal bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
             <Clock className="w-3 h-3" />
             <span>Pending Review</span>
           </span>
         );
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-normal bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
             <CheckCircle2 className="w-3 h-3" />
             <span>Approved</span>
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-normal bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
             <XCircle className="w-3 h-3" />
             <span>Rejected</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-muted800 text-muted-foreground border border-border">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-normal bg-muted800 text-muted-foreground border border-border">
             <span>{status || 'Unknown'}</span>
           </span>
         );
@@ -193,7 +196,7 @@ export default function TransfersTab({
           <div className="w-14 h-14 rounded-2xl bg-muted800 border border-border flex items-center justify-center text-muted-foreground">
             <ArrowLeftRight className="w-7 h-7 opacity-50" />
           </div>
-          <h3 className="text-base font-bold text-foreground">No Transfers Found</h3>
+          <h3 className="text-base font-normal text-foreground">No Transfers Found</h3>
           <p className="text-xs text-muted-foreground max-w-sm">
             Move inventory smoothly between your central warehouse and distribution hubs.
           </p>
@@ -212,14 +215,14 @@ export default function TransfersTab({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-border/80 bg-muted900/40 text-muted-foreground uppercase text-[10px] tracking-wider">
-                <th className="py-3 px-4 font-bold">Transfer Route (From ➔ To)</th>
-                <th className="py-3 px-4 font-bold">Product / SKU</th>
-                <th className="py-3 px-4 font-bold text-right">Quantity</th>
-                <th className="py-3 px-4 font-bold">Reason</th>
-                <th className="py-3 px-4 font-bold">Status</th>
-                <th className="py-3 px-4 font-bold">Dispatched Date</th>
-                <th className="py-3 px-4 font-bold">Approver / Reviewer</th>
-                <th className="py-3 px-4 font-bold text-center">Actions</th>
+                <th className="py-3 px-4 font-normal">Transfer Route (From ➔ To)</th>
+                <th className="py-3 px-4 font-normal">Product / SKU</th>
+                <th className="py-3 px-4 font-normal text-right">Quantity</th>
+                <th className="py-3 px-4 font-normal">Reason</th>
+                <th className="py-3 px-4 font-normal">Status</th>
+                <th className="py-3 px-4 font-normal">Dispatched Date</th>
+                <th className="py-3 px-4 font-normal">Approver / Reviewer</th>
+                <th className="py-3 px-4 font-normal text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
@@ -233,7 +236,7 @@ export default function TransfersTab({
                     {/* Route */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 font-bold text-foreground">
+                        <div className="flex items-center gap-1 font-normal text-foreground">
                           <WarehouseIcon className="w-3.5 h-3.5 text-rose-400" />
                           <span>
                             {item.fromWarehouse?.name}
@@ -241,7 +244,7 @@ export default function TransfersTab({
                           </span>
                         </div>
                         <ArrowRight className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                        <div className="flex items-center gap-1 font-bold text-foreground">
+                        <div className="flex items-center gap-1 font-normal text-foreground">
                           <WarehouseIcon className="w-3.5 h-3.5 text-emerald-400" />
                           <span>
                             {item.toWarehouse?.name}
@@ -258,7 +261,7 @@ export default function TransfersTab({
                           <Package className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <span className="font-bold text-foreground block truncate">
+                          <span className="font-normal text-foreground block truncate">
                             {item.product?.name}
                           </span>
                           {item.product?.sku && (
@@ -271,14 +274,14 @@ export default function TransfersTab({
                     </td>
 
                     {/* Quantity */}
-                    <td className="py-3.5 px-4 text-right font-black text-sm text-sky-400">
+                    <td className="py-3.5 px-4 text-right font-normal text-sm text-sky-400">
                       {Number(item.quantity).toLocaleString()}
                     </td>
 
                     {/* Reason */}
                     <td className="py-3.5 px-4">
                       <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getReasonBadge(
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${getReasonBadge(
                           item.transferReason
                         )}`}
                       >
@@ -306,40 +309,55 @@ export default function TransfersTab({
                     {/* Actions */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        {/* View transfer details */}
                         <button
                           type="button"
                           onClick={() => navigate(`/inventory/transfers/${item.id}`)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
+                          className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                           title="View transfer details"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 text-black dark:text-white" />
                         </button>
+
+                        {/* Edit transfer */}
+                        {canUpdate && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenEditModal?.(item)}
+                            className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
+                            title={isPending ? "Edit pending transfer" : "Edit transfer details"}
+                          >
+                            <Edit2 className="w-4 h-4 text-black dark:text-white" />
+                          </button>
+                        )}
 
                         {/* Review / Process Approval */}
                         {isPending && canApprove && (
                           <button
                             type="button"
                             onClick={() => onOpenApprovalModal?.(item)}
-                            className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center gap-1 transition"
+                            className="px-2.5 py-1 rounded-lg border border-border bg-card text-black dark:text-white font-normal text-xs flex items-center gap-1 hover:bg-muted transition"
                             title="Process Authorization"
                           >
-                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-black dark:text-white" />
                             <span>Review</span>
                           </button>
                         )}
 
+                        {/* Cancel/Delete */}
                         {canDelete && (
                           <button
                             type="button"
                             onClick={() => onDeleteTransfer(item)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition"
+                            className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                             title={isPending ? 'Cancel pending transfer request' : 'Reverse transfer'}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4 text-black dark:text-white" />
                           </button>
                         )}
                       </div>
                     </td>
+
                   </tr>
                 );
               })}
