@@ -2,7 +2,13 @@ import prisma from '../../../config/prisma.js';
 import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
-import { getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
+import {
+  getUserScope,
+  getAssignedWarehouseId,
+  enforceWarehouseScope,
+  enforceTransferSourceScope,
+  enforceTransferAccess,
+} from '../../../utils/warehouse-scope.js';
 
 const sanitizeTransfer = (transfer) => {
   if (!transfer) return transfer;
@@ -17,10 +23,7 @@ export async function createTransfer(data, createdById, req, user = null) {
     throw new AppError('Source and destination warehouses cannot be the same', 400);
   }
 
-  const assignedWarehouseId = await getAssignedWarehouseId(user);
-  if (assignedWarehouseId && data.fromWarehouseId !== assignedWarehouseId) {
-    throw new AppError('You can only initiate transfers from your assigned warehouse', 403);
-  }
+  await enforceTransferSourceScope(user, data.fromWarehouseId);
 
   const fromWarehouse = await prisma.warehouse.findFirst({
     where: { id: data.fromWarehouseId, isArchived: false },
@@ -40,7 +43,7 @@ export async function createTransfer(data, createdById, req, user = null) {
   if (!product) throw new AppError('Product not found', 404);
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Check source warehouse stock
+    // 1. Check source warehouse has enough AVAILABLE stock to hold
     const sourceStock = await tx.warehouseStock.findFirst({
       where: { warehouseId: data.fromWarehouseId, productId: data.productId, isArchived: false },
     });
@@ -53,54 +56,18 @@ export async function createTransfer(data, createdById, req, user = null) {
       );
     }
 
-    // 2. Deduct from source warehouse
-    const newSourceQty = Number(sourceStock.quantity) - Number(data.quantity);
-    const newSourceAvail = Number(sourceStock.availableQuantity) - Number(data.quantity);
-
+    // 2. Hold (reserve) source available quantity — total quantity NOT changed yet
+    //    Stock only physically moves once the transfer is APPROVED.
     await tx.warehouseStock.update({
       where: { id: sourceStock.id },
       data: {
-        quantity: newSourceQty,
-        availableQuantity: newSourceAvail,
+        availableQuantity: Number(sourceStock.availableQuantity) - Number(data.quantity),
         updatedById: createdById,
         updatedAt: new Date(),
       },
     });
 
-    // 3. Increment or create destination warehouse stock
-    let destStock = await tx.warehouseStock.findFirst({
-      where: { warehouseId: data.toWarehouseId, productId: data.productId, isArchived: false },
-    });
-
-    if (destStock) {
-      const newDestQty = Number(destStock.quantity) + Number(data.quantity);
-      const newDestAvail = Number(destStock.availableQuantity) + Number(data.quantity);
-
-      await tx.warehouseStock.update({
-        where: { id: destStock.id },
-        data: {
-          quantity: newDestQty,
-          availableQuantity: newDestAvail,
-          updatedById: createdById,
-          updatedAt: new Date(),
-        },
-      });
-    } else {
-      destStock = await tx.warehouseStock.create({
-        data: {
-          warehouseId: data.toWarehouseId,
-          productId: data.productId,
-          quantity: data.quantity,
-          reservedQuantity: 0,
-          availableQuantity: data.quantity,
-          minimumStock: 0,
-          reorderLevel: 0,
-          createdById,
-        },
-      });
-    }
-
-    // 4. Create WarehouseStockTransfer record
+    // 3. Create the transfer record (status defaults to PENDING)
     const transfer = await tx.warehouseStockTransfer.create({
       data: {
         fromWarehouseId: data.fromWarehouseId,
@@ -109,6 +76,7 @@ export async function createTransfer(data, createdById, req, user = null) {
         transferReason: data.transferReason,
         quantity: data.quantity,
         remark: data.remark,
+        status: 'PENDING',
         createdById,
       },
       include: {
@@ -125,21 +93,20 @@ export async function createTransfer(data, createdById, req, user = null) {
       },
     });
 
-    // 7. Dynamic Notifications
-    // 7a. Initiator Notification
+    // 4. Notify initiator
     if (createdById) {
       await tx.notification.create({
         data: {
           userId: createdById,
-          title: 'Stock Transfer Dispatched',
-          message: `Transferred ${data.quantity} units of ${product.name} from ${fromWarehouse.name} to ${toWarehouse.name}`,
+          title: 'Stock Transfer Pending Approval',
+          message: `Transfer of ${data.quantity} units of ${product.name} from ${fromWarehouse.name} to ${toWarehouse.name} is pending approval.`,
           type: 'INVENTORY_TRANSFER_COMPLETED',
           createdById,
         },
       });
     }
 
-    // 7b. Destination Warehouse Manager Notification
+    // 5. Notify destination warehouse manager that a transfer is incoming and pending
     if (toWarehouse.manager?.personId) {
       const destManagerUser = await tx.user.findFirst({
         where: { personId: toWarehouse.manager.personId, isArchived: false },
@@ -148,8 +115,8 @@ export async function createTransfer(data, createdById, req, user = null) {
         await tx.notification.create({
           data: {
             userId: destManagerUser.id,
-            title: 'Stock Transfer Received',
-            message: `Received ${data.quantity} units of ${product.name} transferred from ${fromWarehouse.name}`,
+            title: 'Incoming Stock Transfer — Awaiting Approval',
+            message: `${data.quantity} units of ${product.name} are pending transfer from ${fromWarehouse.name}. Review and approve to receive stock.`,
             type: 'INVENTORY_TRANSFER_RECEIVED',
             createdById,
           },
@@ -157,7 +124,7 @@ export async function createTransfer(data, createdById, req, user = null) {
       }
     }
 
-    // 7c. Source Warehouse Manager Notification
+    // 6. Notify source warehouse manager
     if (fromWarehouse.manager?.personId) {
       const srcManagerUser = await tx.user.findFirst({
         where: { personId: fromWarehouse.manager.personId, isArchived: false },
@@ -166,26 +133,9 @@ export async function createTransfer(data, createdById, req, user = null) {
         await tx.notification.create({
           data: {
             userId: srcManagerUser.id,
-            title: 'Stock Transfer Outbound',
-            message: `${data.quantity} units of ${product.name} transferred out to ${toWarehouse.name}`,
+            title: 'Stock Transfer Initiated',
+            message: `${data.quantity} units of ${product.name} are being dispatched to ${toWarehouse.name} (pending approval).`,
             type: 'INVENTORY_TRANSFER_OUTBOUND',
-            createdById,
-          },
-        });
-      }
-    }
-
-    // 7d. Dynamic Low Stock Alert for Source Warehouse
-    const reorderLevel = Number(sourceStock.reorderLevel || 0);
-    const minStock = Number(sourceStock.minimumStock || 0);
-    if ((reorderLevel > 0 && newSourceQty <= reorderLevel) || (minStock > 0 && newSourceQty <= minStock)) {
-      if (createdById) {
-        await tx.notification.create({
-          data: {
-            userId: createdById,
-            title: 'Low Stock Warning',
-            message: `Stock for ${product.name} at ${fromWarehouse.name} dropped to ${newSourceQty} (Reorder level: ${reorderLevel})`,
-            type: 'INVENTORY_LOW_STOCK_WARNING',
             createdById,
           },
         });
@@ -195,7 +145,6 @@ export async function createTransfer(data, createdById, req, user = null) {
     return transfer;
   });
 
-  // 8. Audit Log
   await logAudit({
     createdById,
     action: 'STOCK_TRANSFERRED',
@@ -207,6 +156,7 @@ export async function createTransfer(data, createdById, req, user = null) {
       productId: data.productId,
       quantity: data.quantity,
       transferReason: data.transferReason,
+      status: 'PENDING',
     },
     req,
   });
@@ -218,15 +168,30 @@ export async function getTransfers(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
   const where = { isArchived: false };
 
-  const assignedWarehouseId = await getAssignedWarehouseId(user);
-  if (assignedWarehouseId) {
-    if (filters.warehouseId && filters.warehouseId !== assignedWarehouseId) {
-      throw new AppError('You are not authorized to view transfers for this warehouse', 403);
+  if (user) {
+    const scope = await getUserScope(user);
+    if (!scope.isGlobal) {
+      const allowedWarehouseIds = scope.warehouseIds || [];
+      if (filters.warehouseId) {
+        if (!allowedWarehouseIds.includes(filters.warehouseId)) {
+          throw new AppError('You are not authorized to view transfers for this warehouse', 403);
+        }
+        where.OR = [
+          { fromWarehouseId: filters.warehouseId },
+          { toWarehouseId: filters.warehouseId },
+        ];
+      } else {
+        where.OR = [
+          { fromWarehouseId: { in: allowedWarehouseIds } },
+          { toWarehouseId: { in: allowedWarehouseIds } },
+        ];
+      }
+    } else if (filters.warehouseId) {
+      where.OR = [
+        { fromWarehouseId: filters.warehouseId },
+        { toWarehouseId: filters.warehouseId },
+      ];
     }
-    where.OR = [
-      { fromWarehouseId: assignedWarehouseId },
-      { toWarehouseId: assignedWarehouseId },
-    ];
   } else if (filters.warehouseId) {
     where.OR = [
       { fromWarehouseId: filters.warehouseId },
@@ -333,10 +298,7 @@ export async function getTransferById(id, filters = {}, user = null) {
 
   if (!transfer) throw new AppError('Stock transfer not found', 404);
 
-  const assignedWarehouseId = await getAssignedWarehouseId(user);
-  if (assignedWarehouseId && transfer.fromWarehouseId !== assignedWarehouseId && transfer.toWarehouseId !== assignedWarehouseId) {
-    throw new AppError('You are not authorized to view transfers not involving your warehouse', 403);
-  }
+  await enforceTransferAccess(user, transfer);
 
   return sanitizeTransfer(transfer);
 }
@@ -353,18 +315,18 @@ export async function updateTransfer(id, data, updatedById, req, user = null) {
 
   if (!existing) throw new AppError('Stock transfer not found', 404);
 
-  const assignedWarehouseId = await getAssignedWarehouseId(user);
-  if (assignedWarehouseId && existing.fromWarehouseId !== assignedWarehouseId && existing.toWarehouseId !== assignedWarehouseId) {
-    throw new AppError('You are not authorized to modify transfers not involving your warehouse', 403);
-  }
+  await enforceTransferAccess(user, existing);
+
+  const isPending = !existing.status || existing.status === 'PENDING';
 
   const result = await prisma.$transaction(async (tx) => {
-    // If quantity is being changed, calculate delta and adjust stock balances
-    if (data.quantity !== undefined && Number(data.quantity) !== Number(existing.quantity)) {
+    // If quantity is being changed, adjust only the source available quantity hold
+    // (the transfer is still PENDING — no stock has physically moved yet)
+    if (isPending && data.quantity !== undefined && Number(data.quantity) !== Number(existing.quantity)) {
       const delta = Number(data.quantity) - Number(existing.quantity);
 
       if (delta > 0) {
-        // Increasing transfer quantity: requires more stock from source warehouse
+        // Increasing transfer quantity: hold more source available stock
         const sourceStock = await tx.warehouseStock.findFirst({
           where: { warehouseId: existing.fromWarehouseId, productId: existing.productId, isArchived: false },
         });
@@ -377,73 +339,18 @@ export async function updateTransfer(id, data, updatedById, req, user = null) {
           );
         }
 
-        // Deduct additional delta from source warehouse
+        // Extend the source hold by delta
         await tx.warehouseStock.update({
           where: { id: sourceStock.id },
           data: {
-            quantity: Number(sourceStock.quantity) - delta,
             availableQuantity: Number(sourceStock.availableQuantity) - delta,
             updatedById,
             updatedAt: new Date(),
           },
         });
-
-        // Add additional delta to destination warehouse
-        const destStock = await tx.warehouseStock.findFirst({
-          where: { warehouseId: existing.toWarehouseId, productId: existing.productId, isArchived: false },
-        });
-
-        if (destStock) {
-          await tx.warehouseStock.update({
-            where: { id: destStock.id },
-            data: {
-              quantity: Number(destStock.quantity) + delta,
-              availableQuantity: Number(destStock.availableQuantity) + delta,
-              updatedById,
-              updatedAt: new Date(),
-            },
-          });
-        } else {
-          await tx.warehouseStock.create({
-            data: {
-              warehouseId: existing.toWarehouseId,
-              productId: existing.productId,
-              quantity: delta,
-              reservedQuantity: 0,
-              availableQuantity: delta,
-              minimumStock: 0,
-              reorderLevel: 0,
-              createdById: updatedById,
-            },
-          });
-        }
       } else {
-        // Decreasing transfer quantity: return excess stock from destination warehouse back to source
-        const returnQty = Math.abs(delta);
-        const destStock = await tx.warehouseStock.findFirst({
-          where: { warehouseId: existing.toWarehouseId, productId: existing.productId, isArchived: false },
-        });
-
-        if (!destStock || Number(destStock.availableQuantity) < returnQty) {
-          const available = destStock ? Number(destStock.availableQuantity) : 0;
-          throw new AppError(
-            `Cannot reduce transfer quantity: destination warehouse "${existing.toWarehouse.name}" has insufficient available stock to return. Required: ${returnQty}, Available: ${available}`,
-            400
-          );
-        }
-
-        // Deduct returnQty from destination warehouse
-        await tx.warehouseStock.update({
-          where: { id: destStock.id },
-          data: {
-            quantity: Number(destStock.quantity) - returnQty,
-            availableQuantity: Number(destStock.availableQuantity) - returnQty,
-            updatedById,
-            updatedAt: new Date(),
-          },
-        });
-
-        // Add returnQty back to source warehouse
+        // Decreasing transfer quantity: release partial hold back to source available
+        const releaseQty = Math.abs(delta);
         const sourceStock = await tx.warehouseStock.findFirst({
           where: { warehouseId: existing.fromWarehouseId, productId: existing.productId, isArchived: false },
         });
@@ -452,8 +359,7 @@ export async function updateTransfer(id, data, updatedById, req, user = null) {
           await tx.warehouseStock.update({
             where: { id: sourceStock.id },
             data: {
-              quantity: Number(sourceStock.quantity) + returnQty,
-              availableQuantity: Number(sourceStock.availableQuantity) + returnQty,
+              availableQuantity: Number(sourceStock.availableQuantity) + releaseQty,
               updatedById,
               updatedAt: new Date(),
             },
@@ -467,7 +373,7 @@ export async function updateTransfer(id, data, updatedById, req, user = null) {
       where: { id },
       data: {
         ...(data.transferReason && { transferReason: data.transferReason }),
-        ...(data.quantity !== undefined && { quantity: data.quantity }),
+        ...(isPending && data.quantity !== undefined && { quantity: data.quantity }),
         ...(data.remark !== undefined && { remark: data.remark }),
         updatedById,
         updatedAt: new Date(),
@@ -535,69 +441,115 @@ export async function deleteTransfer(id, deletedById, req, user = null) {
 
   if (!existing) throw new AppError('Stock transfer not found', 404);
 
-  const assignedWarehouseId = await getAssignedWarehouseId(user);
-  if (assignedWarehouseId && existing.fromWarehouseId !== assignedWarehouseId && existing.toWarehouseId !== assignedWarehouseId) {
-    throw new AppError('You are not authorized to delete transfers not involving your warehouse', 403);
-  }
+  await enforceTransferAccess(user, existing);
 
   const transferQty = Number(existing.quantity);
+  const isPending = !existing.status || existing.status === 'PENDING';
+  const isApproved = existing.status === 'APPROVED';
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Verify destination warehouse has sufficient available stock to reverse
-    const destStock = await tx.warehouseStock.findFirst({
-      where: { warehouseId: existing.toWarehouseId, productId: existing.productId, isArchived: false },
-    });
-
-    if (!destStock || Number(destStock.availableQuantity) < transferQty) {
-      const available = destStock ? Number(destStock.availableQuantity) : 0;
-      throw new AppError(
-        `Cannot reverse/delete stock transfer: destination warehouse "${existing.toWarehouse.name}" does not have enough available stock (some has already been consumed or reserved). Required: ${transferQty}, Available: ${available}`,
-        400
-      );
-    }
-
-    // 2. Deduct from destination warehouse
-    await tx.warehouseStock.update({
-      where: { id: destStock.id },
-      data: {
-        quantity: Number(destStock.quantity) - transferQty,
-        availableQuantity: Number(destStock.availableQuantity) - transferQty,
-        updatedById: deletedById,
-        updatedAt: new Date(),
-      },
-    });
-
-    // 3. Increment back into source warehouse
-    const sourceStock = await tx.warehouseStock.findFirst({
-      where: { warehouseId: existing.fromWarehouseId, productId: existing.productId, isArchived: false },
-    });
-
-    if (sourceStock) {
-      await tx.warehouseStock.update({
-        where: { id: sourceStock.id },
-        data: {
-          quantity: Number(sourceStock.quantity) + transferQty,
-          availableQuantity: Number(sourceStock.availableQuantity) + transferQty,
-          updatedById: deletedById,
-          updatedAt: new Date(),
-        },
+    if (isPending) {
+      // Transfer was never executed — just release the source availability hold
+      const sourceStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.fromWarehouseId, productId: existing.productId, isArchived: false },
       });
-    } else {
-      await tx.warehouseStock.create({
-        data: {
-          warehouseId: existing.fromWarehouseId,
-          productId: existing.productId,
-          quantity: transferQty,
-          reservedQuantity: 0,
-          availableQuantity: transferQty,
-          minimumStock: 0,
-          reorderLevel: 0,
-          createdById: deletedById,
-        },
-      });
-    }
+      if (sourceStock) {
+        await tx.warehouseStock.update({
+          where: { id: sourceStock.id },
+          data: {
+            availableQuantity: Number(sourceStock.availableQuantity) + transferQty,
+            updatedById: deletedById,
+            updatedAt: new Date(),
+          },
+        });
+      }
+    } else if (isApproved) {
+      // Transfer was approved and stock moved — full reversal needed.
+      //
+      // Professional policy:
+      //   • We ALWAYS reverse the physical quantity count (source +, destination −)
+      //     regardless of how much of the destination stock is still available.
+      //   • The availableQuantity deduction on the destination is CLAMPED to whatever
+      //     is actually available (≥ 0), avoiding a negative value.
+      //   • This handles the realistic case where destination stock was partially or
+      //     fully consumed, reserved, or further transferred after the initial approval.
 
-    // 4. Soft-delete the transfer record
+      const destStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.toWarehouseId, productId: existing.productId },
+      });
+
+      if (destStock && !destStock.isArchived) {
+        // Clamp availableQty deduction — never go below 0
+        const destAvail = Number(destStock.availableQuantity);
+        const availDeduct = Math.min(destAvail, transferQty);
+
+        await tx.warehouseStock.update({
+          where: { id: destStock.id },
+          data: {
+            quantity: Math.max(0, Number(destStock.quantity) - transferQty),
+            availableQuantity: Math.max(0, destAvail - availDeduct),
+            updatedById: deletedById,
+            updatedAt: new Date(),
+          },
+        });
+      } else if (destStock && destStock.isArchived) {
+        // Destination stock was archived after the transfer — nothing to deduct from
+        // (its quantity is already considered 0 by the system)
+      }
+      // If no dest record exists at all, stock was already fully removed — nothing to do
+
+      // Restore source warehouse using upsert-restore pattern:
+      //   • Active record → update quantity + availableQuantity
+      //   • Archived record → un-archive and restore
+      //   • No record → create fresh (with collision protection)
+      const sourceStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.fromWarehouseId, productId: existing.productId },
+      });
+
+      if (sourceStock && !sourceStock.isArchived) {
+        // Active source record — just add stock back
+        await tx.warehouseStock.update({
+          where: { id: sourceStock.id },
+          data: {
+            quantity: Number(sourceStock.quantity) + transferQty,
+            availableQuantity: Number(sourceStock.availableQuantity) + transferQty,
+            updatedById: deletedById,
+            updatedAt: new Date(),
+          },
+        });
+      } else if (sourceStock && sourceStock.isArchived) {
+        // Archived source record — restore it with the reversed quantity
+        await tx.warehouseStock.update({
+          where: { id: sourceStock.id },
+          data: {
+            quantity: transferQty,
+            reservedQuantity: 0,
+            availableQuantity: transferQty,
+            isArchived: false,
+            archivedAt: null,
+            updatedById: deletedById,
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        // No source record exists at all — create fresh
+        await tx.warehouseStock.create({
+          data: {
+            warehouseId: existing.fromWarehouseId,
+            productId: existing.productId,
+            quantity: transferQty,
+            reservedQuantity: 0,
+            availableQuantity: transferQty,
+            minimumStock: 0,
+            reorderLevel: 0,
+            createdById: deletedById,
+          },
+        });
+      }
+    }
+    // For REJECTED transfers: stock was already restored on rejection — nothing to undo
+
+    // Soft-delete the transfer record
     const deleted = await tx.warehouseStockTransfer.update({
       where: { id },
       data: {
@@ -608,20 +560,22 @@ export async function deleteTransfer(id, deletedById, req, user = null) {
       },
     });
 
-    // 5. Dynamic Notifications
+    // Notifications
     if (deletedById) {
       await tx.notification.create({
         data: {
           userId: deletedById,
-          title: 'Stock Transfer Reversed',
-          message: `Reversed transfer of ${transferQty} units of ${existing.product.name}. Stock returned from ${existing.toWarehouse.name} to ${existing.fromWarehouse.name}`,
+          title: isPending ? 'Stock Transfer Cancelled' : 'Stock Transfer Reversed',
+          message: isPending
+            ? `Cancelled pending transfer of ${transferQty} units of ${existing.product.name} from ${existing.fromWarehouse.name} to ${existing.toWarehouse.name}. Hold released.`
+            : `Reversed approved transfer of ${transferQty} units of ${existing.product.name}. Stock returned from ${existing.toWarehouse.name} to ${existing.fromWarehouse.name}.`,
           type: 'INVENTORY_TRANSFER_DELETED',
           createdById: deletedById,
         },
       });
     }
 
-    if (existing.toWarehouse.manager?.personId) {
+    if (isApproved && existing.toWarehouse.manager?.personId) {
       const destMgr = await tx.user.findFirst({
         where: { personId: existing.toWarehouse.manager.personId, isArchived: false },
       });
@@ -629,7 +583,7 @@ export async function deleteTransfer(id, deletedById, req, user = null) {
         await tx.notification.create({
           data: {
             userId: destMgr.id,
-            title: 'Stock Transfer Cancelled & Reversed',
+            title: 'Stock Transfer Reversed',
             message: `${transferQty} units of ${existing.product.name} returned to ${existing.fromWarehouse.name}`,
             type: 'INVENTORY_TRANSFER_REVERSED',
             createdById: deletedById,
@@ -638,7 +592,7 @@ export async function deleteTransfer(id, deletedById, req, user = null) {
       }
     }
 
-    if (existing.fromWarehouse.manager?.personId) {
+    if (isApproved && existing.fromWarehouse.manager?.personId) {
       const srcMgr = await tx.user.findFirst({
         where: { personId: existing.fromWarehouse.manager.personId, isArchived: false },
       });
@@ -646,7 +600,7 @@ export async function deleteTransfer(id, deletedById, req, user = null) {
         await tx.notification.create({
           data: {
             userId: srcMgr.id,
-            title: 'Stock Returned from Cancelled Transfer',
+            title: 'Stock Returned from Reversed Transfer',
             message: `${transferQty} units of ${existing.product.name} returned from ${existing.toWarehouse.name}`,
             type: 'INVENTORY_TRANSFER_RETURNED',
             createdById: deletedById,
@@ -663,8 +617,8 @@ export async function deleteTransfer(id, deletedById, req, user = null) {
     action: 'STOCK_TRANSFER_DELETED',
     entityType: 'WarehouseStockTransfer',
     entityId: id,
-    oldValues: { isArchived: false, quantity: existing.quantity },
-    newValues: { isArchived: true, reversedQuantity: transferQty },
+    oldValues: { isArchived: false, status: existing.status, quantity: existing.quantity },
+    newValues: { isArchived: true, reversedQuantity: isApproved ? transferQty : 0 },
     req,
   });
 
@@ -683,8 +637,14 @@ export async function approveOrRejectTransfer(id, data, approvedById, req, user 
 
   if (!existing) throw new AppError('Stock transfer not found', 404);
 
+  // Warehouse-scoped approvers may only process transfers involving their warehouse
+  await enforceTransferAccess(user, existing);
+
   if (existing.status && existing.status !== 'PENDING') {
-    throw new AppError(`Stock transfer has already been ${existing.status.toLowerCase()}`, 400);
+    throw new AppError(
+      `Stock transfer has already been ${existing.status.toLowerCase()}. No further approval action is needed.`,
+      400
+    );
   }
 
   const action = data.action || (data.status === 'APPROVED' ? 'APPROVE' : data.status === 'REJECTED' ? 'REJECT' : null);
@@ -694,6 +654,89 @@ export async function approveOrRejectTransfer(id, data, approvedById, req, user 
 
   const result = await prisma.$transaction(async (tx) => {
     if (action === 'APPROVE') {
+      const transferQty = Number(existing.quantity);
+
+      // 1. Deduct the held quantity from source warehouse total (hold was on availableQty at create time)
+      const sourceStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.fromWarehouseId, productId: existing.productId, isArchived: false },
+      });
+      if (!sourceStock) throw new AppError('Source warehouse stock record not found', 404);
+
+      await tx.warehouseStock.update({
+        where: { id: sourceStock.id },
+        data: {
+          quantity: Number(sourceStock.quantity) - transferQty,
+          // availableQuantity was already reduced at create — no change needed
+          updatedById: approvedById,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 2. Credit destination warehouse — upsert-restore pattern
+      // Query without isArchived: false to catch soft-deleted records and avoid unique constraint conflicts
+      const destStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.toWarehouseId, productId: existing.productId },
+      });
+
+      if (destStock && !destStock.isArchived) {
+        await tx.warehouseStock.update({
+          where: { id: destStock.id },
+          data: {
+            quantity: Number(destStock.quantity) + transferQty,
+            availableQuantity: Number(destStock.availableQuantity) + transferQty,
+            updatedById: approvedById,
+            updatedAt: new Date(),
+          },
+        });
+      } else if (destStock && destStock.isArchived) {
+        // Destination stock was soft-deleted/archived — restore it and credit the transferred quantity
+        await tx.warehouseStock.update({
+          where: { id: destStock.id },
+          data: {
+            quantity: transferQty,
+            reservedQuantity: 0,
+            availableQuantity: transferQty,
+            isArchived: false,
+            archivedAt: null,
+            updatedById: approvedById,
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        await tx.warehouseStock.create({
+          data: {
+            warehouseId: existing.toWarehouseId,
+            productId: existing.productId,
+            quantity: transferQty,
+            reservedQuantity: 0,
+            availableQuantity: transferQty,
+            minimumStock: 0,
+            reorderLevel: 0,
+            createdById: approvedById,
+          },
+        });
+      }
+
+      // 3. Low stock alert for source warehouse after approval
+      const updatedSourceQty = Number(sourceStock.quantity) - transferQty;
+      const reorderLevel = Number(sourceStock.reorderLevel || 0);
+      const minStock = Number(sourceStock.minimumStock || 0);
+      if (
+        (reorderLevel > 0 && updatedSourceQty <= reorderLevel) ||
+        (minStock > 0 && updatedSourceQty <= minStock)
+      ) {
+        await tx.notification.create({
+          data: {
+            userId: approvedById,
+            title: 'Low Stock Warning',
+            message: `Stock for ${existing.product.name} at ${existing.fromWarehouse.name} dropped to ${updatedSourceQty} after transfer approval (Reorder level: ${reorderLevel}).`,
+            type: 'INVENTORY_LOW_STOCK_WARNING',
+            createdById: approvedById,
+          },
+        });
+      }
+
+      // 4. Update transfer record
       const updated = await tx.warehouseStockTransfer.update({
         where: { id },
         data: {
@@ -739,12 +782,13 @@ export async function approveOrRejectTransfer(id, data, approvedById, req, user 
         },
       });
 
+      // 5. Notify the initiator
       if (existing.createdById) {
         await tx.notification.create({
           data: {
             userId: existing.createdById,
-            title: 'Stock Transfer Approved',
-            message: `Transfer of ${existing.quantity} units of ${existing.product.name} to ${existing.toWarehouse.name} was approved.`,
+            title: 'Stock Transfer Approved & Executed',
+            message: `Transfer of ${transferQty} units of ${existing.product.name} from ${existing.fromWarehouse.name} to ${existing.toWarehouse.name} was approved and stock has been moved.`,
             type: 'INVENTORY_TRANSFER_APPROVED',
             createdById: approvedById,
           },
@@ -753,24 +797,9 @@ export async function approveOrRejectTransfer(id, data, approvedById, req, user 
 
       return updated;
     } else {
-      // REJECT action: reverse stock balance back from toWarehouse to fromWarehouse
+      // REJECT action: release the source availability hold only
+      // (stock total was never moved — only availableQuantity was held at create time)
       const transferQty = Number(existing.quantity);
-
-      const destStock = await tx.warehouseStock.findFirst({
-        where: { warehouseId: existing.toWarehouseId, productId: existing.productId, isArchived: false },
-      });
-
-      if (destStock) {
-        await tx.warehouseStock.update({
-          where: { id: destStock.id },
-          data: {
-            quantity: Math.max(0, Number(destStock.quantity) - transferQty),
-            availableQuantity: Math.max(0, Number(destStock.availableQuantity) - transferQty),
-            updatedById: approvedById,
-            updatedAt: new Date(),
-          },
-        });
-      }
 
       const sourceStock = await tx.warehouseStock.findFirst({
         where: { warehouseId: existing.fromWarehouseId, productId: existing.productId, isArchived: false },
@@ -780,7 +809,6 @@ export async function approveOrRejectTransfer(id, data, approvedById, req, user 
         await tx.warehouseStock.update({
           where: { id: sourceStock.id },
           data: {
-            quantity: Number(sourceStock.quantity) + transferQty,
             availableQuantity: Number(sourceStock.availableQuantity) + transferQty,
             updatedById: approvedById,
             updatedAt: new Date(),
@@ -838,7 +866,7 @@ export async function approveOrRejectTransfer(id, data, approvedById, req, user 
           data: {
             userId: existing.createdById,
             title: 'Stock Transfer Rejected',
-            message: `Transfer of ${existing.quantity} units of ${existing.product.name} was rejected. Reason: ${data.notes || 'Not specified'}`,
+            message: `Transfer of ${transferQty} units of ${existing.product.name} was rejected and the stock hold has been released. Reason: ${data.notes || 'Not specified'}`,
             type: 'INVENTORY_TRANSFER_REJECTED',
             createdById: approvedById,
           },
