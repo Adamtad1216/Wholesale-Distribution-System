@@ -37,6 +37,8 @@ export default function ProductDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  const [allWarehouses, setAllWarehouses] = useState([]);
+
   const { can: canUpdate } = usePermission('products:update');
 
   const fetchProduct = useCallback(async () => {
@@ -45,7 +47,7 @@ export default function ProductDetailPage() {
       setLoading(true);
       const [prodRes, whRes] = await Promise.allSettled([
         productsApi.getProductById(id),
-        productsApi.getWarehouses({ limit: 1 }),
+        productsApi.getWarehouses({ limit: 100 }),
       ]);
 
       if (prodRes.status === 'fulfilled') {
@@ -57,7 +59,9 @@ export default function ProductDetailPage() {
 
       if (whRes.status === 'fulfilled') {
         const raw = whRes.value;
-        const total = raw?.meta?.total ?? (Array.isArray(raw?.data) ? raw.data.length : 0);
+        const list = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+        setAllWarehouses(list);
+        const total = raw?.meta?.total ?? list.length;
         setTotalWarehouses(total);
       }
     } catch (err) {
@@ -125,6 +129,58 @@ export default function ProductDetailPage() {
     return Array.isArray(product?.warehouseSellingPrices) ? product.warehouseSellingPrices : [];
   }, [product]);
 
+  // Selling prices computed for EVERY warehouse depot
+  const allWarehousePrices = useMemo(() => {
+    if (!product) return [];
+    const baseSell = Number(product.sellingPrice) || 0;
+    const baseWhole = Number(product.wholesalePrice) || 0;
+
+    const customPricesMap = new Map();
+    (product.warehouseSellingPrices || []).forEach((wp) => {
+      if (wp.warehouseId) {
+        customPricesMap.set(wp.warehouseId, wp);
+      }
+    });
+
+    const warehouseMap = new Map();
+    allWarehouses.forEach((w) => warehouseMap.set(w.id, w));
+    (product.warehouseStocks || []).forEach((s) => {
+      if (s.warehouse && !warehouseMap.has(s.warehouseId)) {
+        warehouseMap.set(s.warehouseId, { ...s.warehouse, id: s.warehouseId });
+      }
+    });
+    (product.warehouseSellingPrices || []).forEach((wp) => {
+      if (wp.warehouse && !warehouseMap.has(wp.warehouseId)) {
+        warehouseMap.set(wp.warehouseId, { ...wp.warehouse, id: wp.warehouseId });
+      }
+    });
+
+    const list = Array.from(warehouseMap.values());
+    if (list.length === 0 && (product.warehouseStocks || []).length > 0) {
+      return product.warehouseStocks.map((s) => {
+        const custom = customPricesMap.get(s.warehouseId);
+        return {
+          warehouseId: s.warehouseId,
+          warehouse: s.warehouse,
+          sellingPrice: custom ? Number(custom.sellingPrice) : baseSell,
+          wholesalePrice: custom ? Number(custom.wholesalePrice) : baseWhole,
+          isCustom: Boolean(custom),
+        };
+      });
+    }
+
+    return list.map((w) => {
+      const custom = customPricesMap.get(w.id);
+      return {
+        warehouseId: w.id,
+        warehouse: w,
+        sellingPrice: custom ? Number(custom.sellingPrice) : baseSell,
+        wholesalePrice: custom ? Number(custom.wholesalePrice) : baseWhole,
+        isCustom: Boolean(custom),
+      };
+    });
+  }, [product, allWarehouses]);
+
   const formatPrice = (val) => {
     const num = Number(val);
     if (isNaN(num)) return 'ETB 0.00';
@@ -166,7 +222,7 @@ export default function ProductDetailPage() {
         <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
           <XCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-foreground">Product Not Found</h2>
+        <h2 className="text-xl font-normal text-foreground">Product Not Found</h2>
         <p className="text-xs text-muted-foreground">
           The requested product record does not exist or has been removed from the catalog.
         </p>
@@ -193,11 +249,11 @@ export default function ProductDetailPage() {
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
+              <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
                 {product.sku || 'SKU-N/A'}
               </span>
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${product.status === 'ACTIVE'
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-normal border ${product.status === 'ACTIVE'
                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                     : 'bg-muted800 text-muted-foreground border-border'
                   }`}
@@ -209,7 +265,7 @@ export default function ProductDetailPage() {
                 {product.status || 'ACTIVE'}
               </span>
             </div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight mt-1">{product.name}</h1>
+            <h1 className="text-2xl font-normal text-foreground tracking-tight mt-1">{product.name}</h1>
           </div>
         </div>
 
@@ -255,7 +311,7 @@ export default function ProductDetailPage() {
                   }}
                 />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white pointer-events-none">
-                  <span className="px-3.5 py-2 rounded-full bg-black/70 backdrop-blur-md text-xs font-bold flex items-center gap-2 shadow-xl">
+                  <span className="px-3.5 py-2 rounded-full bg-black/70 backdrop-blur-md text-xs font-normal flex items-center gap-2 shadow-xl">
                     <Maximize2 className="w-3.5 h-3.5" />
                     <span>Click to Enlarge</span>
                   </span>
@@ -297,7 +353,7 @@ export default function ProductDetailPage() {
         <div className="lg:col-span-7 space-y-5">
           {/* Classification & Identification */}
           <div className="p-5 sm:p-6 rounded-3xl border border-border bg-card shadow-sm space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <h3 className="text-xs font-normal uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Tag className="w-3.5 h-3.5 text-violet-400" />
               <span>Classification & Identification</span>
             </h3>
@@ -305,39 +361,39 @@ export default function ProductDetailPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
                 <span className="text-[10px] text-muted-foreground block mb-0.5">Category</span>
-                <strong className="text-foreground font-semibold">
+                <span className="text-foreground font-normal">
                   {product.category?.name || 'Uncategorized'}
-                </strong>
+                </span>
               </div>
 
               <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
                 <span className="text-[10px] text-muted-foreground block mb-0.5">Brand</span>
-                <strong className="text-foreground font-semibold">{product.brand?.name || 'Generic / None'}</strong>
+                <span className="text-foreground font-normal">{product.brand?.name || 'Generic / None'}</span>
               </div>
 
               <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
                 <span className="text-[10px] text-muted-foreground block mb-0.5">Measurement Unit</span>
-                <strong className="text-foreground font-semibold">
+                <span className="text-foreground font-normal">
                   {product.unit?.name || 'Unit'}
                   {product.unit?.abbreviation ? ` (${product.unit.abbreviation})` : ''}
-                </strong>
+                </span>
               </div>
 
               <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
                 <span className="text-[10px] text-muted-foreground block mb-0.5">Barcode / UPC</span>
-                <span className="font-mono text-xs text-foreground font-bold">{product.barcode || '—'}</span>
+                <span className="font-mono text-xs text-foreground font-normal">{product.barcode || '—'}</span>
               </div>
 
               <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
                 <span className="text-[10px] text-muted-foreground block mb-0.5">Total Reorder Level</span>
-                <span className="font-bold text-amber-400">
+                <span className="font-normal text-amber-400">
                   {totalReorderLevel > 0 ? totalReorderLevel.toLocaleString() : 'Per Warehouse'}
                 </span>
               </div>
 
               <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
                 <span className="text-[10px] text-muted-foreground block mb-0.5">Total Min Stock</span>
-                <span className="font-bold text-rose-400">
+                <span className="font-normal text-rose-400">
                   {totalMinStock > 0 ? totalMinStock.toLocaleString() : 'Per Warehouse'}
                 </span>
               </div>
@@ -346,7 +402,7 @@ export default function ProductDetailPage() {
             {/* Description */}
             {product.description && (
               <div className="pt-2 border-t border-border/60">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                <span className="text-[10px] font-normal uppercase tracking-wider text-muted-foreground block mb-1">
                   Description / Specification Notes
                 </span>
                 <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line bg-muted800/20 p-3 rounded-xl border border-border/50">
@@ -358,35 +414,35 @@ export default function ProductDetailPage() {
 
           {/* Pricing & Commercial Structure */}
           <div className="p-5 sm:p-6 rounded-3xl border border-border bg-card shadow-sm space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <h3 className="text-xs font-normal uppercase tracking-wider text-muted-foreground flex items-center gap-2">
               <Coins className="w-3.5 h-3.5 text-emerald-400" />
               <span>Standard Commercial Pricing</span>
             </h3>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                <span className="text-[10px] uppercase font-bold text-emerald-300 block mb-1">Selling Price</span>
-                <strong className="text-base font-black text-emerald-400 block">{formatPrice(sellPrice)}</strong>
+                <span className="text-[10px] uppercase font-normal text-emerald-300 block mb-1">Selling Price</span>
+                <span className="text-base font-normal text-emerald-400 block">{formatPrice(sellPrice)}</span>
                 <span className="text-[10px] text-emerald-300/70">Standard retail base</span>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/20">
-                <span className="text-[10px] uppercase font-bold text-sky-300 block mb-1">Wholesale Price</span>
-                <strong className="text-base font-black text-sky-400 block">{formatPrice(wholePrice)}</strong>
+                <span className="text-[10px] uppercase font-normal text-sky-300 block mb-1">Wholesale Price</span>
+                <span className="text-base font-normal text-sky-400 block">{formatPrice(wholePrice)}</span>
                 <span className="text-[10px] text-sky-300/70">Bulk distributor tier</span>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-muted800/50 border border-border">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Cost Price</span>
-                <strong className="text-base font-black text-foreground block">{formatPrice(costPrice)}</strong>
+                <span className="text-[10px] uppercase font-normal text-muted-foreground block mb-1">Cost Price</span>
+                <span className="text-base font-normal text-foreground block">{formatPrice(costPrice)}</span>
                 <span className="text-[10px] text-muted-foreground">Standard procurement</span>
               </div>
 
               <div className="p-3.5 rounded-2xl bg-violet-500/10 border border-violet-500/20">
-                <span className="text-[10px] uppercase font-bold text-violet-300 block mb-1">Catalog Margin</span>
-                <strong className="text-base font-black text-violet-400 block">
+                <span className="text-[10px] uppercase font-normal text-violet-300 block mb-1">Catalog Margin</span>
+                <span className="text-base font-normal text-violet-400 block">
                   {catalogDiscount !== null ? `${catalogDiscount}%` : '—'}
-                </strong>
+                </span>
                 <span className="text-[10px] text-violet-300/70">Wholesale spread</span>
               </div>
             </div>
@@ -402,7 +458,7 @@ export default function ProductDetailPage() {
               <Warehouse className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">Facility Stock Distribution</h3>
+              <h3 className="text-sm font-normal text-foreground">Facility Stock Distribution</h3>
               <p className="text-[11px] text-muted-foreground">
                 Current inventory levels across all warehouse depots
               </p>
@@ -412,15 +468,15 @@ export default function ProductDetailPage() {
           {/* Quick Summary Pill */}
           <div className="flex items-center gap-3 text-xs bg-muted800/60 px-3.5 py-1.5 rounded-xl border border-border/80 self-start sm:self-auto">
             <span>
-              Available: <strong className="text-emerald-400 font-black">{stockSummary.availableQuantity.toLocaleString()}</strong>
+              Available: <span className="text-emerald-400 font-normal">{stockSummary.availableQuantity.toLocaleString()}</span>
             </span>
             <span className="text-border">|</span>
             <span>
-              Reserved: <strong className="text-sky-400 font-black">{stockSummary.reservedQuantity.toLocaleString()}</strong>
+              Reserved: <span className="text-sky-400 font-normal">{stockSummary.reservedQuantity.toLocaleString()}</span>
             </span>
             <span className="text-border">|</span>
             <span>
-              Total: <strong className="text-foreground font-black">{stockSummary.totalQuantity.toLocaleString()}</strong>
+              Total: <span className="text-foreground font-normal">{stockSummary.totalQuantity.toLocaleString()}</span>
             </span>
           </div>
         </div>
@@ -428,7 +484,7 @@ export default function ProductDetailPage() {
         {warehouseStocks.length === 0 ? (
           <div className="p-8 text-center rounded-2xl bg-muted800/20 border border-border/60 text-muted-foreground space-y-1">
             <Package className="w-8 h-8 opacity-40 mx-auto mb-1 text-muted-foreground" />
-            <p className="text-xs font-semibold">No warehouse stock records found for this product</p>
+            <p className="text-xs font-normal">No warehouse stock records found for this product</p>
             <p className="text-[11px]">Stock records will populate once received or transferred into warehouses.</p>
           </div>
         ) : (
@@ -436,14 +492,15 @@ export default function ProductDetailPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border bg-muted900/40 text-muted-foreground uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4 font-bold">Warehouse Depot</th>
-                  <th className="py-3 px-4 font-bold">Facility Code</th>
-                  <th className="py-3 px-4 font-bold text-right">Available Qty</th>
-                  <th className="py-3 px-4 font-bold text-right">Reserved Qty</th>
-                  <th className="py-3 px-4 font-bold text-right">Total On Hand</th>
-                  <th className="py-3 px-4 font-bold text-right">Min Stock</th>
-                  <th className="py-3 px-4 font-bold text-right">Reorder Level</th>
-                  <th className="py-3 px-4 font-bold text-center">Stock Health</th>
+                  <th className="py-3 px-4 font-normal">Warehouse Depot</th>
+                  <th className="py-3 px-4 font-normal">Facility Code</th>
+                  <th className="py-3 px-4 font-normal text-right">Depot Selling Price</th>
+                  <th className="py-3 px-4 font-normal text-right">Available Qty</th>
+                  <th className="py-3 px-4 font-normal text-right">Reserved Qty</th>
+                  <th className="py-3 px-4 font-normal text-right">Total On Hand</th>
+                  <th className="py-3 px-4 font-normal text-right">Min Stock</th>
+                  <th className="py-3 px-4 font-normal text-right">Reorder Level</th>
+                  <th className="py-3 px-4 font-normal text-center">Stock Health</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
@@ -457,9 +514,13 @@ export default function ProductDetailPage() {
                   const isOut = avail <= 0;
                   const branchName = s.warehouse?.branch?.name;
 
+                  // Lookup warehouse specific price
+                  const whPrice = allWarehousePrices.find((p) => p.warehouseId === s.warehouseId);
+                  const sSell = whPrice ? whPrice.sellingPrice : sellPrice;
+
                   return (
                     <tr key={s.id || s.warehouseId} className="hover:bg-muted800/30 transition">
-                      <td className="py-3 px-4 font-bold text-foreground">
+                      <td className="py-3 px-4 font-normal text-foreground">
                         <div className="flex items-center gap-2">
                           <Warehouse className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span>{s.warehouse?.name || 'Warehouse'}</span>
@@ -471,32 +532,46 @@ export default function ProductDetailPage() {
                         </div>
                       </td>
                       <td className="py-3 px-4 font-mono text-muted-foreground">{s.warehouse?.code || '—'}</td>
-                      <td className="py-3 px-4 text-right font-black text-emerald-400 text-sm">
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="font-normal text-emerald-400 font-mono text-sm">{formatPrice(sSell)}</span>
+                          {whPrice?.isCustom ? (
+                            <span className="text-[9px] font-normal uppercase px-1.5 py-0.2 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                              Custom Override
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-medium text-muted-foreground">
+                              Standard Base
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right font-normal text-emerald-700 dark:text-emerald-400 text-sm">
                         {avail.toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 text-right font-semibold text-sky-400">
+                      <td className="py-3 px-4 text-right font-medium text-sky-700 dark:text-sky-400">
                         {res > 0 ? res.toLocaleString() : '0'}
                       </td>
-                      <td className="py-3 px-4 text-right font-black text-foreground">{total.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right font-mono text-rose-400 font-semibold">
+                      <td className="py-3 px-4 text-right font-normal text-foreground">{total.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right font-mono text-rose-700 dark:text-rose-400 font-medium">
                         {minStockLevel.toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-amber-400 font-semibold">
+                      <td className="py-3 px-4 text-right font-mono text-amber-700 dark:text-amber-400 font-medium">
                         {reorderPoint.toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-center">
                         {isOut ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-normal bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30">
                             <XCircle className="w-3 h-3" />
                             <span>Out of Stock</span>
                           </span>
                         ) : isLow ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-normal bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
                             <AlertTriangle className="w-3 h-3" />
                             <span>Reorder Needed</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-normal bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Optimal</span>
                           </span>
@@ -511,18 +586,29 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      {/* Warehouse Specific Pricing Table (Wide) */}
-      {warehouseSellingPrices.length > 0 && (
+      {/* Warehouse Specific Pricing Table for All Warehouses */}
+      {allWarehousePrices.length > 0 && (
         <div className="p-5 sm:p-6 rounded-3xl border border-border bg-card shadow-sm space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-border/80 pb-3">
-            <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
-              <Coins className="w-4 h-4" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                <Coins className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-normal text-foreground">Facility Selling Prices (All Warehouses)</h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Active commercial selling and wholesale price schedule across every warehouse facility
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-foreground">Facility Specific Selling Prices</h3>
-              <p className="text-[11px] text-muted-foreground">
-                Custom override pricing tailored to regional or warehouse facility depots
-              </p>
+
+            <div className="flex items-center gap-2 text-xs">
+              <span className="px-2.5 py-1 rounded-lg bg-sky-500/10 border border-sky-500/25 text-sky-300 font-normal text-[11px]">
+                {warehouseSellingPrices.length} Custom Override{warehouseSellingPrices.length === 1 ? '' : 's'}
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-muted800 border border-border text-muted-foreground font-normal text-[11px]">
+                {Math.max(0, allWarehousePrices.length - warehouseSellingPrices.length)} Standard Catalog
+              </span>
             </div>
           </div>
 
@@ -530,30 +616,53 @@ export default function ProductDetailPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border bg-muted900/40 text-muted-foreground uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-4 font-bold">Depot Facility</th>
-                  <th className="py-3 px-4 font-bold">Depot Code</th>
-                  <th className="py-3 px-4 font-bold text-right">Depot Selling Price</th>
-                  <th className="py-3 px-4 font-bold text-right">Depot Wholesale Price</th>
-                  <th className="py-3 px-4 font-bold text-center">Price Differential</th>
+                  <th className="py-3 px-4 font-normal">Depot Facility</th>
+                  <th className="py-3 px-4 font-normal">Depot Code</th>
+                  <th className="py-3 px-4 font-normal text-right">Depot Selling Price</th>
+                  <th className="py-3 px-4 font-normal text-right">Depot Wholesale Price</th>
+                  <th className="py-3 px-4 font-normal text-center">Pricing Model</th>
+                  <th className="py-3 px-4 font-normal text-center">Price Differential</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
-                {warehouseSellingPrices.map((wp) => {
+                {allWarehousePrices.map((wp) => {
                   const wpSell = Number(wp.sellingPrice) || 0;
                   const wpWhole = Number(wp.wholesalePrice) || 0;
                   const diff = sellPrice > 0 ? wpSell - sellPrice : 0;
+                  const branchName = wp.warehouse?.branch?.name;
 
                   return (
-                    <tr key={wp.id || wp.warehouseId} className="hover:bg-muted800/30 transition">
-                      <td className="py-3 px-4 font-bold text-foreground">{wp.warehouse?.name || 'Warehouse'}</td>
+                    <tr key={wp.warehouseId} className="hover:bg-muted800/30 transition">
+                      <td className="py-3 px-4 font-normal text-foreground">
+                        <div className="flex items-center gap-2">
+                          <Warehouse className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span>{wp.warehouse?.name || 'Warehouse'}</span>
+                          {branchName && (
+                            <span className="text-[11px] font-normal text-muted-foreground">
+                              ({branchName})
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 px-4 font-mono text-muted-foreground">{wp.warehouse?.code || '—'}</td>
-                      <td className="py-3 px-4 text-right font-black text-emerald-400 text-sm">
+                      <td className="py-3 px-4 text-right font-normal text-emerald-400 text-sm">
                         {formatPrice(wpSell)}
                       </td>
-                      <td className="py-3 px-4 text-right font-semibold text-sky-400">{formatPrice(wpWhole)}</td>
-                      <td className="py-3 px-4 text-center font-bold">
+                      <td className="py-3 px-4 text-right font-normal text-sky-400">{formatPrice(wpWhole)}</td>
+                      <td className="py-3 px-4 text-center">
+                        {wp.isCustom ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-normal bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                            Custom Override
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted800 text-muted-foreground border border-border">
+                            Standard Base
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center font-normal">
                         {diff === 0 ? (
-                          <span className="text-muted-foreground">Standard Base</span>
+                          <span className="text-muted-foreground text-[11px]">Standard Base</span>
                         ) : diff > 0 ? (
                           <span className="text-emerald-400 font-mono">+{formatPrice(diff)}</span>
                         ) : (
@@ -574,7 +683,7 @@ export default function ProductDetailPage() {
         <div className="flex items-center gap-4">
           {creatorName && (
             <span>
-              Created by: <strong className="text-foreground">{creatorName}</strong>
+              Created by: <span className="text-foreground">{creatorName}</span>
             </span>
           )}
           {product.createdAt && (
@@ -588,7 +697,7 @@ export default function ProductDetailPage() {
         <div className="flex items-center gap-4">
           {updaterName && (
             <span>
-              Last updated by: <strong className="text-foreground">{updaterName}</strong>
+              Last updated by: <span className="text-foreground">{updaterName}</span>
             </span>
           )}
           {product.updatedAt && (

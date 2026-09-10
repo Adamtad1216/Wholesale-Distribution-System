@@ -405,46 +405,38 @@ export default function ProductFormPage() {
 
     setSubmitting(true);
     try {
-      const baseSell = formData.sellingPrice ? Number(formData.sellingPrice) : 0;
-      const baseWhole = formData.wholesalePrice ? Number(formData.wholesalePrice) : 0;
+      const baseSell =
+        formData.sellingPrice !== '' && formData.sellingPrice !== undefined && formData.sellingPrice !== null
+          ? Math.max(0, Number(formData.sellingPrice))
+          : 0;
+      const baseWhole =
+        formData.wholesalePrice !== '' && formData.wholesalePrice !== undefined && formData.wholesalePrice !== null
+          ? Math.max(0, Number(formData.wholesalePrice))
+          : 0;
 
-      // Ensure all warehouses are saved:
-      // Facilities with custom prices use their entered prices.
-      // Facilities left blank inherit the default base catalog prices (baseSell / baseWhole).
+      // Only save warehouse pricing for facilities where the user explicitly specified a custom price.
+      // Do NOT add default values or auto-inherit base prices for facilities left blank.
       const warehouseSellingPrices = (formData.warehouseSellingPrices || [])
-        .filter((wp) => Boolean(wp.warehouseId))
+        .filter((wp) => {
+          const hasCustomSell =
+            wp.sellingPrice !== undefined && wp.sellingPrice !== null && String(wp.sellingPrice).trim() !== '';
+          const hasCustomWhole =
+            wp.wholesalePrice !== undefined && wp.wholesalePrice !== null && String(wp.wholesalePrice).trim() !== '';
+          return Boolean(wp.warehouseId) && (hasCustomSell || hasCustomWhole);
+        })
         .map((wp) => {
-          const hasCustomSell = wp.sellingPrice !== undefined && String(wp.sellingPrice).trim() !== '';
-          const hasCustomWhole = wp.wholesalePrice !== undefined && String(wp.wholesalePrice).trim() !== '';
-
-          const sell = hasCustomSell ? Math.max(0, Number(wp.sellingPrice)) : (baseSell || 0);
-          const whole = hasCustomWhole ? Math.max(0, Number(wp.wholesalePrice)) : (baseWhole || 0);
+          const hasCustomSell =
+            wp.sellingPrice !== undefined && wp.sellingPrice !== null && String(wp.sellingPrice).trim() !== '';
+          const hasCustomWhole =
+            wp.wholesalePrice !== undefined && wp.wholesalePrice !== null && String(wp.wholesalePrice).trim() !== '';
 
           return {
             warehouseId: wp.warehouseId,
-            sellingPrice: sell,
-            wholesalePrice: whole,
+            sellingPrice: hasCustomSell ? Math.max(0, Number(wp.sellingPrice)) : 0,
+            wholesalePrice: hasCustomWhole ? Math.max(0, Number(wp.wholesalePrice)) : 0,
             status: wp.status || 'ACTIVE',
-            hasCustom: hasCustomSell || hasCustomWhole,
           };
-        })
-        .filter((wp) => wp.hasCustom || baseSell > 0 || baseWhole > 0 || wp.sellingPrice > 0 || wp.wholesalePrice > 0)
-        .map(({ hasCustom, ...rest }) => rest);
-
-      // Primary selling & wholesale price for the master product record
-      const primarySell =
-        baseSell > 0
-          ? baseSell
-          : warehouseSellingPrices.length > 0
-          ? warehouseSellingPrices[0].sellingPrice
-          : 0;
-
-      const primaryWhole =
-        baseWhole > 0
-          ? baseWhole
-          : warehouseSellingPrices.length > 0
-          ? warehouseSellingPrices[0].wholesalePrice
-          : 0;
+        });
 
       const payload = {
         name: formData.name.trim(),
@@ -453,8 +445,8 @@ export default function ProductFormPage() {
         brandId: formData.brandId || undefined,
         unitId: formData.unitId,
         status: 'ACTIVE',
-        sellingPrice: primarySell,
-        wholesalePrice: primaryWhole,
+        sellingPrice: baseSell,
+        wholesalePrice: baseWhole,
         images: formData.images.map((img) => ({
           imageUrl: img.imageUrl,
           isPrimary: Boolean(img.isPrimary),
@@ -493,9 +485,6 @@ export default function ProductFormPage() {
     (wp) => String(wp.sellingPrice).trim() !== '' || String(wp.wholesalePrice).trim() !== ''
   ).length;
 
-  // Default base prices are hidden in edit mode; shown ONLY in create mode per requirement.
-  const hideDefaultPrices = isEdit;
-
   return (
     <div className="w-full max-w-[1500px] mx-auto space-y-6">
       {/* ── Page Header ────────────────────────────────────────── */}
@@ -505,7 +494,7 @@ export default function ProductFormPage() {
             <button
               type="button"
               onClick={() => navigate('/products')}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition flex items-center gap-1.5 text-xs font-semibold"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition flex items-center gap-1.5 text-xs font-normal"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -518,7 +507,7 @@ export default function ProductFormPage() {
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+          <h1 className="text-2xl font-normal tracking-tight text-foreground flex items-center gap-2.5">
             <span>📦</span>
             <span>{isEdit ? `Edit: ${formData.name || 'Product'}` : 'Register New Product'}</span>
           </h1>
@@ -563,7 +552,7 @@ export default function ProductFormPage() {
             <div className="flex items-center gap-2.5">
               <span className="text-lg">📋</span>
               <div>
-                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
+                <h3 className="text-sm font-normal text-foreground uppercase tracking-wider">
                   1. Product Information & Classification
                 </h3>
               </div>
@@ -609,7 +598,7 @@ export default function ProductFormPage() {
                 <button
                   type="button"
                   onClick={() => setIsBrandModalOpen(true)}
-                  className="text-[11px] text-blue-500 hover:text-blue-400 font-semibold transition"
+                  className="text-[11px] text-blue-500 hover:text-blue-400 font-normal transition"
                 >
                   + New Brand
                 </button>
@@ -642,7 +631,7 @@ export default function ProductFormPage() {
                 <button
                   type="button"
                   onClick={() => setIsUnitModalOpen(true)}
-                  className="text-[11px] text-blue-500 hover:text-blue-400 font-semibold transition"
+                  className="text-[11px] text-blue-500 hover:text-blue-400 font-normal transition"
                 >
                   + New Unit
                 </button>
@@ -659,101 +648,97 @@ export default function ProductFormPage() {
           </div>
         </div>
 
-        {/* ── SECTION 2: DEFAULT BASE PRICING (Hidden when warehouse prices are assigned in edit mode) ── */}
-        {!hideDefaultPrices && (
-          <div className="relative z-10 bg-card border border-border rounded-2xl p-4 sm:p-6 space-y-5 shadow-sm">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-              <span className="text-lg">💵</span>
-              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-                2. Default Base Pricing
-              </h3>
+        {/* ── SECTION 2: DEFAULT BASE PRICING ── */}
+        <div className="relative z-10 bg-card border border-border rounded-2xl p-4 sm:p-6 space-y-5 shadow-sm">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-border">
+            <span className="text-lg">💵</span>
+            <h3 className="text-sm font-normal text-foreground uppercase tracking-wider">
+              2. Default Base Pricing
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+            {/* Field 1: Selling Price */}
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1">
+                Standard Selling Price (ETB)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.sellingPrice}
+                onChange={(e) => handleChange('sellingPrice', e.target.value)}
+                placeholder="0.00"
+                className="w-full px-3.5 py-2.5 bg-muted800/80 border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
-              {/* Field 1: Selling Price */}
-              <div>
-                <label className="block text-xs font-medium text-foreground mb-1">
-                  Standard Selling Price (ETB)
+            {/* Field 2: Wholesale Price */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Standard Wholesale Price (ETB)
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.sellingPrice}
-                  onChange={(e) => handleChange('sellingPrice', e.target.value)}
-                  placeholder="0.00"
-                  className="w-full px-3.5 py-2.5 bg-muted800/80 border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
-                />
+                {Number(formData.sellingPrice) > 0 && Number(formData.wholesalePrice) > 0 && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-normal">
+                    {(((Number(formData.sellingPrice) - Number(formData.wholesalePrice)) / Number(formData.sellingPrice)) * 100).toFixed(1)}% Off
+                  </span>
+                )}
               </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.wholesalePrice}
+                onChange={(e) => handleChange('wholesalePrice', e.target.value)}
+                placeholder="0.00"
+                className="w-full px-3.5 py-2.5 bg-muted800/80 border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
+              />
+            </div>
 
-              {/* Field 2: Wholesale Price */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-foreground">
-                    Standard Wholesale Price (ETB)
-                  </label>
-                  {Number(formData.sellingPrice) > 0 && Number(formData.wholesalePrice) > 0 && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 font-semibold">
-                      {(((Number(formData.sellingPrice) - Number(formData.wholesalePrice)) / Number(formData.sellingPrice)) * 100).toFixed(1)}% Off
-                    </span>
-                  )}
+            {/* Field 3: Pricing Analytics Card */}
+            <div className="p-3.5 rounded-xl border border-border/70 bg-muted800/40 flex flex-col justify-between">
+              <span className="text-[11px] font-normal text-foreground uppercase tracking-wider block">
+                Margin & Spread Summary
+              </span>
+              <div className="grid grid-cols-2 gap-2 my-1 text-xs">
+                <div>
+                  <span className="text-[10px] text-muted-foreground block">Selling:</span>
+                  <span className="font-mono font-normal text-emerald-400">
+                    {formData.sellingPrice ? `ETB ${Number(formData.sellingPrice).toFixed(2)}` : '—'}
+                  </span>
                 </div>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.wholesalePrice}
-                  onChange={(e) => handleChange('wholesalePrice', e.target.value)}
-                  placeholder="0.00"
-                  className="w-full px-3.5 py-2.5 bg-muted800/80 border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
-                />
-              </div>
-
-              {/* Field 3: Pricing Analytics Card */}
-              <div className="p-3.5 rounded-xl border border-border/70 bg-muted800/40 flex flex-col justify-between">
-                <span className="text-[11px] font-bold text-foreground uppercase tracking-wider block">
-                  Margin & Spread Summary
-                </span>
-                <div className="grid grid-cols-2 gap-2 my-1 text-xs">
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">Selling:</span>
-                    <span className="font-mono font-semibold text-emerald-400">
-                      {formData.sellingPrice ? `ETB ${Number(formData.sellingPrice).toFixed(2)}` : '—'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground block">Wholesale:</span>
-                    <span className="font-mono font-semibold text-sky-400">
-                      {formData.wholesalePrice ? `ETB ${Number(formData.wholesalePrice).toFixed(2)}` : '—'}
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-2 border-t border-border/50 flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">Wholesale Margin:</span>
-                  <span className="font-mono font-semibold text-foreground">
-                    {Number(formData.sellingPrice) > 0 && Number(formData.wholesalePrice) > 0
-                      ? `ETB ${(Number(formData.sellingPrice) - Number(formData.wholesalePrice)).toFixed(2)} (${(((Number(formData.sellingPrice) - Number(formData.wholesalePrice)) / Number(formData.sellingPrice)) * 100).toFixed(1)}%)`
-                      : 'Base rate'}
+                <div>
+                  <span className="text-[10px] text-muted-foreground block">Wholesale:</span>
+                  <span className="font-mono font-normal text-sky-400">
+                    {formData.wholesalePrice ? `ETB ${Number(formData.wholesalePrice).toFixed(2)}` : '—'}
                   </span>
                 </div>
               </div>
+              <div className="pt-2 border-t border-border/50 flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">Wholesale Margin:</span>
+                <span className="font-mono font-normal text-foreground">
+                  {Number(formData.sellingPrice) > 0 && Number(formData.wholesalePrice) > 0
+                    ? `ETB ${(Number(formData.sellingPrice) - Number(formData.wholesalePrice)).toFixed(2)} (${(((Number(formData.sellingPrice) - Number(formData.wholesalePrice)) / Number(formData.sellingPrice)) * 100).toFixed(1)}%)`
+                    : 'Base rate'}
+                </span>
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* ── SECTION: WAREHOUSE-SPECIFIC PRICES (3 per row) ────────────────── */}
+        {/* ── SECTION 3: WAREHOUSE-SPECIFIC PRICES (3 per row) ────────────────── */}
         <div className="relative z-0 bg-card border border-border rounded-2xl p-4 sm:p-6 space-y-5 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
             <div className="flex items-center gap-2.5">
               <span className="text-lg">🏢</span>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-                  {hideDefaultPrices
-                    ? '2. Warehouse-Specific Selling & Wholesale Prices'
-                    : '3. Warehouse-Specific Selling & Wholesale Prices'}
+                <h3 className="text-sm font-normal text-foreground uppercase tracking-wider">
+                  3. Warehouse-Specific Selling & Wholesale Prices
                 </h3>
                 {formData.warehouseSellingPrices.length > 0 && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                     {formData.warehouseSellingPrices.length} {formData.warehouseSellingPrices.length === 1 ? 'Registered Facility' : 'Registered Facilities'}
                   </span>
                 )}
@@ -811,7 +796,7 @@ export default function ProductFormPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-foreground truncate" title={whName}>
+                            <span className="text-xs font-normal text-foreground truncate" title={whName}>
                               {whName}
                             </span>
                             {whCode && (
@@ -851,7 +836,7 @@ export default function ProductFormPage() {
                           onChange={(e) =>
                             handleUpdateWarehousePrice(idx, 'sellingPrice', e.target.value)
                           }
-                          placeholder={formData.sellingPrice ? `${formData.sellingPrice} (Base)` : '0.00'}
+                          placeholder="Optional (e.g. 0.00)"
                           className="w-full px-2.5 py-1.5 bg-muted900 border border-border rounded-lg text-foreground text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-muted-foreground/50"
                         />
                       </div>
@@ -862,7 +847,7 @@ export default function ProductFormPage() {
                             Wholesale Price (ETB)
                           </label>
                           {discountPct && (
-                            <span className="text-[10px] font-mono px-1 rounded text-sky-400 bg-sky-500/10 border border-sky-500/20 font-semibold">
+                            <span className="text-[10px] font-mono px-1 rounded text-sky-400 bg-sky-500/10 border border-sky-500/20 font-normal">
                               -{discountPct}%
                             </span>
                           )}
@@ -875,7 +860,7 @@ export default function ProductFormPage() {
                           onChange={(e) =>
                             handleUpdateWarehousePrice(idx, 'wholesalePrice', e.target.value)
                           }
-                          placeholder={formData.wholesalePrice ? `${formData.wholesalePrice} (Base)` : '0.00'}
+                          placeholder="Optional (e.g. 0.00)"
                           className="w-full px-2.5 py-1.5 bg-muted900 border border-border rounded-lg text-foreground text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-muted-foreground/50"
                         />
                       </div>
@@ -893,8 +878,8 @@ export default function ProductFormPage() {
             <div className="flex items-center gap-2.5">
               <span className="text-lg">🖼️</span>
               <div>
-                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-                  {hideDefaultPrices ? '3. Product Photos & Gallery' : '4. Product Photos & Gallery'} ({formData.images.length})
+                <h3 className="text-sm font-normal text-foreground uppercase tracking-wider">
+                  4. Product Photos & Gallery ({formData.images.length})
                 </h3>
               </div>
             </div>
@@ -940,7 +925,7 @@ export default function ProductFormPage() {
                 {isDragging ? '📥' : '📁'}
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-sm font-normal text-foreground">
                   {uploadingImage
                     ? 'Uploading image...'
                     : isDragging
@@ -963,7 +948,7 @@ export default function ProductFormPage() {
             >
               {isDragging && (
                 <div className="absolute inset-0 z-20 rounded-2xl bg-blue-600/15 border-2 border-dashed border-blue-500 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
-                  <div className="p-3.5 rounded-xl bg-card border border-border shadow-2xl flex items-center gap-2 text-xs sm:text-sm font-bold text-foreground">
+                  <div className="p-3.5 rounded-xl bg-card border border-border shadow-2xl flex items-center gap-2 text-xs sm:text-sm font-normal text-foreground">
                     <span className="text-base">📥</span> Drop images here to add to gallery
                   </div>
                 </div>
@@ -971,7 +956,7 @@ export default function ProductFormPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-foreground">
+                    <span className="text-xs font-normal text-foreground">
                       Uploaded Photos ({formData.images.length})
                     </span>
                     <span className="text-[11px] text-muted-foreground">
@@ -1002,7 +987,7 @@ export default function ProductFormPage() {
                       />
 
                       {img.isPrimary && (
-                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-blue-600 text-white shadow-md z-10">
+                        <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-normal bg-blue-600 text-white shadow-md z-10">
                           ★ Primary
                         </span>
                       )}
