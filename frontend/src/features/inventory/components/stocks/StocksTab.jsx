@@ -15,6 +15,7 @@ import {
   XCircle,
   AlertCircle,
   Eye,
+  PackagePlus,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../../../components/ui/Button';
@@ -34,9 +35,11 @@ export default function StocksTab({
   onDeleteStock,
   onQuickTransfer,
   onQuickAdjust,
+  onQuickAddQuantity,
   canCreate = true,
   canUpdate = true,
   canDelete = true,
+  canCreateStockAddition = true,
 }) {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
@@ -380,30 +383,42 @@ export default function StocksTab({
                         <button
                           type="button"
                           onClick={() => navigate(`/inventory/stocks/${stock.id}`)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-violet-500 hover:bg-violet-500/10 transition"
+                          className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                           title="View complete stock details"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 text-black dark:text-white" />
                         </button>
+
+                        {/* Quick Add Quantity */}
+                        {canCreateStockAddition && (
+                          <button
+                            type="button"
+                            onClick={() => onQuickAddQuantity && onQuickAddQuantity(stock)}
+                            className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
+                            title="Add Quantity"
+                          >
+                            <PackagePlus className="w-4 h-4 text-black dark:text-white" />
+                          </button>
+                        )}
 
                         {/* Quick Transfer */}
                         <button
                           type="button"
                           onClick={() => onQuickTransfer && onQuickTransfer(stock)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
+                          className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                           title="Transfer stock to another warehouse"
                         >
-                          <ArrowLeftRight className="w-4 h-4" />
+                          <ArrowLeftRight className="w-4 h-4 text-black dark:text-white" />
                         </button>
 
                         {/* Quick Adjust */}
                         <button
                           type="button"
                           onClick={() => onQuickAdjust && onQuickAdjust(stock)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
+                          className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                           title="Stock Adjustment / Count audit"
                         >
-                          <Sliders className="w-4 h-4" />
+                          <Sliders className="w-4 h-4 text-black dark:text-white" />
                         </button>
 
                         {/* Edit thresholds */}
@@ -411,10 +426,10 @@ export default function StocksTab({
                           <button
                             type="button"
                             onClick={() => onOpenEditModal(stock)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
-                            title="Edit thresholds & quantity"
+                            className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
+                            title="Edit safety thresholds"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit2 className="w-4 h-4 text-black dark:text-white" />
                           </button>
                         )}
 
@@ -423,10 +438,10 @@ export default function StocksTab({
                           <button
                             type="button"
                             onClick={() => onDeleteStock(stock)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted800 transition"
+                            className="p-1.5 rounded-lg text-black dark:text-white hover:bg-muted transition"
                             title="Archive Stock"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4 text-black dark:text-white" />
                           </button>
                         )}
                       </div>
@@ -546,25 +561,36 @@ export default function StocksTab({
                   <button
                     type="button"
                     onClick={() => navigate(`/inventory/stocks/${stock.id}`)}
-                    className="p-1.5 rounded-lg border border-border hover:bg-muted800 text-xs font-normal text-muted-foreground hover:text-foreground flex items-center justify-center transition shrink-0"
+                    className="p-1.5 rounded-lg border border-border hover:bg-muted text-xs font-normal text-black dark:text-white flex items-center justify-center transition shrink-0"
                     title="View complete stock details"
                   >
-                    <Eye className="w-3.5 h-3.5" />
+                    <Eye className="w-3.5 h-3.5 text-black dark:text-white" />
                   </button>
+                  {canCreateStockAddition && (
+                    <button
+                      type="button"
+                      onClick={() => onQuickAddQuantity && onQuickAddQuantity(stock)}
+                      className="flex-1 py-1.5 rounded-lg border border-border hover:bg-muted text-xs font-normal text-black dark:text-white flex items-center justify-center gap-1.5 transition"
+                      title="Add Quantity"
+                    >
+                      <PackagePlus className="w-3 h-3 text-black dark:text-white" />
+                      <span>+ Qty</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onQuickTransfer && onQuickTransfer(stock)}
-                    className="flex-1 py-1.5 rounded-lg border border-border hover:border-sky-500/40 hover:bg-sky-500/10 text-xs font-normal text-muted-foreground hover:text-sky-300 flex items-center justify-center gap-1.5 transition"
+                    className="flex-1 py-1.5 rounded-lg border border-border hover:bg-muted text-xs font-normal text-black dark:text-white flex items-center justify-center gap-1.5 transition"
                   >
-                    <ArrowLeftRight className="w-3 h-3" />
+                    <ArrowLeftRight className="w-3 h-3 text-black dark:text-white" />
                     <span>Transfer</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => onQuickAdjust && onQuickAdjust(stock)}
-                    className="flex-1 py-1.5 rounded-lg border border-border hover:border-violet-500/40 hover:bg-violet-500/10 text-xs font-normal text-muted-foreground hover:text-violet-300 flex items-center justify-center gap-1.5 transition"
-                    acity                  >
-                    <Sliders className="w-3 h-3" />
+                    className="flex-1 py-1.5 rounded-lg border border-border hover:bg-muted text-xs font-normal text-black dark:text-white flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Sliders className="w-3 h-3 text-black dark:text-white" />
                     <span>Audit Count</span>
                   </button>
                 </div>
