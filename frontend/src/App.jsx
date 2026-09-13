@@ -47,6 +47,7 @@ import SalesOrderDetail from './features/sales-orders/pages/SalesOrderDetail';
 // Inventory & Operations
 import InventoryPage from './features/inventory/pages/InventoryPage';
 import StockDetailPage from './features/inventory/pages/StockDetailPage';
+import StockAdditionDetailPage from './features/inventory/pages/StockAdditionDetailPage';
 import TransferDetailPage from './features/inventory/pages/TransferDetailPage';
 import AdjustmentDetailPage from './features/inventory/pages/AdjustmentDetailPage';
 import ReservationDetailPage from './features/inventory/pages/ReservationDetailPage';
@@ -150,6 +151,7 @@ function AppRoutes() {
             <PermissionRoute
               permission={[
                 'inventory:stock:read',
+                'inventory:stock-additions:read',
                 'inventory:transfers:read',
                 'inventory:adjustments:read',
                 'inventory:reservations:read',
@@ -159,6 +161,7 @@ function AppRoutes() {
         >
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/inventory/stocks/:id" element={<StockDetailPage />} />
+          <Route path="/inventory/stock-additions/:id" element={<StockAdditionDetailPage />} />
           <Route path="/inventory/transfers/:id" element={<TransferDetailPage />} />
           <Route path="/inventory/adjustments/:id" element={<AdjustmentDetailPage />} />
           <Route path="/inventory/reservations/:id" element={<ReservationDetailPage />} />

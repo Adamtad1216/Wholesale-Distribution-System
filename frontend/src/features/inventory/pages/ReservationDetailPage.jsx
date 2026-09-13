@@ -29,6 +29,7 @@ import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import ReservationFormModal from '../components/reservations/ReservationFormModal';
 import ConfirmDeleteModal from '../../../components/ui/ConfirmDeleteModal';
+import ProductThumbnail from '../components/ProductThumbnail';
 
 export default function ReservationDetailPage() {
   const { id } = useParams();
@@ -192,16 +193,16 @@ export default function ReservationDetailPage() {
           <button
             type="button"
             onClick={() => navigate('/inventory?tab=reservations')}
-            className="p-2 rounded-xl bg-card border border-border hover:bg-muted800 text-muted-foreground hover:text-foreground transition"
+            className="p-2 rounded-xl bg-card border border-border hover:bg-muted text-black dark:text-white transition"
             title="Back to Reservations"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-black dark:text-white" />
           </button>
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
-                #{reservation.id?.slice(0, 8)}
+              <span className="font-mono text-xs font-normal px-2.5 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
+                {warehouseDisplay}
               </span>
               {isReserved && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-normal bg-amber-500/15 text-amber-300 border border-amber-500/30">
@@ -228,17 +229,26 @@ export default function ReservationDetailPage() {
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-normal text-foreground tracking-tight mt-1 flex items-center gap-2">
-              <BookmarkCheck className="w-6 h-6 text-emerald-400" />
-              <span>Stock Reservation Details</span>
-            </h1>
+            <div className="flex items-center gap-3.5 mt-2">
+              <ProductThumbnail product={reservation.product} size="lg" className="rounded-2xl shadow-sm border border-border" />
+              <div>
+                <h1 className="text-2xl font-normal text-foreground tracking-tight">
+                  Reservation: {reservation.product?.name || 'Inventory Product'}
+                </h1>
+                {reservation.product?.sku && (
+                  <span className="text-xs font-mono text-muted-foreground">
+                    SKU: {reservation.product.sku}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Dynamic Action Bar */}
         <div className="flex items-center gap-2.5 self-end sm:self-auto flex-wrap">
-          <Button variant="outline" size="sm" onClick={fetchReservation} className="flex items-center gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <Button variant="outline" size="sm" onClick={fetchReservation} className="flex items-center gap-1.5 text-black dark:text-white">
+            <RefreshCw className="w-3.5 h-3.5 text-black dark:text-white" />
             <span>Refresh</span>
           </Button>
 
@@ -273,9 +283,9 @@ export default function ReservationDetailPage() {
                 type="button"
                 disabled={processing}
                 onClick={() => setIsReleaseModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-normal text-xs flex items-center gap-1.5 transition active:scale-95"
+                className="px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs flex items-center gap-1.5 transition active:scale-95"
               >
-                <TrendingDown className="w-3.5 h-3.5" />
+                <TrendingDown className="w-3.5 h-3.5 text-black dark:text-white" />
                 <span>Release Stock</span>
               </button>
 
@@ -283,9 +293,9 @@ export default function ReservationDetailPage() {
                 type="button"
                 disabled={processing}
                 onClick={handleConfirmFulfill}
-                className="px-4 py-2 rounded-xl font-normal text-xs text-white shadow-lg shadow-emerald-500/20 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 flex items-center gap-1.5 transition active:scale-95"
+                className="px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs flex items-center gap-1.5 transition active:scale-95"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-black dark:text-white" />
                 <span>Confirm Allocation</span>
               </button>
             </>
@@ -296,22 +306,22 @@ export default function ReservationDetailPage() {
               variant="outline"
               size="sm"
               onClick={() => navigate(`/sales-orders/${reservation.salesOrderId}`)}
-              className="flex items-center gap-1.5"
+              className="flex items-center gap-1.5 text-black dark:text-white"
             >
               <span>Sales Order</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-3.5 h-3.5 text-black dark:text-white" />
             </Button>
           )}
 
           {reservation.productId && (
             <Button
-              variant="primary"
+              variant="outline"
               size="sm"
               onClick={() => navigate(`/products/${reservation.productId}`)}
-              className="flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+              className="flex items-center gap-1.5 text-black dark:text-white"
             >
               <span>View Product</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-3.5 h-3.5 text-black dark:text-white" />
             </Button>
           )}
         </div>
@@ -500,28 +510,32 @@ export default function ReservationDetailPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-xs text-muted-foreground font-normal">Product Name</span>
-              <p className="font-normal text-foreground mt-0.5">{reservation.product?.name || 'Product'}</p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground font-normal">SKU</span>
-              <p className="font-mono font-normal text-foreground mt-0.5">
-                {reservation.product?.sku || 'SKU-NONE'}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground font-normal">Standard Selling Price</span>
-              <p className="font-mono font-normal text-foreground mt-0.5">
-                ${Number(reservation.product?.sellingPrice || 0).toFixed(2)}
-              </p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground font-normal">Wholesale Price</span>
-              <p className="font-mono font-normal text-emerald-400 mt-0.5">
-                ${Number(reservation.product?.wholesalePrice || 0).toFixed(2)}
-              </p>
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <ProductThumbnail product={reservation.product} size="xl" className="rounded-2xl shadow-sm border border-border/80" />
+            <div className="grid grid-cols-2 gap-4 text-sm flex-1 w-full">
+              <div>
+                <span className="text-xs text-muted-foreground font-normal">Product Name</span>
+                <p className="font-normal text-foreground mt-0.5">{reservation.product?.name || 'Product'}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground font-normal">SKU</span>
+                <p className="font-mono font-normal text-foreground mt-0.5">
+                  {reservation.product?.sku || 'SKU-NONE'}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground font-normal">Measurement Unit</span>
+                <p className="font-normal text-foreground mt-0.5">
+                  {reservation.product?.unit?.name || 'Standard Unit'}
+                  {reservation.product?.unit?.abbreviation ? ` (${reservation.product.unit.abbreviation})` : ''}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground font-normal">Wholesale Price</span>
+                <p className="font-mono font-normal text-emerald-400 mt-0.5">
+                  ${Number(reservation.product?.wholesalePrice || 0).toFixed(2)}
+                </p>
+              </div>
             </div>
           </div>
         </div>

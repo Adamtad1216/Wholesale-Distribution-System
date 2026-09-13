@@ -9,6 +9,7 @@ import {
   RotateCw,
   Package,
   History,
+  PackagePlus,
 } from 'lucide-react';
 
 import { inventoryApi } from '../inventoryApi';
@@ -36,6 +37,9 @@ import ReservationApprovalModal from '../components/reservations/ReservationAppr
 
 import StockMovementsTab from '../components/movements/StockMovementsTab';
 
+import StockAdditionsTab from '../components/stock-additions/StockAdditionsTab';
+import StockAdditionFormModal from '../components/stock-additions/StockAdditionFormModal';
+
 export default function InventoryPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,6 +60,7 @@ export default function InventoryPage() {
   const [adjustments, setAdjustments] = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [reservations, setReservations] = useState([]);
+  const [stockAdditions, setStockAdditions] = useState([]);
 
   // Lookups
   const [warehouses, setWarehouses] = useState([]);
@@ -130,6 +135,16 @@ export default function InventoryPage() {
   const { can: canDeleteReservationsPerm } = usePermission('inventory:reservations:delete');
   const canDeleteReservations = true;
 
+  const { can: canReadStockAdditions } = usePermission('inventory:stock-additions:read');
+  const { can: canCreateStockAdditions } = usePermission('inventory:stock-additions:create');
+  const { can: canUpdateStockAdditions } = usePermission('inventory:stock-additions:update');
+  const { can: canDeleteStockAdditions } = usePermission('inventory:stock-additions:delete');
+
+  // Stock Additions Modal state
+  const [isStockAdditionModalOpen, setIsStockAdditionModalOpen] = useState(false);
+  const [editingStockAddition, setEditingStockAddition] = useState(null);
+  const [stockAdditionSearch, setStockAdditionSearch] = useState('');
+
   // Fetch Lookups
   const fetchLookups = useCallback(async () => {
     try {
@@ -161,11 +176,12 @@ export default function InventoryPage() {
     try {
       const params = { limit: 100 };
 
-      const [stocksRes, adjRes, trRes, resRes] = await Promise.allSettled([
+      const [stocksRes, adjRes, trRes, resRes, addRes] = await Promise.allSettled([
         canReadStock ? inventoryApi.getStocks(params) : Promise.resolve({ data: [] }),
         canReadAdjustments ? inventoryApi.getAdjustments(params) : Promise.resolve({ data: [] }),
         canReadTransfers ? inventoryApi.getTransfers(params) : Promise.resolve({ data: [] }),
         canReadReservations ? inventoryApi.getReservations(params) : Promise.resolve({ data: [] }),
+        canReadStockAdditions ? inventoryApi.getStockAdditions(params) : Promise.resolve({ data: [] }),
       ]);
 
       if (stocksRes.status === 'fulfilled') {
@@ -184,13 +200,17 @@ export default function InventoryPage() {
         const d = resRes.value?.data || resRes.value || [];
         setReservations(Array.isArray(d) ? d : d.reservations || []);
       }
+      if (addRes.status === 'fulfilled') {
+        const d = addRes.value?.data || addRes.value || [];
+        setStockAdditions(Array.isArray(d) ? d : d.additions || []);
+      }
     } catch (err) {
       toast.error(err?.message || 'Failed to load inventory data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [canReadStock, canReadAdjustments, canReadTransfers, canReadReservations]);
+  }, [canReadStock, canReadAdjustments, canReadTransfers, canReadReservations, canReadStockAdditions]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -200,6 +220,7 @@ export default function InventoryPage() {
 
   const handleRefresh = () => {
     setRefreshing(true);
+    fetchLookups();
     fetchData();
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
   };
@@ -237,14 +258,13 @@ export default function InventoryPage() {
     try {
       if (editingStock) {
         await inventoryApi.updateStock(editingStock.id, {
-          quantity: data.quantity,
           minimumStock: data.minimumStock,
           reorderLevel: data.reorderLevel,
         });
         toast.success('Stock thresholds updated');
       } else {
         await inventoryApi.createStock(data);
-        toast.success('Stock item created');
+        toast.success('Product assigned to warehouse');
       }
       setIsStockModalOpen(false);
       setEditingStock(null);
@@ -453,6 +473,9 @@ export default function InventoryPage() {
         await inventoryApi.deleteReservation(item.id);
         const isReserved = item.status === 'RESERVED';
         toast.success(isReserved ? 'Stock reservation cancelled and units restored to available inventory' : 'Reservation record archived');
+      } else if (type === 'stock-addition') {
+        await inventoryApi.deleteStockAddition(item.id);
+        toast.success('Stock addition archived and balances rebalanced');
       }
       setDeleteTarget(null);
       fetchData();
@@ -549,6 +572,14 @@ export default function InventoryPage() {
       badge: stats.activeReservationsCount > 0 ? `${stats.activeReservationsCount} Reserved` : null,
       badgeColor: 'bg-cyan-500/15 text-cyan-900 dark:text-cyan-300 border-cyan-500/30',
       visible: canReadReservations,
+    },
+    {
+      id: 'stock-additions',
+      label: 'Stock Additions',
+      icon: <PackagePlus className="w-4 h-4" />,
+      badge: stockAdditions.length > 0 ? `${stockAdditions.length}` : null,
+      badgeColor: 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 border-emerald-500/30',
+      visible: canReadStockAdditions,
     },
   ].filter((t) => t.visible);
 
@@ -671,9 +702,17 @@ export default function InventoryPage() {
               setWarehouseFilter(stock.warehouseId || stock.warehouse?.id || '');
               setIsAdjustmentModalOpen(true);
             }}
+            onQuickAddQuantity={(stock) => {
+              setEditingStockAddition({
+                warehouseId: stock.warehouseId || stock.warehouse?.id,
+                productId: stock.productId || stock.product?.id,
+              });
+              setIsStockAdditionModalOpen(true);
+            }}
             canCreate={canCreateStock}
             canUpdate={canUpdateStock}
             canDelete={canDeleteStock}
+            canCreateStockAddition={canCreateStockAdditions}
           />
         )}
 
@@ -786,6 +825,7 @@ export default function InventoryPage() {
             onSearchChange={setSearch}
             onOpenCreateModal={() => {
               setEditingReservation(null);
+              fetchLookups();
               setIsReservationModalOpen(true);
             }}
             onOpenEditModal={(res) => {
@@ -816,6 +856,37 @@ export default function InventoryPage() {
             canApprove={canApproveReservations}
             canRelease={canReleaseReservations}
             canDelete={canDeleteReservations}
+          />
+        )}
+        {activeTab === 'stock-additions' && canReadStockAdditions && (
+          <StockAdditionsTab
+            stockAdditions={stockAdditions}
+            warehouses={warehouses}
+            loading={loading}
+            search={stockAdditionSearch}
+            onSearchChange={setStockAdditionSearch}
+            selectedWarehouseId={warehouseFilter}
+            onWarehouseChange={setWarehouseFilter}
+            onOpenCreateModal={() => {
+              setEditingStockAddition(null);
+              setIsStockAdditionModalOpen(true);
+            }}
+            onOpenEditModal={(addition) => {
+              setEditingStockAddition(addition);
+              setIsStockAdditionModalOpen(true);
+            }}
+            onDeleteAddition={(addition) => {
+              setDeleteTarget({
+                type: 'stock-addition',
+                item: addition,
+                title: 'Archive Stock Addition',
+                confirmText: 'Yes, Archive Addition',
+                message: `Archive stock addition of ${addition.addedQuantity} units of "${addition.product?.name}" from ${addition.warehouse?.name}? Subsequent balance records will be rebalanced automatically.`,
+              });
+            }}
+            canCreate={canCreateStockAdditions}
+            canUpdate={canUpdateStockAdditions}
+            canDelete={canDeleteStockAdditions}
           />
         )}
       </div>
@@ -953,6 +1024,39 @@ export default function InventoryPage() {
         message={deleteTarget?.message || 'Are you sure you want to perform this deletion?'}
         confirmText={deleteTarget?.confirmText || 'Yes, Delete Record'}
         submitting={isSubmitting}
+      />
+
+      {/* Stock Addition Form Modal */}
+      <StockAdditionFormModal
+        isOpen={isStockAdditionModalOpen}
+        onClose={() => {
+          setIsStockAdditionModalOpen(false);
+          setEditingStockAddition(null);
+        }}
+        onSubmit={async (data) => {
+          setIsSubmitting(true);
+          try {
+            if (editingStockAddition?.id) {
+              await inventoryApi.updateStockAddition(editingStockAddition.id, data);
+              toast.success('Stock addition updated successfully');
+            } else {
+              await inventoryApi.createStockAddition(data);
+              toast.success(`${data.addedQuantity} units added to stock successfully`);
+            }
+            setIsStockAdditionModalOpen(false);
+            setEditingStockAddition(null);
+            fetchData();
+          } catch (err) {
+            toast.error(err?.response?.data?.message || err?.message || 'Failed to save stock addition');
+          } finally {
+            setIsSubmitting(false);
+          }
+        }}
+        initialData={editingStockAddition}
+        warehouses={warehouses}
+        products={products}
+        stocks={stocks}
+        isSubmitting={isSubmitting}
       />
     </div>
   );

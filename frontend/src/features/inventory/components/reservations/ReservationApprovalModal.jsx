@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../../../components/ui/Modal';
 import Button from '../../../../components/ui/Button';
+import ProductThumbnail from '../ProductThumbnail';
 
 export default function ReservationApprovalModal({
   isOpen,
@@ -49,16 +50,19 @@ export default function ReservationApprovalModal({
   const totalQty = currentStock ? Number(currentStock.quantity) : null;
 
   const customerName =
+    reservation.salesOrder?.customer?.organization?.name ||
+    (reservation.salesOrder?.customer?.person
+      ? `${reservation.salesOrder.customer.person.firstName || ''} ${reservation.salesOrder.customer.person.lastName || ''}`.trim()
+      : null) ||
     reservation.salesOrder?.customer?.customerCode ||
-    reservation.salesOrder?.customer?.id?.slice(0, 8) ||
-    '—';
+    'Customer';
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title="Review Stock Reservation"
-      subtitle={`Confirm allocation or release reserved stock for order #${reservation.salesOrder?.orderNumber || reservation.salesOrderId?.slice(0, 8)}`}
+      subtitle={`Confirm allocation or release reserved stock for order #${reservation.salesOrder?.orderNumber || 'SO-PENDING'}`}
       icon={<ShieldCheck className="w-5 h-5 text-cyan-400" />}
       maxWidth="max-w-xl"
       footer={
@@ -73,9 +77,9 @@ export default function ReservationApprovalModal({
               type="button"
               onClick={handleRelease}
               disabled={isProcessing}
-              className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-normal text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs transition flex items-center gap-1.5 disabled:opacity-50"
             >
-              <XCircle className="w-4 h-4" />
+              <XCircle className="w-4 h-4 text-black dark:text-white" />
               <span>Release / Reject</span>
             </button>
 
@@ -84,9 +88,9 @@ export default function ReservationApprovalModal({
               type="button"
               onClick={handleApprove}
               disabled={isProcessing}
-              className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-normal text-xs shadow-md shadow-cyan-500/20 transition flex items-center gap-1.5 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs transition flex items-center gap-1.5 disabled:opacity-50"
             >
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4 text-black dark:text-white" />
               <span>Confirm Allocation</span>
             </button>
           </div>
@@ -120,7 +124,7 @@ export default function ReservationApprovalModal({
               <p className="text-[10px] text-muted-foreground">Order Number</p>
               <p className="text-xs font-normal text-foreground flex items-center gap-1.5">
                 <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
-                #{reservation.salesOrder?.orderNumber || reservation.salesOrderId?.slice(0, 8)}
+                #{reservation.salesOrder?.orderNumber || 'SO-PENDING'}
               </p>
             </div>
             <div className="space-y-0.5">
@@ -140,16 +144,19 @@ export default function ReservationApprovalModal({
             <span>Product & Stock</span>
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-0.5">
-              <p className="text-[10px] text-muted-foreground">Product</p>
-              <p className="text-xs font-normal text-foreground truncate">
-                {reservation.product?.name || '—'}
-              </p>
-              {reservation.product?.sku && (
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  SKU: {reservation.product.sku}
+            <div className="flex items-center gap-2.5">
+              <ProductThumbnail product={reservation.product} size="sm" className="rounded-lg shadow-sm border border-border/80" />
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-[10px] text-muted-foreground">Product</p>
+                <p className="text-xs font-normal text-foreground truncate">
+                  {reservation.product?.name || '—'}
                 </p>
-              )}
+                {reservation.product?.sku && (
+                  <p className="text-[10px] text-muted-foreground font-mono">
+                    SKU: {reservation.product.sku}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="space-y-0.5">
               <p className="text-[10px] text-muted-foreground">Warehouse</p>

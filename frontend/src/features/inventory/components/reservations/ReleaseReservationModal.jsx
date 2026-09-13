@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import Modal from '../../../../components/ui/Modal';
 import Button from '../../../../components/ui/Button';
+import ProductThumbnail from '../ProductThumbnail';
 
 export default function ReleaseReservationModal({
   isOpen,
@@ -26,7 +27,7 @@ export default function ReleaseReservationModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Release Stock Reservation"
-      subtitle={`Unlock inventory for sales order #${reservation.salesOrder?.orderNumber || reservation.salesOrderId?.slice(0, 8)} and return units to available stock`}
+      subtitle={`Unlock inventory for sales order #${reservation.salesOrder?.orderNumber || 'SO-PENDING'} and return units to available stock`}
       icon={<RotateCcw className="w-5 h-5 text-amber-400" />}
       maxWidth="max-w-md"
       footer={
@@ -50,11 +51,14 @@ export default function ReleaseReservationModal({
       <div className="space-y-4">
         {/* Reservation summary card */}
         <div className="p-3.5 rounded-xl bg-muted900/50 border border-border space-y-1.5 text-xs">
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">Product:</span>
-            <span className="font-normal text-foreground">
-              {reservation.product?.name}
-            </span>
+            <div className="flex items-center gap-2">
+              <ProductThumbnail product={reservation.product} size="xs" className="rounded-md border border-border" />
+              <span className="font-normal text-foreground">
+                {reservation.product?.name}
+              </span>
+            </div>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Warehouse:</span>
