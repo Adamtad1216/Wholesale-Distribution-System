@@ -4,6 +4,7 @@ import { createNotification } from "../../14-notifications/notifications/notific
 import { AppError } from "../../../utils/errors.js";
 import { getPaginationParams, buildPaginationMeta } from "../../../utils/pagination.js";
 import { getUserScope } from "../../../utils/warehouse-scope.js";
+import { getStockQuantitySummary } from "../../07-inventory/stock-additions/stock-additions.service.js";
 
 export const generateProductCode = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -63,6 +64,34 @@ const sanitizeProduct = (product) => {
       }
       : null,
   };
+};
+
+const enrichProductsWithStocks = async (products) => {
+  return Promise.all(
+    products.map(async (product) => {
+      if (!product || !product.warehouseStocks || product.warehouseStocks.length === 0) {
+        return product;
+      }
+      const enrichedStocks = await Promise.all(
+        product.warehouseStocks.map(async (ws) => {
+          const { quantity, reservedQuantity, availableQuantity } = await getStockQuantitySummary(
+            ws.warehouseId,
+            product.id
+          );
+          return {
+            ...ws,
+            quantity,
+            reservedQuantity,
+            availableQuantity,
+          };
+        })
+      );
+      return {
+        ...product,
+        warehouseStocks: enrichedStocks,
+      };
+    })
+  );
 };
 
 export async function createProduct(data, createdById, req) {
@@ -292,9 +321,6 @@ export async function getProducts(filters, user = null) {
           select: {
             id: true,
             warehouseId: true,
-            quantity: true,
-            availableQuantity: true,
-            reservedQuantity: true,
             minimumStock: true,
             reorderLevel: true,
             warehouse: {
@@ -344,9 +370,10 @@ export async function getProducts(filters, user = null) {
   ]);
 
   const meta = buildPaginationMeta({ page, limit, total });
+  const enrichedProducts = await enrichProductsWithStocks(products);
 
   return {
-    products: products.map(sanitizeProduct),
+    products: enrichedProducts.map(sanitizeProduct),
     meta,
   };
 }
@@ -414,9 +441,6 @@ export async function getProductById(id, user = null) {
         select: {
           id: true,
           warehouseId: true,
-          quantity: true,
-          availableQuantity: true,
-          reservedQuantity: true,
           minimumStock: true,
           reorderLevel: true,
           warehouse: {
@@ -474,7 +498,8 @@ export async function getProductById(id, user = null) {
     }
   }
 
-  return sanitizeProduct(product);
+  const [enriched] = await enrichProductsWithStocks([product]);
+  return sanitizeProduct(enriched);
 }
 
 export async function getProductWarehousePrices(productId) {
@@ -744,7 +769,7 @@ export async function deleteProduct(id, createdById, req) {
     invoiceCount,
     prCount,
   ] = await Promise.all([
-    prisma.warehouseStock.count({ where: { productId: id, isArchived: false, quantity: { gt: 0 } } }),
+    prisma.productAddedQuantity.count({ where: { productId: id, isArchived: false, currentTotalAvailableQty: { gt: 0 } } }),
     prisma.warehouseStockTransfer.count({ where: { productId: id, isArchived: false, status: 'PENDING' } }),
     prisma.stockReservation.count({ where: { productId: id, isArchived: false, status: 'RESERVED' } }),
     prisma.stockAdjustmentItem.count({

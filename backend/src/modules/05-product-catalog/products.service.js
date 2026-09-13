@@ -38,9 +38,7 @@ export async function getProducts(filters) {
           warehouseStocks: {
             where: { warehouseId },
             select: {
-              quantity: true,
-              reservedQuantity: true,
-              availableQuantity: true,
+              id: true,
               minimumStock: true,
               reorderLevel: true,
             },

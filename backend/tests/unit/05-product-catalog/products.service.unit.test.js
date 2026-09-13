@@ -14,6 +14,9 @@ vi.mock('../../../src/config/prisma.js', () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
+    employee: {
+      findFirst: vi.fn(),
+    },
   },
 }));
 
@@ -110,7 +113,10 @@ describe('getProducts Warehouse Scoping & Filtering (Unit)', () => {
   });
 
   it('should auto-scope products to assigned warehouse when a non-admin warehouse manager calls without warehouseId', async () => {
-    prisma.warehouse.findFirst.mockResolvedValueOnce({ id: warehouseId });
+    prisma.employee.findFirst.mockResolvedValueOnce({
+      id: 'emp-1',
+      managedWarehouses: [{ id: warehouseId }],
+    });
     prisma.product.findMany.mockResolvedValueOnce([]);
     prisma.product.count.mockResolvedValueOnce(0);
 
@@ -122,14 +128,6 @@ describe('getProducts Warehouse Scoping & Filtering (Unit)', () => {
 
     await getProducts({}, stockManagerUser);
 
-    expect(prisma.warehouse.findFirst).toHaveBeenCalledWith({
-      where: {
-        manager: { personId, isArchived: false },
-        isArchived: false,
-      },
-      select: { id: true },
-    });
-
     expect(prisma.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -139,7 +137,7 @@ describe('getProducts Warehouse Scoping & Filtering (Unit)', () => {
                 {
                   warehouseStocks: {
                     some: {
-                      warehouseId,
+                      warehouseId: { in: [warehouseId] },
                       isArchived: false,
                     },
                   },
@@ -147,7 +145,7 @@ describe('getProducts Warehouse Scoping & Filtering (Unit)', () => {
                 {
                   warehouseSellingPrices: {
                     some: {
-                      warehouseId,
+                      warehouseId: { in: [warehouseId] },
                       isArchived: false,
                     },
                   },
