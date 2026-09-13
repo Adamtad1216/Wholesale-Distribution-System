@@ -160,8 +160,18 @@ export async function getReservations(filters, user = null) {
     prisma.stockReservation.count({ where }),
   ]);
 
+  const enrichedReservations = await Promise.all(
+    reservations.map(async (r) => {
+      const liveStock = await getStockQuantitySummary(r.warehouseId, r.productId);
+      return {
+        ...r,
+        currentStock: liveStock,
+      };
+    })
+  );
+
   return {
-    reservations,
+    reservations: enrichedReservations,
     meta: buildPaginationMeta({ page, limit, total }),
   };
 }
@@ -434,6 +444,32 @@ export async function approveOrRejectReservation(id, data, createdById, req, use
           title: 'Reservation Approval Recorded',
           message: `You confirmed the allocation of ${Number(existing.quantity)} units of ${existing.product.name} in ${existing.warehouse.name}.`,
           type: 'INVENTORY_RESERVATION_CONFIRMED',
+          createdById,
+        },
+      });
+    }
+
+    // Deduct physical inventory upon confirmation and allocation (FULFILLED)
+    if (targetStatus === 'FULFILLED') {
+      const fulfillQty = Number(existing.quantity);
+      const warehouseStock = await tx.warehouseStock.findFirst({
+        where: { warehouseId: existing.warehouseId, productId: existing.productId, isArchived: false },
+      });
+
+      const { quantity: prevTotalQty } = await getStockQuantitySummary(existing.warehouseId, existing.productId, tx);
+      const newTotalQty = Math.max(0, prevTotalQty - fulfillQty);
+
+      await tx.productAddedQuantity.create({
+        data: {
+          warehouseStockId: warehouseStock?.id || null,
+          warehouseId: existing.warehouseId,
+          productId: existing.productId,
+          previousTotalQty: prevTotalQty,
+          addedQuantity: -fulfillQty,
+          currentTotalAvailableQty: newTotalQty,
+          referenceType: 'RESERVATION',
+          referenceId: existing.id,
+          notes: `Allocated and issued to Sales Order #${existing.salesOrder?.orderNumber || existing.salesOrderId?.slice(0, 8)} via confirmed reservation`,
           createdById,
         },
       });

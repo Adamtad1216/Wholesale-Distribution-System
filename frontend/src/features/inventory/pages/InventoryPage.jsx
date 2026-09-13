@@ -1010,6 +1010,7 @@ export default function InventoryPage() {
         isOpen={Boolean(approvalReservation)}
         onClose={() => setApprovalReservation(null)}
         reservation={approvalReservation}
+        stocks={stocks}
         onApprove={handleApproveReservation}
         onRelease={handleReleaseFromApprovalModal}
         isProcessing={isSubmitting}

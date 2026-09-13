@@ -21,6 +21,7 @@ export default function ReservationApprovalModal({
   isOpen,
   onClose,
   reservation,
+  stocks = [],
   onApprove,
   onRelease,
   isProcessing = false,
@@ -45,9 +46,16 @@ export default function ReservationApprovalModal({
   };
 
   const reservedQty = Number(reservation.quantity);
-  const currentStock = reservation.currentStock;
-  const availableQty = currentStock ? Number(currentStock.availableQuantity) : null;
-  const totalQty = currentStock ? Number(currentStock.quantity) : null;
+  const matchedStock = !reservation.currentStock && stocks && stocks.length > 0
+    ? stocks.find(
+        (s) =>
+          (s.warehouseId === reservation.warehouseId || s.warehouse?.id === reservation.warehouseId) &&
+          (s.productId === reservation.productId || s.product?.id === reservation.productId)
+      )
+    : null;
+  const currentStock = reservation.currentStock || matchedStock;
+  const availableQty = currentStock && currentStock.availableQuantity != null ? Number(currentStock.availableQuantity) : null;
+  const totalQty = currentStock && currentStock.quantity != null ? Number(currentStock.quantity) : null;
 
   const customerName =
     reservation.salesOrder?.customer?.organization?.name ||
@@ -201,15 +209,23 @@ export default function ReservationApprovalModal({
             </div>
           </div>
 
-          {/* Release Impact */}
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-            <TrendingDown className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            <span>
-              If released, <strong>{reservedQty.toLocaleString()} units</strong> will be returned to available inventory
-              {availableQty !== null
-                ? ` (new available: ${(availableQty + reservedQty).toLocaleString()} units)`
-                : ''}.
-            </span>
+          {/* Impact Indicators */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>
+                <strong>Confirm Allocation:</strong> {reservedQty.toLocaleString()} units will be issued & deducted from total physical warehouse stock
+                {totalQty !== null ? ` (new total stock: ${Math.max(0, totalQty - reservedQty).toLocaleString()} units)` : ''}.
+              </span>
+            </div>
+
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+              <TrendingDown className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>
+                <strong>Release / Reject:</strong> {reservedQty.toLocaleString()} units will be returned to available inventory
+                {availableQty !== null ? ` (new available: ${(availableQty + reservedQty).toLocaleString()} units)` : ''}.
+              </span>
+            </div>
           </div>
         </div>
 
