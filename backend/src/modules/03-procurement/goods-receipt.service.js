@@ -1,4 +1,5 @@
 import prisma from '../../config/prisma.js';
+import { getStockQuantitySummary } from '../07-inventory/stock-additions/stock-additions.service.js';
 
 class GoodsReceiptService {
   async createGoodsReceipt(data, createdById) {
@@ -31,61 +32,68 @@ class GoodsReceiptService {
         include: { items: true }
       });
 
-      // 2. Update PO status to PARTIALLY_RECEIVED or RECEIVED depending on logic (omitted for brevity, assume manual or simple update for now)
-      // Let's just mark it RECEIVED if we created a GR.
+      // 2. Update PO status to PARTIALLY_RECEIVED or RECEIVED
       await tx.purchaseOrder.update({
         where: { id: purchaseOrderId },
         data: { status: 'RECEIVED' }
       });
 
-      // 3. Trigger Developer B's Inventory Update
-      // For each item received, update WarehouseStock and create StockMovement
+      // 3. Record stock additions and create StockMovement for each received item
       for (const item of receipt.items) {
         const qtyReceived = Number(item.receivedQuantity) - Number(item.damagedQuantity);
         if (qtyReceived <= 0) continue;
 
-        // Upsert WarehouseStock
-        const existingStock = await tx.warehouseStock.findUnique({
-          where: {
-            warehouseId_productId: {
-              warehouseId: warehouseId,
-              productId: item.productId
-            }
-          }
+        // Ensure WarehouseStock record exists (upsert pattern)
+        let existingStock = await tx.warehouseStock.findFirst({
+          where: { warehouseId, productId: item.productId },
         });
 
-        if (existingStock) {
-          await tx.warehouseStock.update({
-            where: { id: existingStock.id },
+        if (!existingStock) {
+          existingStock = await tx.warehouseStock.create({
             data: {
-              quantity: { increment: qtyReceived },
-              availableQuantity: { increment: qtyReceived }
-            }
-          });
-        } else {
-          await tx.warehouseStock.create({
-            data: {
-              warehouseId: warehouseId,
+              warehouseId,
               productId: item.productId,
-              quantity: qtyReceived,
-              availableQuantity: qtyReceived,
-              createdById
-            }
+              minimumStock: 0,
+              reorderLevel: 0,
+              createdById,
+            },
+          });
+        } else if (existingStock.isArchived) {
+          existingStock = await tx.warehouseStock.update({
+            where: { id: existingStock.id },
+            data: { isArchived: false, archivedAt: null, updatedById: createdById },
           });
         }
+
+        // Record the incoming quantity as a ProductAddedQuantity
+        const { quantity: prevQty } = await getStockQuantitySummary(warehouseId, item.productId, tx);
+        await tx.productAddedQuantity.create({
+          data: {
+            warehouseStockId: existingStock.id,
+            warehouseId,
+            productId: item.productId,
+            previousTotalQty: prevQty,
+            addedQuantity: qtyReceived,
+            currentTotalAvailableQty: prevQty + qtyReceived,
+            referenceType: 'GOODS_RECEIPT',
+            referenceId: receipt.id,
+            notes: `Received via goods receipt ${receiptNumber}`,
+            createdById,
+          },
+        });
 
         // Create Stock Movement Log
         await tx.stockMovement.create({
           data: {
-            warehouseId: warehouseId,
+            warehouseId,
             productId: item.productId,
             movementType: 'PURCHASE_RECEIPT',
             quantity: qtyReceived,
             referenceType: 'GOODS_RECEIPT',
             referenceId: receipt.id,
             unitCost: item.unitCost,
-            createdById
-          }
+            createdById,
+          },
         });
       }
 

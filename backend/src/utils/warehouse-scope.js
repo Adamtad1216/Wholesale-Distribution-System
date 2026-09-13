@@ -238,6 +238,7 @@ export async function getAssignedWarehouseIds(user) {
  * @throws {AppError} 403 Forbidden if not authorized
  */
 export async function enforceWarehouseScope(user, warehouseId) {
+  if (!user) return null;
   const scope = await getUserScope(user);
   if (scope.isGlobal) return null;
 
@@ -263,6 +264,7 @@ export async function enforceWarehouseScope(user, warehouseId) {
  * @throws {AppError} 403 Forbidden if unauthorized
  */
 export async function enforceTransferSourceScope(user, fromWarehouseId) {
+  if (!user) return null;
   const scope = await getUserScope(user);
   if (scope.isGlobal) return null;
 
@@ -288,6 +290,7 @@ export async function enforceTransferSourceScope(user, fromWarehouseId) {
  * @throws {AppError} 403 Forbidden if unauthorized
  */
 export async function enforceTransferAccess(user, transfer) {
+  if (!user) return null;
   const scope = await getUserScope(user);
   if (scope.isGlobal) return null;
 
