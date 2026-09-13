@@ -7,6 +7,8 @@ vi.mock('../../../src/config/prisma.js', () => {
       warehouse: { findFirst: vi.fn() },
       product: { findFirst: vi.fn() },
       warehouseStock: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
+      productAddedQuantity: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn() },
+      stockReservation: { aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: 0 } }) },
       stockAdjustment: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), update: vi.fn() },
       stockAdjustmentItem: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), deleteMany: vi.fn(), createMany: vi.fn() },
       notification: { create: vi.fn() },
@@ -20,6 +22,13 @@ vi.mock('../../../src/config/prisma.js', () => {
           findFirst: vi.fn(),
           update: vi.fn(),
           create: vi.fn(),
+        },
+        productAddedQuantity: {
+          findFirst: vi.fn(),
+          create: vi.fn(),
+        },
+        stockReservation: {
+          aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: 0 } }),
         },
         stockAdjustmentItem: {
           deleteMany: vi.fn(),
@@ -58,11 +67,11 @@ describe('Stock Adjustment Service & Permission Tests', () => {
       prisma.warehouse.findFirst.mockResolvedValueOnce({ id: warehouseId, name: 'Central Warehouse' });
       prisma.product.findFirst.mockResolvedValueOnce({ id: productId, name: 'Sugar 50kg' });
 
-      // Existing warehouse stock has 50 units
-      prisma.warehouseStock.findFirst.mockResolvedValueOnce({
-        id: 'stock-1',
-        quantity: '50.000',
+      // Live inventory summary returns 50 units
+      prisma.productAddedQuantity.findFirst.mockResolvedValueOnce({
+        currentTotalAvailableQty: '50.000',
       });
+      prisma.stockReservation.aggregate.mockResolvedValueOnce({ _sum: { quantity: 0 } });
 
       const mockAdjustmentRecord = {
         id: 'adj-1',
@@ -104,6 +113,7 @@ describe('Stock Adjustment Service & Permission Tests', () => {
       expect(mockTx.stockAdjustment.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
+            warehouseId,
             items: {
               create: [
                 expect.objectContaining({
@@ -121,30 +131,43 @@ describe('Stock Adjustment Service & Permission Tests', () => {
 
     it('should assume systemQuantity: 0 and difference = actualQuantity when stock record does not exist', async () => {
       prisma.warehouse.findFirst.mockResolvedValueOnce({ id: warehouseId, name: 'Central Warehouse' });
-      prisma.product.findFirst.mockResolvedValueOnce({ id: productId, name: 'Sugar 50kg' });
+      prisma.product.findFirst.mockResolvedValueOnce({ id: productId, name: 'Rice 25kg' });
 
-      // No stock record exists yet
-      prisma.warehouseStock.findFirst.mockResolvedValueOnce(null);
+      // No addition records exist
+      prisma.productAddedQuantity.findFirst.mockResolvedValueOnce(null);
+      prisma.stockReservation.aggregate.mockResolvedValueOnce({ _sum: { quantity: 0 } });
 
       const mockAdjustmentRecord = {
         id: 'adj-2',
         warehouseId,
-        items: [{ id: 'item-2', productId, systemQuantity: 0, actualQuantity: 20, difference: 20 }],
+        reason: 'Initial physical inventory discovery',
+        status: 'PENDING',
+        items: [
+          {
+            id: 'item-2',
+            productId,
+            systemQuantity: 0,
+            actualQuantity: 20,
+            difference: 20,
+          },
+        ],
       };
 
       const mockTx = {
         stockAdjustment: {
           create: vi.fn().mockResolvedValueOnce(mockAdjustmentRecord),
         },
-        notification: { create: vi.fn() },
+        notification: {
+          create: vi.fn().mockResolvedValue({}),
+        },
       };
       prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
 
       await createAdjustment(
         {
           warehouseId,
-          reason: 'Found extra inventory',
-          items: [{ productId, actualQuantity: 20 }],
+          reason: 'Initial physical inventory discovery',
+          items: [{ productId, actualQuantity: 20, reason: 'Found unmarked box' }],
         },
         userId
       );
@@ -195,9 +218,8 @@ describe('Stock Adjustment Service & Permission Tests', () => {
         id: 'stock-main',
         warehouseId,
         productId,
-        quantity: 100,
-        reservedQuantity: 10,
-        availableQuantity: 90,
+        minimumStock: 0,
+        reorderLevel: 0,
       };
 
       const mockTx = {
@@ -208,6 +230,13 @@ describe('Stock Adjustment Service & Permission Tests', () => {
           findFirst: vi.fn().mockResolvedValueOnce(mockStock),
           update: vi.fn().mockResolvedValue({}),
         },
+        productAddedQuantity: {
+          findFirst: vi.fn().mockResolvedValueOnce({ currentTotalAvailableQty: 100 }),
+          create: vi.fn().mockResolvedValue({}),
+        },
+        stockReservation: {
+          aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: 10 } }),
+        },
         notification: { create: vi.fn() },
       };
       prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
@@ -215,13 +244,14 @@ describe('Stock Adjustment Service & Permission Tests', () => {
       const result = await approveAdjustment('adj-10', { status: 'APPROVED' }, userId);
 
       expect(result.status).toBe('APPROVED');
-      // Stock quantity: 100 + (-8) = 92
-      // Available: 92 - 10 = 82
-      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith({
-        where: { id: 'stock-main' },
+      // ProductAddedQuantity created with difference: -8, newTotal: 92
+      expect(mockTx.productAddedQuantity.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          quantity: 92,
-          availableQuantity: 82,
+          addedQuantity: -8,
+          previousTotalQty: 100,
+          currentTotalAvailableQty: 92,
+          referenceType: 'ADJUSTMENT',
+          referenceId: 'adj-10',
         }),
       });
     });
@@ -252,9 +282,8 @@ describe('Stock Adjustment Service & Permission Tests', () => {
         id: 'stock-main',
         warehouseId,
         productId,
-        quantity: 50,
-        reservedQuantity: 0,
-        availableQuantity: 50,
+        minimumStock: 0,
+        reorderLevel: 0,
       };
 
       const mockTx = {
@@ -265,18 +294,27 @@ describe('Stock Adjustment Service & Permission Tests', () => {
           findFirst: vi.fn().mockResolvedValueOnce(mockStock),
           update: vi.fn().mockResolvedValue({}),
         },
+        productAddedQuantity: {
+          findFirst: vi.fn().mockResolvedValueOnce({ currentTotalAvailableQty: 50 }),
+          create: vi.fn().mockResolvedValue({}),
+        },
+        stockReservation: {
+          aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: 0 } }),
+        },
         notification: { create: vi.fn() },
       };
       prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));
 
       await approveAdjustment('adj-11', { status: 'APPROVED' }, userId);
 
-      // Stock quantity: 50 + 15 = 65
-      expect(mockTx.warehouseStock.update).toHaveBeenCalledWith({
-        where: { id: 'stock-main' },
+      // ProductAddedQuantity created with difference: 15, newTotal: 65
+      expect(mockTx.productAddedQuantity.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          quantity: 65,
-          availableQuantity: 65,
+          addedQuantity: 15,
+          previousTotalQty: 50,
+          currentTotalAvailableQty: 65,
+          referenceType: 'ADJUSTMENT',
+          referenceId: 'adj-11',
         }),
       });
     });
@@ -307,9 +345,8 @@ describe('Stock Adjustment Service & Permission Tests', () => {
         id: 'stock-main',
         warehouseId,
         productId,
-        quantity: 10,
-        reservedQuantity: 0,
-        availableQuantity: 10,
+        minimumStock: 0,
+        reorderLevel: 0,
       };
 
       const mockTx = {
@@ -318,6 +355,12 @@ describe('Stock Adjustment Service & Permission Tests', () => {
         },
         warehouseStock: {
           findFirst: vi.fn().mockResolvedValueOnce(mockStock),
+        },
+        productAddedQuantity: {
+          findFirst: vi.fn().mockResolvedValueOnce({ currentTotalAvailableQty: 10 }),
+        },
+        stockReservation: {
+          aggregate: vi.fn().mockResolvedValue({ _sum: { quantity: 0 } }),
         },
       };
       prisma.$transaction.mockImplementationOnce((cb) => cb(mockTx));

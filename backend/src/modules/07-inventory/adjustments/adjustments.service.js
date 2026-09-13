@@ -3,6 +3,7 @@ import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
 import { getUserScope, getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
+import { getStockQuantitySummary } from '../stock-additions/stock-additions.service.js';
 
 export async function createAdjustment(data, createdById, req, user = null) {
   await enforceWarehouseScope(user, data.warehouseId);
@@ -20,10 +21,7 @@ export async function createAdjustment(data, createdById, req, user = null) {
 
   const itemsWithSystemStock = await Promise.all(
     data.items.map(async (item) => {
-      const stock = await prisma.warehouseStock.findFirst({
-        where: { warehouseId: data.warehouseId, productId: item.productId, isArchived: false },
-      });
-      const systemQuantity = stock ? Number(stock.quantity) : 0;
+      const { quantity: systemQuantity } = await getStockQuantitySummary(data.warehouseId, item.productId);
       const actualQuantity = Number(item.actualQuantity);
       const difference = actualQuantity - systemQuantity;
       return {
@@ -51,7 +49,15 @@ export async function createAdjustment(data, createdById, req, user = null) {
       include: {
         items: {
           include: {
-            product: { select: { id: true, name: true, sku: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                unit: { select: { id: true, name: true, abbreviation: true } },
+                images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+              },
+            },
           },
         },
         warehouse: { select: { id: true, name: true, code: true } },
@@ -115,7 +121,15 @@ export async function getAdjustments(filters, user = null) {
       include: {
         items: {
           include: {
-            product: { select: { id: true, name: true, sku: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                unit: { select: { id: true, name: true, abbreviation: true } },
+                images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+              },
+            },
           },
         },
         warehouse: { select: { id: true, name: true, code: true } },
@@ -140,7 +154,17 @@ export async function getAdjustmentById(id, user = null) {
     include: {
       items: {
         include: {
-          product: { select: { id: true, name: true, sku: true, sellingPrice: true, wholesalePrice: true } },
+          product: {
+            select: {
+              id: true,
+              name: true,
+              sku: true,
+              sellingPrice: true,
+              wholesalePrice: true,
+              unit: { select: { id: true, name: true, abbreviation: true } },
+              images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+            },
+          },
         },
       },
       warehouse: {
@@ -191,7 +215,15 @@ export async function approveAdjustment(id, data, createdById, req, user = null)
       include: {
         items: {
           include: {
-            product: { select: { id: true, name: true, sku: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                unit: { select: { id: true, name: true, abbreviation: true } },
+                images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+              },
+            },
           },
         },
         warehouse: { select: { id: true, name: true, code: true } },
@@ -200,62 +232,61 @@ export async function approveAdjustment(id, data, createdById, req, user = null)
 
     if (data.status === 'APPROVED') {
       for (const item of adjustment.items) {
+        const difference = Number(item.difference);
+        if (difference === 0) continue;
+
+        // Ensure a WarehouseStock record exists
         let stock = await tx.warehouseStock.findFirst({
           where: { warehouseId: existing.warehouseId, productId: item.productId },
         });
 
-        const difference = Number(item.difference);
-
-        if (stock && !stock.isArchived) {
-          const newQty = Number(stock.quantity) + difference;
-          if (newQty < 0) {
-            throw new AppError(
-              `Stock adjustment would cause negative inventory for product in warehouse. Current: ${stock.quantity}, Difference: ${difference}`,
-              400
-            );
-          }
-          await tx.warehouseStock.update({
-            where: { id: stock.id },
-            data: {
-              quantity: newQty,
-              availableQuantity: newQty - Number(stock.reservedQuantity),
-              updatedById: createdById,
-              updatedAt: new Date(),
-            },
-          });
-        } else if (stock && stock.isArchived) {
+        if (!stock) {
           if (difference < 0) {
-            throw new AppError(
-              `Cannot decrease stock for archived product with zero inventory. Difference: ${difference}`,
-              400
-            );
+            throw new AppError(`Cannot decrease stock for product with no inventory. Difference: ${difference}`, 400);
           }
-          await tx.warehouseStock.update({
-            where: { id: stock.id },
-            data: {
-              quantity: difference,
-              reservedQuantity: 0,
-              availableQuantity: difference,
-              isArchived: false,
-              archivedAt: null,
-              updatedById: createdById,
-              updatedAt: new Date(),
-            },
-          });
-        } else if (difference > 0) {
-          await tx.warehouseStock.create({
+          stock = await tx.warehouseStock.create({
             data: {
               warehouseId: existing.warehouseId,
               productId: item.productId,
-              quantity: difference,
-              reservedQuantity: 0,
-              availableQuantity: difference,
               minimumStock: 0,
               reorderLevel: 0,
               createdById,
             },
           });
+        } else if (stock.isArchived) {
+          if (difference < 0) {
+            throw new AppError(`Cannot decrease stock for archived product with zero inventory. Difference: ${difference}`, 400);
+          }
+          stock = await tx.warehouseStock.update({
+            where: { id: stock.id },
+            data: { isArchived: false, archivedAt: null, updatedById: createdById },
+          });
         }
+
+        // Compute running balance via ProductAddedQuantity
+        const { quantity: prevQty } = await getStockQuantitySummary(existing.warehouseId, item.productId, tx);
+        const newTotal = prevQty + difference;
+        if (newTotal < 0) {
+          throw new AppError(
+            `Stock adjustment would cause negative inventory. Current: ${prevQty}, Difference: ${difference}`,
+            400
+          );
+        }
+
+        await tx.productAddedQuantity.create({
+          data: {
+            warehouseStockId: stock.id,
+            warehouseId: existing.warehouseId,
+            productId: item.productId,
+            previousTotalQty: prevQty,
+            addedQuantity: difference,
+            currentTotalAvailableQty: newTotal,
+            referenceType: 'ADJUSTMENT',
+            referenceId: adjustment.id,
+            notes: `Stock adjustment approved. System qty: ${item.systemQuantity}, Actual: ${item.actualQuantity}`,
+            createdById,
+          },
+        });
       }
     }
 
@@ -351,7 +382,15 @@ export async function updateAdjustment(id, data, updatedById, req, user = null) 
       include: {
         items: {
           include: {
-            product: { select: { id: true, name: true, sku: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                unit: { select: { id: true, name: true, abbreviation: true } },
+                images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+              },
+            },
           },
         },
         warehouse: { select: { id: true, name: true, code: true } },
@@ -393,10 +432,7 @@ export async function updateAdjustment(id, data, updatedById, req, user = null) 
     if (data.items) {
       const itemsWithSystemStock = await Promise.all(
         data.items.map(async (item) => {
-          const stock = await tx.warehouseStock.findFirst({
-            where: { warehouseId: existing.warehouseId, productId: item.productId, isArchived: false },
-          });
-          const systemQuantity = stock ? Number(stock.quantity) : 0;
+          const { quantity: systemQuantity } = await getStockQuantitySummary(existing.warehouseId, item.productId, tx);
           const actualQuantity = Number(item.actualQuantity);
           const difference = actualQuantity - systemQuantity;
           return {
@@ -421,7 +457,15 @@ export async function updateAdjustment(id, data, updatedById, req, user = null) 
       include: {
         items: {
           include: {
-            product: { select: { id: true, name: true, sku: true } },
+            product: {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                unit: { select: { id: true, name: true, abbreviation: true } },
+                images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+              },
+            },
           },
         },
         warehouse: { select: { id: true, name: true, code: true } },
@@ -477,10 +521,7 @@ export async function addAdjustmentItem(adjustmentId, data, createdById, req, us
     throw new AppError('Product already exists in this adjustment', 400);
   }
 
-  const currentStock = await prisma.warehouseStock.findFirst({
-    where: { warehouseId: adjustment.warehouseId, productId: data.productId, isArchived: false },
-  });
-  const systemQuantity = currentStock ? Number(currentStock.quantity) : 0;
+  const { quantity: systemQuantity } = await getStockQuantitySummary(adjustment.warehouseId, data.productId);
   const actualQuantity = Number(data.actualQuantity);
   const difference = actualQuantity - systemQuantity;
 
