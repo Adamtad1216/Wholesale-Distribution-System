@@ -121,6 +121,12 @@ export async function getCategories(filters) {
     prisma.category.findMany({
       where,
       include: {
+        _count: {
+          select: {
+            products: { where: { isArchived: false } },
+            children: { where: { isArchived: false } },
+          },
+        },
         parent: {
           select: {
             id: true,
@@ -177,6 +183,12 @@ export async function getCategoryById(id) {
   const category = await prisma.category.findFirst({
     where: { id, isArchived: false },
     include: {
+      _count: {
+        select: {
+          products: { where: { isArchived: false } },
+          children: { where: { isArchived: false } },
+        },
+      },
       parent: {
         select: {
           id: true,
