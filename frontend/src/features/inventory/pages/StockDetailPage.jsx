@@ -24,6 +24,7 @@ import { inventoryApi } from '../inventoryApi';
 import { usePermission } from '../../../hooks/usePermission';
 import Button from '../../../components/ui/Button';
 import StockFormModal from '../components/stocks/StockFormModal';
+import ProductThumbnail from '../components/ProductThumbnail';
 
 export default function StockDetailPage() {
   const { id } = useParams();
@@ -144,10 +145,10 @@ export default function StockDetailPage() {
           <button
             type="button"
             onClick={() => navigate('/inventory?tab=stocks')}
-            className="p-2 rounded-xl bg-card border border-border hover:bg-muted800 text-muted-foreground hover:text-foreground transition"
+            className="p-2 rounded-xl bg-card border border-border hover:bg-muted text-black dark:text-white transition"
             title="Back to Stocks"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-black dark:text-white" />
           </button>
 
           <div>
@@ -161,16 +162,25 @@ export default function StockDetailPage() {
                 <span>{health.label}</span>
               </span>
             </div>
-            <h1 className="text-2xl font-normal text-foreground tracking-tight mt-1 flex items-center gap-2">
-              <Package className="w-6 h-6 text-violet-400" />
-              <span>{stock.product?.name || 'Inventory Product'}</span>
-            </h1>
+            <div className="flex items-center gap-3.5 mt-2">
+              <ProductThumbnail product={stock.product} size="lg" className="rounded-2xl shadow-sm border border-border" />
+              <div>
+                <h1 className="text-2xl font-normal text-foreground tracking-tight">
+                  {stock.product?.name || 'Inventory Product'}
+                </h1>
+                {stock.product?.sku && (
+                  <span className="text-xs font-mono text-muted-foreground">
+                    SKU: {stock.product.sku}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
-          <Button variant="outline" size="sm" onClick={fetchStock} className="flex items-center gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <Button variant="outline" size="sm" onClick={fetchStock} className="flex items-center gap-1.5 text-black dark:text-white">
+            <RefreshCw className="w-3.5 h-3.5 text-black dark:text-white" />
             <span>Refresh</span>
           </Button>
 
@@ -179,21 +189,21 @@ export default function StockDetailPage() {
               variant="outline"
               size="sm"
               onClick={() => navigate(`/products/${stock.productId}`)}
-              className="flex items-center gap-1.5"
+              className="flex items-center gap-1.5 text-black dark:text-white"
             >
               <span>Product Page</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-3.5 h-3.5 text-black dark:text-white" />
             </Button>
           )}
 
           {canUpdate && (
             <Button
-              variant="primary"
+              variant="outline"
               size="sm"
               onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center gap-1.5 shadow-lg shadow-violet-500/20"
+              className="flex items-center gap-1.5 text-black dark:text-white"
             >
-              <Edit2 className="w-3.5 h-3.5" />
+              <Edit2 className="w-3.5 h-3.5 text-black dark:text-white" />
               <span>Edit Thresholds</span>
             </Button>
           )}
@@ -217,9 +227,9 @@ export default function StockDetailPage() {
             variant="outline"
             size="sm"
             onClick={() => navigate(`/inventory?tab=transfers`)}
-            className="text-xs flex items-center gap-1.5 bg-background/40"
+            className="text-xs flex items-center gap-1.5 bg-background/40 text-black dark:text-white"
           >
-            <ArrowLeftRight className="w-3.5 h-3.5" />
+            <ArrowLeftRight className="w-3.5 h-3.5 text-black dark:text-white" />
             <span>Transfer Stock</span>
           </Button>
 
@@ -227,9 +237,9 @@ export default function StockDetailPage() {
             variant="outline"
             size="sm"
             onClick={() => navigate(`/inventory?tab=adjustments`)}
-            className="text-xs flex items-center gap-1.5 bg-background/40"
+            className="text-xs flex items-center gap-1.5 bg-background/40 text-black dark:text-white"
           >
-            <Sliders className="w-3.5 h-3.5" />
+            <Sliders className="w-3.5 h-3.5 text-black dark:text-white" />
             <span>Audit Count</span>
           </Button>
         </div>
@@ -322,9 +332,9 @@ export default function StockDetailPage() {
             </div>
 
             <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
-              <span className="text-[10px] text-muted-foreground block mb-0.5">Facility Record ID</span>
-              <span className="font-mono text-[11px] text-muted-foreground truncate block">
-                {stock.warehouseId}
+              <span className="text-[10px] text-muted-foreground block mb-0.5">Branch Location</span>
+              <span className="text-foreground font-normal truncate block">
+                {stock.warehouse?.branch?.name || 'Main Regional Branch'}
               </span>
             </div>
 
@@ -343,38 +353,41 @@ export default function StockDetailPage() {
             </div>
             <div>
               <h3 className="text-sm font-normal text-foreground">Catalog Product Attributes</h3>
-              <p className="text-[11px] text-muted-foreground">Base product unit specifications and identifier</p>
+              <p className="text-[11px] text-muted-foreground">Base product specifications and catalog item</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
-              <span className="text-[10px] text-muted-foreground block mb-0.5">Catalog Title</span>
-              <span className="text-foreground truncate block font-normal">{stock.product?.name || '—'}</span>
-            </div>
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <ProductThumbnail product={stock.product} size="xl" className="rounded-2xl shadow-sm border border-border/80" />
+            <div className="grid grid-cols-2 gap-3 text-xs flex-1 w-full">
+              <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
+                <span className="text-[10px] text-muted-foreground block mb-0.5">Catalog Title</span>
+                <span className="text-foreground truncate block font-normal">{stock.product?.name || '—'}</span>
+              </div>
 
-            <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
-              <span className="text-[10px] text-muted-foreground block mb-0.5">SKU Identifier</span>
-              <span className="font-mono text-foreground font-normal">{stock.product?.sku || '—'}</span>
-            </div>
+              <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
+                <span className="text-[10px] text-muted-foreground block mb-0.5">SKU Identifier</span>
+                <span className="font-mono text-foreground font-normal">{stock.product?.sku || '—'}</span>
+              </div>
 
-            <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
-              <span className="text-[10px] text-muted-foreground block mb-0.5">Measurement Unit</span>
-              <span className="text-foreground font-normal">
-                {stock.product?.unit?.name || 'Standard Unit'}
-                {stock.product?.unit?.abbreviation ? ` (${stock.product.unit.abbreviation})` : ''}
-              </span>
-            </div>
+              <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
+                <span className="text-[10px] text-muted-foreground block mb-0.5">Measurement Unit</span>
+                <span className="text-foreground font-normal">
+                  {stock.product?.unit?.name || 'Standard Unit'}
+                  {stock.product?.unit?.abbreviation ? ` (${stock.product.unit.abbreviation})` : ''}
+                </span>
+              </div>
 
-            <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
-              <span className="text-[10px] text-muted-foreground block mb-0.5">Product Detail Link</span>
-              <Link
-                to={`/products/${stock.productId}`}
-                className="text-violet-400 hover:underline font-normal flex items-center gap-1"
-              >
-                <span>Open Full Page</span>
-                <ExternalLink className="w-3 h-3" />
-              </Link>
+              <div className="p-3 rounded-xl bg-muted800/40 border border-border/80">
+                <span className="text-[10px] text-muted-foreground block mb-0.5">Product Detail Link</span>
+                <Link
+                  to={`/products/${stock.productId}`}
+                  className="text-black dark:text-white hover:underline font-normal flex items-center gap-1"
+                >
+                  <span>Open Full Page</span>
+                  <ExternalLink className="w-3 h-3 text-black dark:text-white" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
