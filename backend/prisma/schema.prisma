@@ -282,6 +282,8 @@ model User {
   updatedWarehouses               Warehouse[]               @relation("WarehouseUpdater")
   createdWarehouseStocks          WarehouseStock[]          @relation("WarehouseStockCreator")
   updatedWarehouseStocks          WarehouseStock[]          @relation("WarehouseStockUpdater")
+  createdProductAddedQuantities   ProductAddedQuantity[]    @relation("ProductAddedQuantityCreator")
+  updatedProductAddedQuantities   ProductAddedQuantity[]    @relation("ProductAddedQuantityUpdater")
   createdStockMovements           StockMovement[]           @relation("StockMovementCreator")
   updatedStockMovements           StockMovement[]           @relation("StockMovementUpdater")
   createdStockReservations        StockReservation[]        @relation("StockReservationCreator")
@@ -651,8 +653,9 @@ model Warehouse {
   houseNumber     String?            @map("house_number")
   managerId       String?            @map("manager_id") @db.Uuid
   status          String             @default("ACTIVE")
-  stocks          WarehouseStock[]
-  stockMovements  StockMovement[]
+  stocks               WarehouseStock[]
+  stockMovements       StockMovement[]
+  productAddedQuantities ProductAddedQuantity[]
   warehouseSellingPrices WarehouseSellingPrice[]
   transfersFrom   WarehouseStockTransfer[]   @relation("StockTransferFrom")
   transfersTo     WarehouseStockTransfer[]   @relation("StockTransferTo")
@@ -920,8 +923,9 @@ model Product {
   reorderLevel        Decimal                   @default(0) @map("reorder_level") @db.Decimal(15, 3)
   status              String                    @default("ACTIVE")
   images              ProductImage[]
-  warehouseStocks     WarehouseStock[]
+  warehouseStocks        WarehouseStock[]
   warehouseSellingPrices WarehouseSellingPrice[]
+  productAddedQuantities ProductAddedQuantity[]
   stockTransfers      WarehouseStockTransfer[]
   stockMovements      StockMovement[]
   reservations        StockReservation[]
@@ -971,30 +975,64 @@ model ProductImage {
 // ============================================================
 
 model WarehouseStock {
-  id                String    @id @default(uuid()) @db.Uuid
-  createdById       String?   @map("created_by_id") @db.Uuid
-  updatedById       String?   @map("updated_by_id") @db.Uuid
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  isArchived        Boolean   @default(false) @map("is_archived")
-  archivedAt        DateTime? @map("archived_at")
-  warehouseId       String    @map("warehouse_id") @db.Uuid
-  productId         String    @map("product_id") @db.Uuid
-  quantity          Decimal   @default(0) @db.Decimal(15, 3)
-  reservedQuantity  Decimal   @default(0) @map("reserved_quantity") @db.Decimal(15, 3)
-  availableQuantity Decimal   @default(0) @map("available_quantity") @db.Decimal(15, 3)
-  minimumStock      Decimal   @default(0) @map("minimum_stock") @db.Decimal(15, 3)
-  reorderLevel      Decimal   @default(0) @map("reorder_level") @db.Decimal(15, 3)
+  id           String    @id @default(uuid()) @db.Uuid
+  createdById  String?   @map("created_by_id") @db.Uuid
+  updatedById  String?   @map("updated_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  isArchived   Boolean   @default(false) @map("is_archived")
+  archivedAt   DateTime? @map("archived_at")
+  warehouseId  String    @map("warehouse_id") @db.Uuid
+  productId    String    @map("product_id") @db.Uuid
+  minimumStock Decimal   @default(0) @map("minimum_stock") @db.Decimal(15, 3)
+  reorderLevel Decimal   @default(0) @map("reorder_level") @db.Decimal(15, 3)
 
-  createdBy User?     @relation("WarehouseStockCreator", fields: [createdById], references: [id])
-  updatedBy User?     @relation("WarehouseStockUpdater", fields: [updatedById], references: [id])
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  product   Product   @relation(fields: [productId], references: [id])
+  createdBy      User?                  @relation("WarehouseStockCreator", fields: [createdById], references: [id])
+  updatedBy      User?                  @relation("WarehouseStockUpdater", fields: [updatedById], references: [id])
+  warehouse      Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product        Product                @relation(fields: [productId], references: [id])
+  addedQuantities ProductAddedQuantity[]
 
   @@unique([warehouseId, productId])
   @@index([warehouseId])
   @@index([productId])
   @@map("warehouse_stocks")
+}
+
+model ProductAddedQuantity {
+  id          String    @id @default(uuid()) @db.Uuid
+  createdById String?   @map("created_by_id") @db.Uuid
+  updatedById String?   @map("updated_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  isArchived  Boolean   @default(false) @map("is_archived")
+  archivedAt  DateTime? @map("archived_at")
+
+  warehouseStockId String? @map("warehouse_stock_id") @db.Uuid
+  warehouseId      String  @map("warehouse_id") @db.Uuid
+  productId        String  @map("product_id")   @db.Uuid
+
+  previousTotalQty         Decimal @map("previous_total_qty") @db.Decimal(15, 3)
+  addedQuantity            Decimal @map("added_quantity")     @db.Decimal(15, 3)
+  currentTotalAvailableQty Decimal @map("current_total_qty")  @db.Decimal(15, 3)
+
+  addedAt DateTime @default(now()) @map("added_at")
+
+  referenceType String?  @map("reference_type")
+  referenceId   String?  @map("reference_id") @db.Uuid
+  notes         String?
+
+  warehouseStock WarehouseStock? @relation(fields: [warehouseStockId], references: [id], onDelete: Cascade)
+  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id])
+  createdBy      User?           @relation("ProductAddedQuantityCreator", fields: [createdById], references: [id])
+  updatedBy      User?           @relation("ProductAddedQuantityUpdater", fields: [updatedById], references: [id])
+
+  @@index([warehouseStockId])
+  @@index([warehouseId, productId])
+  @@index([addedAt])
+  @@index([referenceType, referenceId])
+  @@map("product_added_quantities")
 }
 
 model StockMovement {
