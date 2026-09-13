@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle, XCircle, Sliders, Warehouse as WarehouseIcon } from 'lucide-react';
 import Modal from '../../../../components/ui/Modal';
 import Button from '../../../../components/ui/Button';
+import ProductThumbnail from '../ProductThumbnail';
 
 export default function AdjustmentApprovalModal({
   isOpen,
@@ -19,7 +20,7 @@ export default function AdjustmentApprovalModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Process Stock Adjustment"
-      subtitle={`Review discrepancies and decide whether to approve or reject adjustment #${adjustment.id?.slice(0, 8)}`}
+      subtitle="Review discrepancies and decide whether to approve or reject this physical count adjustment"
       icon={<Sliders className="w-5 h-5 text-amber-400" />}
       maxWidth="max-w-xl"
       footer={
@@ -90,18 +91,21 @@ export default function AdjustmentApprovalModal({
                   key={item.id}
                   className="p-2.5 flex items-center justify-between gap-3 text-xs bg-card/60"
                 >
-                  <div className="min-w-0">
-                    <p className="font-normal text-foreground truncate">
-                      {item.product?.name || 'Product'}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      SKU: {item.product?.sku || 'N/A'} • System: {item.systemQuantity} ➔ Actual: {item.actualQuantity}
-                    </p>
-                    {item.reason && (
-                      <p className="text-[10px] text-muted-foreground italic mt-0.5">
-                        Note: {item.reason}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <ProductThumbnail product={item.product} size="sm" className="rounded-lg shadow-sm border border-border/80" />
+                    <div className="min-w-0">
+                      <p className="font-normal text-foreground truncate">
+                        {item.product?.name || 'Product'}
                       </p>
-                    )}
+                      <p className="text-[10px] text-muted-foreground">
+                        SKU: {item.product?.sku || 'N/A'} • System: {item.systemQuantity} ➔ Actual: {item.actualQuantity}
+                      </p>
+                      {item.reason && (
+                        <p className="text-[10px] text-muted-foreground italic mt-0.5">
+                          Note: {item.reason}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="shrink-0 text-right">

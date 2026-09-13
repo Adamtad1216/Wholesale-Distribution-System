@@ -1,6 +1,7 @@
 import { Sliders, Warehouse as WarehouseIcon, User, Calendar, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import Modal from '../../../../components/ui/Modal';
 import Button from '../../../../components/ui/Button';
+import ProductThumbnail from '../ProductThumbnail';
 
 export default function AdjustmentDetailModal({
   isOpen,
@@ -41,7 +42,7 @@ export default function AdjustmentDetailModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Adjustment Details #${adjustment.id?.slice(0, 8)}`}
+      title="Stock Adjustment Details"
       subtitle="Complete physical inventory count reconciliation audit record"
       icon={<Sliders className="w-5 h-5 text-violet-400" />}
       maxWidth="max-w-2xl"
@@ -131,14 +132,19 @@ export default function AdjustmentDetailModal({
                   return (
                     <tr key={item.id} className="hover:bg-muted800/30">
                       <td className="p-3">
-                        <span className="font-normal text-foreground block">
-                          {item.product?.name}
-                        </span>
-                        {item.product?.sku && (
-                          <span className="text-[10px] text-muted-foreground">
-                            SKU: {item.product.sku}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2.5">
+                          <ProductThumbnail product={item.product} size="sm" className="rounded-lg shadow-sm border border-border/80" />
+                          <div>
+                            <span className="font-normal text-foreground block">
+                              {item.product?.name}
+                            </span>
+                            {item.product?.sku && (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                SKU: {item.product.sku}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="p-3 text-right font-medium text-muted-foreground">
                         {item.systemQuantity}

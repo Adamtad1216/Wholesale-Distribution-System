@@ -24,6 +24,7 @@ import { usePermission } from '../../../hooks/usePermission';
 import Button from '../../../components/ui/Button';
 import AdjustmentFormModal from '../components/adjustments/AdjustmentFormModal';
 import ConfirmDeleteModal from '../../../components/ui/ConfirmDeleteModal';
+import ProductThumbnail from '../components/ProductThumbnail';
 
 export default function AdjustmentDetailPage() {
   const { id } = useParams();
@@ -210,16 +211,17 @@ export default function AdjustmentDetailPage() {
           <button
             type="button"
             onClick={() => navigate('/inventory?tab=adjustments')}
-            className="p-2 rounded-xl bg-card border border-border hover:bg-muted800 text-muted-foreground hover:text-foreground transition"
+            className="p-2 rounded-xl bg-card border border-border hover:bg-muted text-black dark:text-white transition"
             title="Back to Stock Adjustments"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-black dark:text-white" />
           </button>
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
-                #{adjustment.id?.slice(0, 8)}
+              <span className="font-mono text-xs font-normal px-2.5 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
+                {adjustment.warehouse?.name || 'Depot Facility'}
+                {adjustment.warehouse?.branch?.name ? ` (${adjustment.warehouse.branch.name})` : ''}
               </span>
               {getStatusBadge(adjustment.status)}
             </div>
@@ -231,8 +233,8 @@ export default function AdjustmentDetailPage() {
         </div>
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
-          <Button variant="outline" size="sm" onClick={fetchAdjustment} className="flex items-center gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <Button variant="outline" size="sm" onClick={fetchAdjustment} className="flex items-center gap-1.5 text-black dark:text-white">
+            <RefreshCw className="w-3.5 h-3.5 text-black dark:text-white" />
             <span>Refresh</span>
           </Button>
 
@@ -265,9 +267,9 @@ export default function AdjustmentDetailPage() {
                 type="button"
                 onClick={() => setRejectModalOpen(true)}
                 disabled={processing}
-                className="px-3.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 font-normal text-xs flex items-center gap-1.5 transition disabled:opacity-50"
+                className="px-3.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs flex items-center gap-1.5 transition disabled:opacity-50"
               >
-                <XCircle className="w-4 h-4" />
+                <XCircle className="w-4 h-4 text-black dark:text-white" />
                 <span>Reject</span>
               </button>
 
@@ -275,9 +277,9 @@ export default function AdjustmentDetailPage() {
                 type="button"
                 onClick={handleApprove}
                 disabled={processing}
-                className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-normal text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 transition disabled:opacity-50"
+                className="px-4 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs flex items-center gap-1.5 transition disabled:opacity-50"
               >
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-4 h-4 text-black dark:text-white" />
                 <span>Approve & Reconcile</span>
               </button>
             </div>
@@ -399,10 +401,8 @@ export default function AdjustmentDetailPage() {
                     <tr key={item.id || idx} className="hover:bg-muted800/30 transition">
                       {/* Product */}
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
-                            <Package className="w-4 h-4" />
-                          </div>
+                        <div className="flex items-center gap-3">
+                          <ProductThumbnail product={item.product} size="sm" className="rounded-lg shadow-sm border border-border/80" />
                           <div>
                             <span className="font-normal text-foreground block">
                               {item.product?.name || 'Product'}
