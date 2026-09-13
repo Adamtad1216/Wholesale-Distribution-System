@@ -37,10 +37,23 @@ export const inventoryApi = {
   releaseReservation: (id, data) => api.post(`/inventory/reservations/${id}/release`, data),
   deleteReservation: (id) => api.delete(`/inventory/reservations/${id}`),
 
+  // ── Stock Additions (ProductAddedQuantity) ────────────────
+  getStockAdditions: (params) => api.get('/inventory/stock-additions', { params }),
+  getStockAdditionById: (id) => api.get(`/inventory/stock-additions/${id}`),
+  createStockAddition: (data) => api.post('/inventory/stock-additions', data),
+  updateStockAddition: (id, data) => api.patch(`/inventory/stock-additions/${id}`, data),
+  deleteStockAddition: (id) => api.delete(`/inventory/stock-additions/${id}`),
+
   // ── Lookups ───────────────────────────────────────────────
   getWarehouses: (params) => api.get('/warehouses', { params }),
   getProducts: (params) => api.get('/catalog/products', { params }),
-  getSalesOrders: (params) => api.get('/sales/orders', { params }),
+  getSalesOrders: async (params) => {
+    try {
+      return await api.get('/inventory/reservations/sales-orders', { params });
+    } catch {
+      return await api.get('/inventory/sales-orders', { params });
+    }
+  },
 };
 
 export default inventoryApi;
