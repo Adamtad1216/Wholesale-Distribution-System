@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../../../components/ui/Modal';
 import Button from '../../../../components/ui/Button';
+import ProductThumbnail from '../ProductThumbnail';
 
 export default function TransferDetailModal({
   isOpen,
@@ -28,7 +29,7 @@ export default function TransferDetailModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Transfer Dispatch #${transfer.id?.slice(0, 8)}`}
+      title="Transfer Dispatch Details"
       subtitle="Complete inter-warehouse movement audit record"
       icon={<ArrowLeftRight className="w-5 h-5 text-sky-400" />}
       maxWidth="max-w-xl"
@@ -45,9 +46,9 @@ export default function TransferDetailModal({
                 onClose();
                 onOpenApprovalModal?.(transfer);
               }}
-              className="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-normal text-xs transition flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs transition flex items-center gap-1.5"
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-4 h-4 text-black dark:text-white" />
               <span>Review & Authorize</span>
             </button>
           )}
@@ -119,10 +120,8 @@ export default function TransferDetailModal({
         {/* Product & Quantity Box */}
         <div className="p-4 rounded-2xl bg-card border border-border space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-400 shrink-0">
-                <Package className="w-4 h-4" />
-              </div>
+            <div className="flex items-center gap-3">
+              <ProductThumbnail product={transfer.product} size="md" className="rounded-xl shadow-sm border border-border/80" />
               <div>
                 <h4 className="text-sm font-normal text-foreground">
                   {transfer.product?.name}

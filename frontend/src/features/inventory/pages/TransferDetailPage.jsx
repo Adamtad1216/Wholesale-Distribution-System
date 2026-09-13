@@ -28,6 +28,7 @@ import Button from '../../../components/ui/Button';
 import TransferApprovalModal from '../components/transfers/TransferApprovalModal';
 import TransferFormModal from '../components/transfers/TransferFormModal';
 import ConfirmDeleteModal from '../../../components/ui/ConfirmDeleteModal';
+import ProductThumbnail from '../components/ProductThumbnail';
 
 export default function TransferDetailPage() {
   const { id } = useParams();
@@ -161,6 +162,7 @@ export default function TransferDetailPage() {
 
   const reasonFormatted = transfer.transferReason?.replace(/_/g, ' ') || 'Rebalance';
   const isPending = transfer.status === 'PENDING';
+  const isApproved = transfer.status === 'APPROVED';
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-200">
@@ -170,23 +172,23 @@ export default function TransferDetailPage() {
           <button
             type="button"
             onClick={() => navigate('/inventory?tab=transfers')}
-            className="p-2 rounded-xl bg-card border border-border hover:bg-muted800 text-muted-foreground hover:text-foreground transition"
+            className="p-2 rounded-xl bg-card border border-border hover:bg-muted text-black dark:text-white transition"
             title="Back to Transfers"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-black dark:text-white" />
           </button>
 
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-normal px-2 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
-                #{transfer.id?.slice(0, 8)}
+              <span className="font-mono text-xs font-normal px-2.5 py-0.5 rounded-md bg-muted800 text-muted-foreground border border-border">
+                {transfer.fromWarehouse?.name || 'Origin Depot'} → {transfer.toWarehouse?.name || 'Destination Depot'}
               </span>
               {isPending ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-normal bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  <Clock className="w-3.5 h-3.5" />
+                  <Clock className="w-3.5 h-3.5 animate-pulse" />
                   <span>Pending Authorization</span>
                 </span>
-              ) : transfer.status === 'APPROVED' ? (
+              ) : isApproved ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-normal bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Approved & Executed</span>
@@ -198,16 +200,25 @@ export default function TransferDetailPage() {
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-normal text-foreground tracking-tight mt-1 flex items-center gap-2">
-              <ArrowLeftRight className="w-6 h-6 text-sky-400" />
-              <span>Inter-Warehouse Stock Transfer</span>
-            </h1>
+            <div className="flex items-center gap-3.5 mt-2">
+              <ProductThumbnail product={transfer.product} size="lg" className="rounded-2xl shadow-sm border border-border" />
+              <div>
+                <h1 className="text-2xl font-normal text-foreground tracking-tight">
+                  Transfer: {transfer.product?.name || 'Inventory Product'}
+                </h1>
+                {transfer.product?.sku && (
+                  <span className="text-xs font-mono text-muted-foreground">
+                    SKU: {transfer.product.sku}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5 self-end sm:self-auto">
-          <Button variant="outline" size="sm" onClick={fetchTransfer} className="flex items-center gap-1.5">
-            <RefreshCw className="w-3.5 h-3.5" />
+          <Button variant="outline" size="sm" onClick={fetchTransfer} className="flex items-center gap-1.5 text-black dark:text-white">
+            <RefreshCw className="w-3.5 h-3.5 text-black dark:text-white" />
             <span>Refresh</span>
           </Button>
 
@@ -238,22 +249,22 @@ export default function TransferDetailPage() {
             <button
               type="button"
               onClick={() => setIsApprovalModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-normal text-xs flex items-center gap-1.5 transition"
+              className="px-3.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-black dark:text-white font-normal text-xs flex items-center gap-1.5 transition"
             >
-              <AlertTriangle className="w-3.5 h-3.5" />
+              <AlertTriangle className="w-3.5 h-3.5 text-black dark:text-white" />
               <span>Review & Authorize</span>
             </button>
           )}
 
           {transfer.productId && (
             <Button
-              variant="primary"
+              variant="outline"
               size="sm"
               onClick={() => navigate(`/products/${transfer.productId}`)}
-              className="flex items-center gap-1.5 shadow-lg shadow-sky-500/20"
+              className="flex items-center gap-1.5 text-black dark:text-white"
             >
               <span>View Product Detail</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-3.5 h-3.5 text-black dark:text-white" />
             </Button>
           )}
         </div>
@@ -337,10 +348,8 @@ export default function TransferDetailPage() {
           </h3>
 
           <div className="p-4 rounded-2xl bg-muted800/40 border border-border/80 flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3.5 min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
-                <Package className="w-6 h-6" />
-              </div>
+            <div className="flex items-start gap-4 min-w-0">
+              <ProductThumbnail product={transfer.product} size="xl" className="rounded-2xl shadow-sm border border-border/80" />
               <div className="space-y-1 min-w-0">
                 <h4 className="text-base font-normal text-foreground truncate">
                   {transfer.product?.name || 'Inventory Product'}

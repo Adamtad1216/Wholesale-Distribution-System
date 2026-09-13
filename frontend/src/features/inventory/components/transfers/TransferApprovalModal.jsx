@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Modal from '../../../../components/ui/Modal';
 import Button from '../../../../components/ui/Button';
+import ProductThumbnail from '../ProductThumbnail';
 
 export default function TransferApprovalModal({
   isOpen,
@@ -45,7 +46,7 @@ export default function TransferApprovalModal({
       isOpen={isOpen}
       onClose={handleClose}
       title="Authorize Inter-Warehouse Transfer"
-      subtitle={`Review transit route, product volumes, and authorize or reject transfer #${transfer.id?.slice(0, 8)}`}
+      subtitle="Review transit route, product volumes, and authorize or reject this transfer movement"
       icon={<ArrowLeftRight className="w-5 h-5 text-sky-400" />}
       maxWidth="max-w-xl"
       footer={
@@ -132,9 +133,7 @@ export default function TransferApprovalModal({
         {/* Product Details & Volume */}
         <div className="p-3.5 rounded-xl bg-muted800/30 border border-border flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0">
-              <Package className="w-5 h-5" />
-            </div>
+            <ProductThumbnail product={transfer.product} size="md" className="rounded-xl shadow-sm border border-border/80" />
             <div className="min-w-0">
               <h4 className="text-xs font-normal text-foreground truncate">
                 {transfer.product?.name || 'Transferred Product'}
