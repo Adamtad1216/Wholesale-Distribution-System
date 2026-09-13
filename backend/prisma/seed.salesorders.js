@@ -42,25 +42,38 @@ async function main() {
 
   for (const wh of warehouses) {
     for (const prod of products.slice(0, 3)) {
-      await prisma.warehouseStock.upsert({
+      const stock = await prisma.warehouseStock.upsert({
         where: { warehouseId_productId: { warehouseId: wh.id, productId: prod.id } },
         update: {
-          quantity: 150,
-          availableQuantity: 150,
-          reservedQuantity: 0,
           isArchived: false,
           archivedAt: null,
         },
         create: {
           warehouseId: wh.id,
           productId: prod.id,
-          quantity: 150,
-          availableQuantity: 150,
-          reservedQuantity: 0,
           minimumStock: 10,
           reorderLevel: 20,
         },
       });
+
+      // Ensure at least one stock addition exists for available balance
+      const existingAddition = await prisma.productAddedQuantity.findFirst({
+        where: { warehouseId: wh.id, productId: prod.id, isArchived: false },
+      });
+      if (!existingAddition) {
+        await prisma.productAddedQuantity.create({
+          data: {
+            warehouseId: wh.id,
+            productId: prod.id,
+            warehouseStockId: stock.id,
+            previousTotalQty: 0,
+            addedQuantity: 150,
+            currentTotalAvailableQty: 150,
+            referenceType: 'INITIAL_STOCK',
+            notes: 'Seeded initial inventory for sales orders & reservations testing',
+          },
+        });
+      }
     }
   }
   console.log('Stock availability verified/updated across warehouses.');

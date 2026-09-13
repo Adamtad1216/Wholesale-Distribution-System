@@ -46,6 +46,12 @@ const BRANCH_MANAGER_PERMISSIONS = [
   'inventory:reservations:release',
   'inventory:reservations:delete',
 
+  // Stock Additions (ProductAddedQuantity) — full CRUD
+  'inventory:stock-additions:read',
+  'inventory:stock-additions:create',
+  'inventory:stock-additions:update',
+  'inventory:stock-additions:delete',
+
   // Read-only lookups for reservation forms
   'products:read',
   'customers:read',
@@ -82,6 +88,11 @@ const WAREHOUSE_MANAGER_PERMISSIONS = [
   'inventory:reservations:create',
   'inventory:reservations:update',
   'inventory:reservations:release',
+
+  // Stock Additions (ProductAddedQuantity) — create + read (no delete)
+  'inventory:stock-additions:read',
+  'inventory:stock-additions:create',
+  'inventory:stock-additions:update',
 
   // Read-only lookups
   'products:read',
