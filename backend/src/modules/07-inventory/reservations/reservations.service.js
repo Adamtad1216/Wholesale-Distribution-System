@@ -3,6 +3,7 @@ import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
 import { getUserScope, getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
+import { getStockQuantitySummary } from '../stock-additions/stock-additions.service.js';
 
 export async function createReservation(data, createdById, req, user = null) {
   await enforceWarehouseScope(user, data.warehouseId);
@@ -21,8 +22,10 @@ export async function createReservation(data, createdById, req, user = null) {
   });
   if (!stock) throw new AppError('No stock found', 404);
 
-  if (Number(stock.availableQuantity) < data.quantity) {
-    throw new AppError('Insufficient available stock', 400);
+  // Compute live available quantity (total additions minus active reservations)
+  const { availableQuantity } = await getStockQuantitySummary(data.warehouseId, data.productId);
+  if (availableQuantity < data.quantity) {
+    throw new AppError(`Insufficient available stock. Available: ${availableQuantity}, Requested: ${data.quantity}`, 400);
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -37,18 +40,16 @@ export async function createReservation(data, createdById, req, user = null) {
       },
       include: {
         warehouse: { select: { id: true, name: true, code: true } },
-        product: { select: { id: true, name: true, sku: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            unit: { select: { id: true, name: true, abbreviation: true } },
+            images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+          },
+        },
         salesOrder: { select: { id: true, orderNumber: true, status: true } },
-      },
-    });
-
-    await tx.warehouseStock.update({
-      where: { id: stock.id },
-      data: {
-        reservedQuantity: { increment: data.quantity },
-        availableQuantity: { decrement: data.quantity },
-        updatedById: createdById,
-        updatedAt: new Date(),
       },
     });
 
@@ -117,7 +118,17 @@ export async function getReservations(filters, user = null) {
             branch: { select: { id: true, name: true } },
           },
         },
-        product: { select: { id: true, name: true, sku: true, unit: true, sellingPrice: true, wholesalePrice: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            unit: { select: { id: true, name: true, abbreviation: true } },
+            sellingPrice: true,
+            wholesalePrice: true,
+            images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+          },
+        },
         salesOrder: {
           select: {
             id: true,
@@ -179,20 +190,20 @@ export async function releaseReservation(id, quantity, createdById, req, user = 
       },
       include: {
         warehouse: { select: { id: true, name: true, code: true } },
-        product: { select: { id: true, name: true, sku: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            unit: { select: { id: true, name: true, abbreviation: true } },
+            images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+          },
+        },
         salesOrder: { select: { id: true, orderNumber: true, status: true } },
       },
     });
 
-    await tx.warehouseStock.updateMany({
-      where: { warehouseId: existing.warehouseId, productId: existing.productId },
-      data: {
-        reservedQuantity: { decrement: releaseQty },
-        availableQuantity: { increment: releaseQty },
-        updatedById: createdById,
-        updatedAt: new Date(),
-      },
-    });
+    // No direct column update needed — reservedQuantity is computed live from active reservations
 
     // Create notification
     await tx.notification.create({
@@ -245,15 +256,12 @@ export async function deleteReservation(id, deletedById, req, user = null) {
     });
 
     // Release reserved quantity back to stock if still reserved
+    // No direct column update needed — reservedQuantity is computed live from active reservations
     if (existing.status === 'RESERVED' || existing.status === 'PARTIALLY_FULFILLED') {
-      await tx.warehouseStock.updateMany({
-        where: { warehouseId: existing.warehouseId, productId: existing.productId },
-        data: {
-          reservedQuantity: { decrement: Number(existing.quantity) },
-          availableQuantity: { increment: Number(existing.quantity) },
-          updatedById: deletedById,
-          updatedAt: new Date(),
-        },
+      // status update is sufficient; computed available will auto-update
+      await tx.stockReservation.update({
+        where: { id },
+        data: { status: 'RELEASED', releasedAt: new Date(), updatedById: deletedById },
       });
     }
 
@@ -299,9 +307,10 @@ export async function getReservationById(id, user = null) {
           id: true,
           name: true,
           sku: true,
-          unit: true,
+          unit: { select: { id: true, name: true, abbreviation: true } },
           sellingPrice: true,
           wholesalePrice: true,
+          images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
         },
       },
       salesOrder: {
@@ -337,19 +346,16 @@ export async function getReservationById(id, user = null) {
   if (!reservation) throw new AppError('Stock reservation not found', 404);
   await enforceWarehouseScope(user, reservation.warehouseId);
 
-  const currentStock = await prisma.warehouseStock.findFirst({
-    where: { warehouseId: reservation.warehouseId, productId: reservation.productId, isArchived: false },
-  });
+  // Compute live stock summary
+  const liveStock = await getStockQuantitySummary(reservation.warehouseId, reservation.productId);
 
   return {
     ...reservation,
-    currentStock: currentStock
-      ? {
-        quantity: Number(currentStock.quantity),
-        availableQuantity: Number(currentStock.availableQuantity),
-        reservedQuantity: Number(currentStock.reservedQuantity),
-      }
-      : null,
+    currentStock: {
+      quantity: liveStock.quantity,
+      availableQuantity: liveStock.availableQuantity,
+      reservedQuantity: liveStock.reservedQuantity,
+    },
   };
 }
 
@@ -394,7 +400,15 @@ export async function approveOrRejectReservation(id, data, createdById, req, use
             branch: { select: { id: true, name: true } },
           },
         },
-        product: { select: { id: true, name: true, sku: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            unit: { select: { id: true, name: true, abbreviation: true } },
+            images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+          },
+        },
         salesOrder: { select: { id: true, orderNumber: true, status: true } },
       },
     });
@@ -446,7 +460,15 @@ export async function updateReservation(id, data, updatedById, req, user = null)
     where: { id, isArchived: false },
     include: {
       warehouse: { select: { id: true, name: true, code: true } },
-      product: { select: { id: true, name: true, sku: true } },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          unit: { select: { id: true, name: true, abbreviation: true } },
+          images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+        },
+      },
       salesOrder: { select: { id: true, orderNumber: true, status: true } },
     },
   });
@@ -464,7 +486,15 @@ export async function updateReservation(id, data, updatedById, req, user = null)
       },
       include: {
         warehouse: { select: { id: true, name: true, code: true } },
-        product: { select: { id: true, name: true, sku: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            unit: { select: { id: true, name: true, abbreviation: true } },
+            images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+          },
+        },
         salesOrder: { select: { id: true, orderNumber: true, status: true } },
       },
     });
@@ -492,79 +522,26 @@ export async function updateReservation(id, data, updatedById, req, user = null)
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    // If warehouse or product changed, release from old stock and reserve in new stock
+    // If warehouse or product changed, check new availability
     if (newWarehouseId !== existing.warehouseId || newProductId !== existing.productId) {
-      // Release hold on old stock
-      const oldStock = await tx.warehouseStock.findFirst({
-        where: { warehouseId: existing.warehouseId, productId: existing.productId, isArchived: false },
-      });
-      if (oldStock) {
-        await tx.warehouseStock.update({
-          where: { id: oldStock.id },
-          data: {
-            reservedQuantity: { decrement: Number(existing.quantity) },
-            availableQuantity: { increment: Number(existing.quantity) },
-            updatedById,
-            updatedAt: new Date(),
-          },
-        });
-      }
-
-      // Check and reserve in new stock
-      const newStock = await tx.warehouseStock.findFirst({
-        where: { warehouseId: newWarehouseId, productId: newProductId, isArchived: false },
-      });
-      if (!newStock || Number(newStock.availableQuantity) < newQuantity) {
-        const avail = newStock ? Number(newStock.availableQuantity) : 0;
+      const newSummary = await getStockQuantitySummary(newWarehouseId, newProductId);
+      if (newSummary.availableQuantity < newQuantity) {
         throw new AppError(
-          `Insufficient available stock in selected warehouse. Available: ${avail}, Requested: ${newQuantity}`,
+          `Insufficient available stock in selected warehouse. Available: ${newSummary.availableQuantity}, Requested: ${newQuantity}`,
           400
         );
       }
-
-      await tx.warehouseStock.update({
-        where: { id: newStock.id },
-        data: {
-          reservedQuantity: { increment: newQuantity },
-          availableQuantity: { decrement: newQuantity },
-          updatedById,
-          updatedAt: new Date(),
-        },
-      });
     } else if (newQuantity !== Number(existing.quantity)) {
       const delta = newQuantity - Number(existing.quantity);
-      const stock = await tx.warehouseStock.findFirst({
-        where: { warehouseId: existing.warehouseId, productId: existing.productId, isArchived: false },
-      });
-      if (!stock) throw new AppError('Warehouse stock not found', 404);
-
       if (delta > 0) {
-        if (Number(stock.availableQuantity) < delta) {
+        const { availableQuantity } = await getStockQuantitySummary(existing.warehouseId, existing.productId);
+        // Available already excludes the current reservation so compare net
+        if (availableQuantity < delta) {
           throw new AppError(
-            `Insufficient available stock to increase reservation. Additional required: ${delta}, Available: ${stock.availableQuantity}`,
+            `Insufficient available stock to increase reservation. Additional required: ${delta}, Available: ${availableQuantity}`,
             400
           );
         }
-        await tx.warehouseStock.update({
-          where: { id: stock.id },
-          data: {
-            reservedQuantity: { increment: delta },
-            availableQuantity: { decrement: delta },
-            updatedById,
-            updatedAt: new Date(),
-          },
-        });
-      } else {
-        const releaseQty = Math.abs(delta);
-        await tx.warehouseStock.update({
-          where: { id: stock.id },
-          data: {
-            reservedQuantity: { decrement: releaseQty },
-            availableQuantity: { increment: releaseQty },
-            updatedById,
-            updatedAt: new Date(),
-          },
-        });
       }
     }
 
@@ -580,7 +557,15 @@ export async function updateReservation(id, data, updatedById, req, user = null)
       },
       include: {
         warehouse: { select: { id: true, name: true, code: true } },
-        product: { select: { id: true, name: true, sku: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            unit: { select: { id: true, name: true, abbreviation: true } },
+            images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+          },
+        },
         salesOrder: { select: { id: true, orderNumber: true, status: true } },
       },
     });
@@ -609,6 +594,80 @@ export async function updateReservation(id, data, updatedById, req, user = null)
   });
 
   return result;
+}
+
+/**
+ * Retrieve sales orders eligible for inventory stock reservations
+ */
+export async function getReservableSalesOrders({ warehouseId, limit = 100, search } = {}) {
+  const where = {
+    isArchived: false,
+    status: {
+      in: [
+        'APPROVED',
+        'SALES_REP_APPROVED',
+        'PENDING_REVIEW',
+        'WAREHOUSE_PREPARATION_SCHEDULED',
+        'PREPARING',
+        'RESERVED',
+        'DRAFT',
+      ],
+    },
+  };
+
+  if (warehouseId) {
+    where.warehouseId = warehouseId;
+  }
+
+  if (search) {
+    where.OR = [
+      { orderNumber: { contains: search, mode: 'insensitive' } },
+      { customer: { organization: { name: { contains: search, mode: 'insensitive' } } } },
+      { customer: { person: { firstName: { contains: search, mode: 'insensitive' } } } },
+      { customer: { person: { lastName: { contains: search, mode: 'insensitive' } } } },
+    ];
+  }
+
+  const orders = await prisma.salesOrder.findMany({
+    where,
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      warehouseId: true,
+      requiredDate: true,
+      createdAt: true,
+      warehouse: {
+        select: { id: true, name: true, code: true },
+      },
+      customer: {
+        select: {
+          id: true,
+          person: { select: { firstName: true, lastName: true } },
+          organization: { select: { name: true } },
+        },
+      },
+      items: {
+        where: { isArchived: false },
+        select: {
+          id: true,
+          productId: true,
+          quantity: true,
+          product: {
+            select: { id: true, name: true, sku: true },
+          },
+        },
+      },
+      reservations: {
+        where: { isArchived: false },
+        select: { id: true, productId: true, quantity: true, status: true },
+      },
+    },
+  });
+
+  return orders;
 }
 
 

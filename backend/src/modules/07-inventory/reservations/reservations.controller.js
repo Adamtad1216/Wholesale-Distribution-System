@@ -8,6 +8,7 @@ import {
   releaseReservation,
   deleteReservation,
   approveOrRejectReservation,
+  getReservableSalesOrders,
 } from './reservations.service.js';
 
 export async function listReservations(req, res, next) {
@@ -78,6 +79,20 @@ export async function removeReservation(req, res, next) {
     if (!idResult.success) return sendError(res, 'Invalid reservation ID', 400);
     await deleteReservation(idResult.data.id, req.user.id, req, req.user);
     sendDeleted(res, 'Stock reservation deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listReservableSalesOrders(req, res, next) {
+  try {
+    const { warehouseId, limit, search } = req.query;
+    const orders = await getReservableSalesOrders({
+      warehouseId,
+      limit: limit ? Number(limit) : 100,
+      search,
+    });
+    sendSuccess(res, orders);
   } catch (err) {
     next(err);
   }

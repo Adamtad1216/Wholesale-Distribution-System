@@ -7,6 +7,7 @@ import {
   releaseStockReservation,
   approveOrRejectReservationHandler,
   removeReservation,
+  listReservableSalesOrders,
 } from './reservations.controller.js';
 import {
   reservationQuerySchema,
@@ -104,6 +105,12 @@ router.get(
   validate(reservationQuerySchema),
   requirePermission('inventory:reservations:read'),
   listReservations,
+);
+
+router.get(
+  '/sales-orders',
+  requirePermission(['inventory:reservations:read', 'inventory:reservations:create']),
+  listReservableSalesOrders,
 );
 
 /**
