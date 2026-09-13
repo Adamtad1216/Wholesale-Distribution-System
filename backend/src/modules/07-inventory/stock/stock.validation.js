@@ -15,13 +15,15 @@ export const stockIdSchema = z.object({
 export const createStockSchema = z.object({
   warehouseId: z.string().uuid(),
   productId: z.string().uuid(),
+  // Optional initial quantity — creates the first ProductAddedQuantity record if > 0
   quantity: z.coerce.number().min(0).default(0),
   minimumStock: z.coerce.number().min(0).default(0),
   reorderLevel: z.coerce.number().min(0).default(0),
+  notes: z.string().max(1000).optional(),
 });
 
 export const updateStockSchema = z.object({
-  quantity: z.coerce.number().min(0).optional(),
+  // quantity is no longer a direct column — use stock-additions endpoint to add stock
   minimumStock: z.coerce.number().min(0).optional(),
   reorderLevel: z.coerce.number().min(0).optional(),
 });

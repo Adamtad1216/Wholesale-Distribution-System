@@ -2,19 +2,37 @@ import prisma from '../../../config/prisma.js';
 import { logAudit } from '../../../middleware/audit.middleware.js';
 import { AppError } from '../../../utils/errors.js';
 import { getPaginationParams, buildPaginationMeta } from '../../../utils/pagination.js';
-import { getUserScope, getAssignedWarehouseId, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
+import { getUserScope, enforceWarehouseScope } from '../../../utils/warehouse-scope.js';
+import { getStockQuantitySummary } from '../stock-additions/stock-additions.service.js';
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Sanitise a WarehouseStock record, injecting computed quantity fields
+// ──────────────────────────────────────────────────────────────────────────────
 const sanitizeStock = (stock) => {
   if (!stock) return stock;
   return {
     ...stock,
-    quantity: Number(stock.quantity),
-    reservedQuantity: Number(stock.reservedQuantity),
-    availableQuantity: Number(stock.availableQuantity),
     minimumStock: Number(stock.minimumStock),
     reorderLevel: Number(stock.reorderLevel),
+    // Computed fields injected by enrichStock(); default to 0 if not present
+    quantity: Number(stock.quantity ?? 0),
+    reservedQuantity: Number(stock.reservedQuantity ?? 0),
+    availableQuantity: Number(stock.availableQuantity ?? 0),
   };
 };
+
+// Enrich a list of stock records with computed quantities in parallel
+async function enrichStocks(stocks) {
+  return Promise.all(
+    stocks.map(async (s) => {
+      const { quantity, reservedQuantity, availableQuantity } = await getStockQuantitySummary(
+        s.warehouseId,
+        s.productId,
+      );
+      return { ...s, quantity, reservedQuantity, availableQuantity };
+    }),
+  );
+}
 
 export async function createStock(data, createdById, req, user = null) {
   await enforceWarehouseScope(user, data.warehouseId);
@@ -38,8 +56,8 @@ export async function createStock(data, createdById, req, user = null) {
   if (existingAny && !existingAny.isArchived) {
     throw new AppError(
       `An active stock record for "${product.name}" already exists in "${warehouse.name}". ` +
-      `Use the Edit action to update the existing record instead.`,
-      409
+        `Use the Edit action to update the existing record instead.`,
+      409,
     );
   }
 
@@ -47,13 +65,10 @@ export async function createStock(data, createdById, req, user = null) {
     let newStock;
 
     if (existingAny && existingAny.isArchived) {
-      // Case 2: Soft-deleted (archived) record found → restore it with fresh values
+      // Case 2: Soft-deleted (archived) record found → restore with fresh thresholds
       newStock = await tx.warehouseStock.update({
         where: { id: existingAny.id },
         data: {
-          quantity: data.quantity,
-          reservedQuantity: 0,
-          availableQuantity: data.quantity,
           minimumStock: data.minimumStock ?? existingAny.minimumStock,
           reorderLevel: data.reorderLevel ?? existingAny.reorderLevel,
           isArchived: false,
@@ -72,11 +87,8 @@ export async function createStock(data, createdById, req, user = null) {
         data: {
           warehouseId: data.warehouseId,
           productId: data.productId,
-          quantity: data.quantity,
-          reservedQuantity: 0,
-          availableQuantity: data.quantity,
-          minimumStock: data.minimumStock,
-          reorderLevel: data.reorderLevel,
+          minimumStock: data.minimumStock ?? 0,
+          reorderLevel: data.reorderLevel ?? 0,
           createdById,
         },
         include: {
@@ -86,13 +98,31 @@ export async function createStock(data, createdById, req, user = null) {
       });
     }
 
+    // If an initial quantity was supplied, record it as the first addition
+    const initialQty = Number(data.quantity) || 0;
+    if (initialQty > 0) {
+      await tx.productAddedQuantity.create({
+        data: {
+          warehouseStockId: newStock.id,
+          warehouseId: data.warehouseId,
+          productId: data.productId,
+          previousTotalQty: 0,
+          addedQuantity: initialQty,
+          currentTotalAvailableQty: initialQty,
+          referenceType: 'INITIAL_STOCK',
+          notes: data.notes || `Initial stock for ${product.name} in ${warehouse.name}`,
+          createdById,
+        },
+      });
+    }
+
     await tx.notification.create({
       data: {
         userId: createdById,
         title: existingAny ? 'Stock Record Restored' : 'Stock Created',
         message: existingAny
-          ? `Restored and updated stock for ${product.name} in ${warehouse.name} to ${data.quantity} units.`
-          : `Added ${data.quantity} units of ${product.name} to ${warehouse.name}.`,
+          ? `Restored stock for ${product.name} in ${warehouse.name}.`
+          : `Created stock entry for ${product.name} in ${warehouse.name}${initialQty > 0 ? ` with ${initialQty} initial units.` : '.'}`,
         type: 'INVENTORY_STOCK_CREATED',
         createdById,
       },
@@ -109,15 +139,15 @@ export async function createStock(data, createdById, req, user = null) {
     newValues: {
       warehouseId: data.warehouseId,
       productId: data.productId,
-      quantity: data.quantity,
+      initialQuantity: data.quantity,
       restored: Boolean(existingAny),
     },
     req,
   });
 
-  return sanitizeStock(stock);
+  const enriched = await enrichStocks([stock]);
+  return sanitizeStock(enriched[0]);
 }
-
 
 export async function getStocks(filters, user = null) {
   const { page, limit, skip } = getPaginationParams(filters);
@@ -143,17 +173,21 @@ export async function getStocks(filters, user = null) {
   }
 
   if (filters.productId) where.productId = filters.productId;
-  if (filters.lowStock) {
-    where.reorderLevel = { gt: 0 };
-    where.availableQuantity = { lte: prisma.warehouseStock.fields.reorderLevel };
-  }
 
   const [stocks, total] = await Promise.all([
     prisma.warehouseStock.findMany({
       where,
       include: {
         warehouse: { select: { id: true, name: true, code: true } },
-        product: { select: { id: true, name: true, sku: true, unit: { select: { id: true, name: true, abbreviation: true } } } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            sku: true,
+            unit: { select: { id: true, name: true, abbreviation: true } },
+            images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       skip,
@@ -162,8 +196,21 @@ export async function getStocks(filters, user = null) {
     prisma.warehouseStock.count({ where }),
   ]);
 
+  // Enrich each stock record with live computed quantities
+  let enriched = await enrichStocks(stocks);
+
+  // Apply low-stock filter after enrichment
+  if (filters.lowStock) {
+    enriched = enriched.filter((s) => {
+      const avail = s.availableQuantity;
+      const reorder = Number(s.reorderLevel) || 0;
+      const min = Number(s.minimumStock) || 0;
+      return (reorder > 0 && avail <= reorder) || (min > 0 && avail <= min);
+    });
+  }
+
   return {
-    stocks: stocks.map(sanitizeStock),
+    stocks: enriched.map(sanitizeStock),
     meta: buildPaginationMeta({ page, limit, total }),
   };
 }
@@ -173,13 +220,26 @@ export async function getStockById(id, user = null) {
     where: { id, isArchived: false },
     include: {
       warehouse: { select: { id: true, name: true, code: true } },
-      product: { select: { id: true, name: true, sku: true, unit: { select: { id: true, name: true, abbreviation: true } } } },
+      product: {
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          unit: { select: { id: true, name: true, abbreviation: true } },
+          images: { where: { isArchived: false }, select: { id: true, imageUrl: true, isPrimary: true } },
+        },
+      },
     },
   });
 
   if (!stock) throw new AppError('Stock not found', 404);
   await enforceWarehouseScope(user, stock.warehouseId);
-  return sanitizeStock(stock);
+
+  const { quantity, reservedQuantity, availableQuantity } = await getStockQuantitySummary(
+    stock.warehouseId,
+    stock.productId,
+  );
+  return sanitizeStock({ ...stock, quantity, reservedQuantity, availableQuantity });
 }
 
 export async function updateStock(id, data, createdById, req, user = null) {
@@ -190,10 +250,6 @@ export async function updateStock(id, data, createdById, req, user = null) {
   await enforceWarehouseScope(user, existing.warehouseId);
 
   const updateData = {};
-  if (data.quantity !== undefined && data.quantity !== Number(existing.quantity)) {
-    updateData.quantity = data.quantity;
-    updateData.availableQuantity = data.quantity - Number(existing.reservedQuantity);
-  }
   if (data.minimumStock !== undefined && data.minimumStock !== Number(existing.minimumStock)) {
     updateData.minimumStock = data.minimumStock;
   }
@@ -202,7 +258,7 @@ export async function updateStock(id, data, createdById, req, user = null) {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return getStockById(id);
+    return getStockById(id, user);
   }
 
   updateData.updatedById = createdById;
@@ -218,12 +274,11 @@ export async function updateStock(id, data, createdById, req, user = null) {
       },
     });
 
-    // Create notification
     await tx.notification.create({
       data: {
         userId: createdById,
-        title: 'Stock Updated',
-        message: `Updated stock for ${updatedStock.product.name} in ${updatedStock.warehouse.name}`,
+        title: 'Stock Thresholds Updated',
+        message: `Updated stock thresholds for ${updatedStock.product.name} in ${updatedStock.warehouse.name}`,
         type: 'INVENTORY_STOCK_UPDATED',
         createdById,
       },
@@ -237,12 +292,16 @@ export async function updateStock(id, data, createdById, req, user = null) {
     action: 'STOCK_UPDATED',
     entityType: 'WarehouseStock',
     entityId: id,
-    oldValues: { quantity: existing.quantity, minimumStock: existing.minimumStock, reorderLevel: existing.reorderLevel },
+    oldValues: { minimumStock: existing.minimumStock, reorderLevel: existing.reorderLevel },
     newValues: updateData,
     req,
   });
 
-  return sanitizeStock(stock);
+  const { quantity, reservedQuantity, availableQuantity } = await getStockQuantitySummary(
+    stock.warehouseId,
+    stock.productId,
+  );
+  return sanitizeStock({ ...stock, quantity, reservedQuantity, availableQuantity });
 }
 
 export async function deleteStock(id, deletedById, req, user = null) {
@@ -267,7 +326,6 @@ export async function deleteStock(id, deletedById, req, user = null) {
       },
     });
 
-    // Create notification
     await tx.notification.create({
       data: {
         userId: deletedById,
